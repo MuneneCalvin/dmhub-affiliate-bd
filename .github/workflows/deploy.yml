@@ -1,0 +1,120 @@
+name: deploy
+
+# Builds the production images, pushes them to GitHub Container Registry and asks Dokploy to redeploy.
+#   staging    : every push to main
+#   production : run this workflow manually (Actions > deploy > Run workflow, environment = production).
+#                Protect the "production" environment with required reviewers in the repository settings.
+# Nothing happens on pushes until the repository variable DEPLOY_ENABLED is "true".
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Where to deploy
+        type: choice
+        options:
+          - staging
+          - production
+        default: staging
+      ref:
+        description: Git ref (branch, tag or sha) to build and deploy
+        default: main
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: deploy-${{ github.event.inputs.environment || 'staging' }}
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  TARGET_ENV: ${{ github.event.inputs.environment || 'staging' }}
+
+jobs:
+  images:
+    if: ${{ vars.DEPLOY_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    outputs:
+      repo: ${{ steps.meta.outputs.repo }}
+      sha: ${{ steps.meta.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref || github.sha }}
+
+      - name: Image names and tags
+        id: meta
+        run: |
+          echo "repo=${REGISTRY}/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse --short=12 HEAD)" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Each image gets an immutable sha tag (for rollbacks) and a moving environment tag
+      # (staging | production) that the Dokploy stack follows via IMAGE_TAG.
+      - name: Build and push app image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/production/Dockerfile
+          target: app
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.repo }}/app:${{ steps.meta.outputs.sha }}
+            ${{ steps.meta.outputs.repo }}/app:${{ env.TARGET_ENV }}
+          cache-from: type=gha,scope=app
+          cache-to: type=gha,mode=max,scope=app
+
+      - name: Build and push web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/production/Dockerfile
+          target: web
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.repo }}/web:${{ steps.meta.outputs.sha }}
+            ${{ steps.meta.outputs.repo }}/web:${{ env.TARGET_ENV }}
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
+
+  deploy:
+    needs: images
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    steps:
+      - name: Trigger Dokploy redeploy
+        env:
+          DOKPLOY_WEBHOOK_URL: ${{ secrets.DOKPLOY_WEBHOOK_URL }}
+          SHA: ${{ needs.images.outputs.sha }}
+        run: |
+          if [ -z "$DOKPLOY_WEBHOOK_URL" ]; then
+            echo "::notice::Images ${SHA} pushed. No DOKPLOY_WEBHOOK_URL secret set for '${TARGET_ENV}', so press Deploy in Dokploy."
+            echo "skip=true" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          curl -fsS --max-time 30 -X POST -H 'Content-Type: application/json' \
+            -d "{\"ref\":\"refs/heads/main\",\"head_commit\":{\"id\":\"${SHA}\"}}" "$DOKPLOY_WEBHOOK_URL"
+
+      - name: Smoke test
+        if: env.skip != 'true'
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+        run: |
+          for i in $(seq 1 24); do
+            if curl -fsS --max-time 10 "$APP_URL/up" >/dev/null; then echo "OK: $APP_URL/up"; exit 0; fi
+            sleep 10
+          done
+          echo "Smoke test failed for $APP_URL/up" >&2
+          exit 1

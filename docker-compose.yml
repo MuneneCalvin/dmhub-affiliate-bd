@@ -1,0 +1,83 @@
+services:
+    app:
+        build:
+            context: .
+            dockerfile: docker/php/Dockerfile
+        image: dmhub-app
+        container_name: dmhub_app
+        restart: unless-stopped
+        working_dir: /var/www
+        volumes:
+            - ./:/var/www
+            - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+        networks:
+            - dmhub_network
+        environment:
+            DB_CONNECTION: pgsql
+            DB_HOST: db
+            DB_PORT: 5432
+            DB_DATABASE: ${DB_DATABASE:-dmhub}
+            DB_USERNAME: ${DB_USERNAME:-postgres}
+            DB_PASSWORD: ${DB_PASSWORD:-postgres}
+        depends_on:
+            - db
+
+    queue:
+        build:
+            context: .
+            dockerfile: docker/php/Dockerfile
+        image: dmhub-app
+        container_name: dmhub_queue
+        restart: unless-stopped
+        working_dir: /var/www
+        command: "php artisan queue:work --tries=3 --timeout=90"
+        volumes:
+            - ./:/var/www
+            - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+        networks:
+            - dmhub_network
+        environment:
+            DB_CONNECTION: pgsql
+            DB_HOST: db
+            DB_PORT: 5432
+            DB_DATABASE: ${DB_DATABASE:-dmhub}
+            DB_USERNAME: ${DB_USERNAME:-postgres}
+            DB_PASSWORD: ${DB_PASSWORD:-postgres}
+        depends_on:
+            - db
+
+
+    web:
+        image: nginx:alpine
+        container_name: dmhub_web
+        restart: unless-stopped
+        ports:
+            - "8000:80"
+        volumes:
+            - ./:/var/www
+            - ./docker/nginx/conf.d:/etc/nginx/conf.d
+        networks:
+            - dmhub_network
+        depends_on:
+            - app
+
+    db:
+        image: postgres:15
+        container_name: dmhub_db
+        restart: unless-stopped
+        environment:
+            POSTGRES_DB: ${DB_DATABASE:-dmhub}
+            POSTGRES_USER: ${DB_USERNAME:-postgres}
+            POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+        volumes:
+            - db_data:/var/lib/postgresql/data
+        ports:
+            - "5434:5432"
+        networks:
+            - dmhub_network
+networks:
+    dmhub_network:
+        driver: bridge
+
+volumes:
+    db_data:

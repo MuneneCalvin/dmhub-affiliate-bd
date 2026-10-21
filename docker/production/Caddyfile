@@ -1,0 +1,53 @@
+# Plain-HTTP web server behind a TLS-terminating proxy (Traefik in Dokploy). Public HTTPS, certificates and the
+# domain are handled by the proxy, so Caddy listens on :80 only.
+{
+	auto_https off
+	servers {
+		# Trust X-Forwarded-* headers from the proxy (Docker private networks) so the real client IP
+		# and scheme reach PHP.
+		trusted_proxies static private_ranges
+	}
+}
+
+:80 {
+	root * /var/www/public
+	encode zstd gzip
+
+	request_body {
+		max_size 12MB
+	}
+
+	header {
+		-Server
+	}
+
+	# Never serve dotfiles (except ACME/.well-known)
+	@hidden {
+		path /.*
+		not path /.well-known/*
+	}
+	respond @hidden 404
+
+	# Hashed Vite assets are immutable
+	@build path /build/*
+	header @build Cache-Control "public, max-age=31536000, immutable"
+
+	# Uploaded logos live on the shared storage volume (php artisan storage:link equivalent)
+	handle /storage/* {
+		uri strip_prefix /storage
+		root * /var/www/storage/app/public
+		header Cache-Control "public, max-age=86400"
+		file_server
+	}
+
+	handle {
+		# Unique alias, not "app": see compose.dokploy.yaml (the shared proxy network has other "app" containers).
+		php_fastcgi dmhub-php:9000
+		file_server
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

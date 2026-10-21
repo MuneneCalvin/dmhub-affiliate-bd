@@ -1,0 +1,20 @@
+{
+  "approve": "Approve",
+  "edit": "Edit",
+  "change_status": "Change Status",
+  "already_approved": "Already approved.",
+  "approve_network_title": "Approve this Network?",
+  "approve_network_description": "This will approve the network and allow normal usage.",
+  "yes_approve": "Yes, Approve",
+  "cancel": "Cancel",
+  "operation_failed": "Operation failed.",
+  "approve_first": "Approve first before you change status.",
+  "deactivate_network_title": "Deactivate this network?",
+  "deactivate_network_description": "This will deactivate the network and restrict access.",
+  "activate_network_title": "Activate this network?",
+  "activate_network_description": "This will activate the network and allow normal usage.",
+  "yes_deactivate": "Yes, Deactivate",
+  "yes_activate": "Yes, Activate",
+  "search": "Search",
+  "Change Network": "Change Network"
+}

@@ -1,0 +1,61 @@
+services:
+  php-fpm:
+    build:
+      context: .
+      dockerfile: ./docker/common/php-fpm/Dockerfile
+    ports:
+      - ${NGINX_PORT:-9000}:9000
+    env_file:
+      - .env
+    user: "${UID:-1000}:${GID:-1000}"
+    volumes:
+      - ./:/var/www
+    networks:
+      - laravel-affiliates-development
+    depends_on:
+      db:
+        condition: service_started
+
+  workspace:
+    build:
+      context: .
+      dockerfile: ./docker/development/workspace/Dockerfile
+    ports:
+      - '${VITE_PORT:-5173}:5173'
+    tty: true
+    stdin_open: true
+    env_file:
+      - .env
+    volumes:
+      - ./:/var/www
+    networks:
+      - laravel-affiliates-development
+
+  db:
+    image: postgres:16-alpine
+    container_name: new-postgres-db-affiliates
+    ports:
+      - "${MYSQL_OTHER_DB_PORT}:5432"
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    networks:
+      - laravel-affiliates-development
+    volumes:
+      - laravel-development-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  laravel-affiliates-development:
+
+
+volumes:
+  laravel-development-db-data:

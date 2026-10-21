@@ -1,0 +1,121 @@
+# Compose stack for Dokploy (https://dokploy.com): PHP-FPM app, queue worker, web (Caddy, plain HTTP),
+# PostgreSQL 16 and a daily pg_dump backup.
+#
+# Traefik (managed by Dokploy) terminates TLS and routes the domain you add under the Compose service's
+# "Domains" tab to service `web`, port 80. This file publishes no host ports, so it cannot clash with other
+# apps on the server. Dokploy writes the environment variables you set in its UI to `.env` next to this file.
+#
+# Variables (set in Dokploy): see .env.production.example. Image settings:
+#   IMAGE_REPO  e.g. ghcr.io/munenecalvin/dmhub-affiliate-bd     IMAGE_TAG  staging | production | <git sha>
+
+x-app: &app
+  image: ${IMAGE_REPO:?set IMAGE_REPO}/app:${IMAGE_TAG:-staging}
+  pull_policy: always
+  restart: unless-stopped
+  env_file: .env
+  environment: &app-env
+    DB_CONNECTION: pgsql
+    DB_HOST: db
+    DB_PORT: 5432
+    LOG_CHANNEL: stderr
+  volumes:
+    - storage:/var/www/storage
+  logging: &logging
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "5"
+
+services:
+  app:
+    <<: *app
+    environment:
+      <<: *app-env
+      CONTAINER_ROLE: app
+    # `web` is also attached to Dokploy's shared network, where other applications have containers called
+    # "app". The generic name would resolve to THEIR containers, so Caddy reaches PHP-FPM through a unique alias
+    # that exists only on this stack's private network.
+    networks:
+      default:
+        aliases:
+          - dmhub-php
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Credential emails and notifications are queued; without this worker nobody receives them.
+  queue:
+    <<: *app
+    command: ["php", "artisan", "queue:work", "--sleep=3", "--tries=3", "--max-time=3600"]
+    environment:
+      <<: *app-env
+      CONTAINER_ROLE: queue
+    depends_on:
+      app:
+        condition: service_healthy
+
+  web:
+    image: ${IMAGE_REPO:?set IMAGE_REPO}/web:${IMAGE_TAG:-staging}
+    pull_policy: always
+    restart: unless-stopped
+    volumes:
+      - storage:/var/www/storage:ro
+    networks:
+      - default
+      - dokploy-network
+    depends_on:
+      app:
+        condition: service_healthy
+    logging: *logging
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:?set DB_DATABASE}
+      POSTGRES_USER: ${DB_USERNAME:?set DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    logging: *logging
+
+  # Daily compressed dump kept for BACKUP_KEEP_DAYS days, on this server only: also copy /backups elsewhere
+  # (see DEPLOYMENT.md).
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          f=/backups/db-$$(date +%Y%m%d-%H%M%S).sql.gz
+          if pg_dump --no-owner --clean --if-exists | gzip > "$$f.tmp"; then mv "$$f.tmp" "$$f"; else rm -f "$$f.tmp"; echo "backup failed" >&2; fi
+          find /backups -name 'db-*.sql.gz' -mtime +$${BACKUP_KEEP_DAYS:-14} -delete
+          sleep 86400
+        done
+    environment:
+      PGHOST: db
+      PGUSER: ${DB_USERNAME}
+      PGPASSWORD: ${DB_PASSWORD}
+      PGDATABASE: ${DB_DATABASE}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+    volumes:
+      - backups:/backups
+    depends_on:
+      db:
+        condition: service_healthy
+    logging: *logging
+
+networks:
+  dokploy-network:
+    external: true
+
+volumes:
+  pgdata:
+  storage:
+  backups:
