@@ -107,7 +107,7 @@ class AdvertiserController extends Controller
             DB::beginTransaction();
             $request->validate([
                 'business_name' => ['required', 'string', 'max:255'],
-                'coc_number' => ['required', 'string'],
+                'coc_number' => ['required', 'string', 'max:10', 'unique:advertisers,coc_number'],
                 'website_name' => ['nullable', 'string'],
                 'industry' => ['required', 'string'],
                 'first_name' => ['required', 'string', 'max:255'],
@@ -231,7 +231,7 @@ class AdvertiserController extends Controller
             $advertiser = $this->findManaged($id);
             Validator::make($request->all(), [
                 'business_name' => ['required', 'string', 'max:255'],
-                'coc_number' => ['required', 'string'],
+                'coc_number' => ['required', 'string', 'max:10', Rule::unique('advertisers', 'coc_number')->ignore($advertiser->id)],
                 'website_name' => ['nullable', 'string'],
                 'industry' => ['required', 'string'],
                 'network_id' => ['nullable', 'integer'],

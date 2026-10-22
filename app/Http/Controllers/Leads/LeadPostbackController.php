@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Clicks;
 use App\Models\Lead;
 use App\Models\Offer;
+use App\Services\CommissionService;
 use Illuminate\Http\Request;
 
 class LeadPostbackController extends Controller
@@ -95,6 +96,7 @@ class LeadPostbackController extends Controller
         if ($offer) {
             $offer->increment('total_conversions');
         }
+        $this->payCommission($lead);
 
         return response()->json([
             'success' => true,
@@ -176,5 +178,18 @@ class LeadPostbackController extends Controller
                 'created_at' => $lead->created_at->toISOString(),
             ],
         ]);
+    }
+
+    /**
+     * Pay the publisher for the lead. A commission failure must not lose the lead itself, so it is reported
+     * and the request still succeeds.
+     */
+    private function payCommission(Lead $lead): void
+    {
+        try {
+            app(CommissionService::class)->calculateLeadCommission($lead);
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 }

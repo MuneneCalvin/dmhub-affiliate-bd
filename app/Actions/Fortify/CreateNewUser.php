@@ -3,9 +3,9 @@
 namespace App\Actions\Fortify;
 
 use App\Jobs\SendUserCredentialsJob;
-use App\Models\User;
 use App\Models\Advertiser;
 use App\Models\Publisher;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -29,7 +29,6 @@ class CreateNewUser implements CreatesNewUsers
                 'max:255',
                 Rule::unique(User::class),
             ],
-            'coc_number' => ['required', 'string']
         ])->validate();
         $this->validateBusinessFields($input);
 
@@ -79,11 +78,12 @@ class CreateNewUser implements CreatesNewUsers
 
     protected function validateBusinessFields(array $input): void
     {
+        $table = ($input['role_name'] ?? null) === 'publisher' ? 'publishers' : 'advertisers';
         $rules = [
             'business_name' => ['required', 'string', 'max:255'],
             'website_name' => ['nullable', 'string', 'url'],
             'industry' => ['required', 'string'],
-            'coc_number' => ['required', 'string'],
+            'coc_number' => ['required', 'string', 'max:10', Rule::unique($table, 'coc_number')],
         ];
         Validator::make($input, $rules)->validate();
     }

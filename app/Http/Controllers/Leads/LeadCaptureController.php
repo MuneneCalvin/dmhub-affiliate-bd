@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Clicks;
 use App\Models\Lead;
 use App\Models\Offer;
+use App\Services\CommissionService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -114,6 +115,7 @@ class LeadCaptureController extends Controller
         if ($click->publisherCampaign) {
             $click->publisherCampaign->increment('total_conversions');
         }
+        $this->payCommission($lead);
         $offer = Offer::find($click->offer_id);
         $redirectUrl = $offer?->preview_url ?? '/lead/thank-you';
 
@@ -126,5 +128,18 @@ class LeadCaptureController extends Controller
     public function thankYou()
     {
         return Inertia::render('leads/thank-you');
+    }
+
+    /**
+     * Pay the publisher for the lead. A commission failure must not lose the lead itself, so it is reported
+     * and the request still succeeds.
+     */
+    private function payCommission(Lead $lead): void
+    {
+        try {
+            app(CommissionService::class)->calculateLeadCommission($lead);
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 }
