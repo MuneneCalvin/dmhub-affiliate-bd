@@ -124,3 +124,21 @@ it('keeps DM Hub deployment instructions out of the public merchant guides', fun
     expect(file_get_contents(base_path('DEPLOYMENT.md')))
         ->toContain('SHOPIFY_CLIENT_SECRET', 'php artisan promotions:reconcile', 'php artisan postback:credentials');
 });
+
+it('keeps the docs secondary text readable against the page background', function () {
+    $css = file_get_contents(public_path('css/documentation.css'));
+    preg_match('/:root\s*\{[^}]*\}/', $css, $root);
+    preg_match('/--muted:\s*(#[0-9a-f]{6})/i', $root[0], $muted);
+    preg_match('/--bg:\s*(#[0-9a-f]{6})/i', $root[0], $background);
+
+    $luminance = function (string $hex): float {
+        [$r, $g, $b] = array_map(fn ($part) => hexdec($part) / 255, str_split(ltrim($hex, '#'), 2));
+        $channel = fn ($c) => $c <= 0.03928 ? $c / 12.92 : (($c + 0.055) / 1.055) ** 2.4;
+
+        return 0.2126 * $channel($r) + 0.7152 * $channel($g) + 0.0722 * $channel($b);
+    };
+    [$lighter, $darker] = [max($luminance($muted[1]), $luminance($background[1])), min($luminance($muted[1]), $luminance($background[1]))];
+
+    // WCAG AA for normal text.
+    expect(($lighter + 0.05) / ($darker + 0.05))->toBeGreaterThanOrEqual(4.5);
+});

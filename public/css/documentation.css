@@ -1,4 +1,4 @@
-:root { color-scheme: light; --bg: #f5f7fb; --surface: #fff; --text: #18243b; --muted: #64738b; --primary: #305cde; --border: #e2e8f1; }
+:root { color-scheme: light; --bg: #f5f7fb; --surface: #fff; --text: #18243b; --muted: #59667e; --primary: #305cde; --border: #e2e8f1; }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.7 Inter, ui-sans-serif, system-ui, sans-serif; }
 a { color: var(--primary); text-underline-offset: 4px; }
