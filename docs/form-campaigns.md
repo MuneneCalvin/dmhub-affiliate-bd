@@ -1,6 +1,6 @@
 # Form submission campaigns
 
-Reward successful, non-spam submissions on the client's own website. DM Hub stores referral and conversion metadata, not the customer's contact details or form answers. An accepted submission event automatically creates a conversion and pending commission; there is no lead record or second confirmation step.
+Reward successful, non-spam submissions on the client's own website. DM Hub stores referral and conversion metadata, not the customer's contact details or form answers. An accepted submission event automatically creates a conversion and pending commission; there is no lead record or second confirmation step. To keep the contact as a lead in Brand New Day, use [lead submissions](lead-submissions.md) instead.
 
 ## 1. Configure the offer
 

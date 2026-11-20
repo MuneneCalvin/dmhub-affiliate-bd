@@ -18,6 +18,7 @@ Send `Authorization: Bearer ADVERTISER_CREDENTIAL`. Body/query credentials and a
 | `GET /s/{scriptToken}` | Public script token | Load the attribution SDK v2 |
 | `GET /api/v1/referrals/{uuid}` | Public referral identity | Validate referral eligibility and return attribution/expiry |
 | `POST /api/v1/events` | Advertiser Bearer credential | Record a successful submission, purchase or action |
+| `POST /api/v1/leads` | Advertiser Bearer credential | Record a successful submission together with its contact; see [lead submissions](lead-submissions.md) |
 
 Public does not mean arbitrary attribution: every event must resolve to a real click and eligible publisher assignment. The script token cannot substitute for a referral.
 
@@ -40,7 +41,7 @@ Send `Content-Type: application/json` and `Accept: application/json`.
 
 Supply at least `referral_id` or `click_id`. If supplying multiple identifiers, they must all agree. A creative tracking code alone is insufficient.
 
-Contact details, form contents, arbitrary metadata and unknown fields are rejected. Use opaque IDs that contain no customer information.
+Contact details, form contents, arbitrary metadata and unknown fields are rejected on `/api/v1/events`; use [lead submissions](lead-submissions.md) when you want Brand New Day to keep the contact. Use opaque IDs that contain no customer information.
 
 Event time cannot precede the click or be in the future. The conversion window must still be open when the server receives a new event, as well as at the event time. Active status, traffic restrictions, currency, funding and the click's commission snapshot are validated.
 

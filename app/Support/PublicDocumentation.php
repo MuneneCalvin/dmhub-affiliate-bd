@@ -13,6 +13,7 @@ class PublicDocumentation
             'overview' => ['title' => 'Documentation', 'group' => 'Start here', 'description' => 'Set up campaigns and connect your website to DM Hub.'],
             'campaign-setup' => ['title' => 'Campaign setup', 'group' => 'Start here', 'description' => 'Configure offers, commissions, publishers and tracking.'],
             'form-campaigns' => ['title' => 'Form submission campaigns', 'group' => 'Campaigns', 'description' => 'Track successful submissions without storing customer data.'],
+            'lead-submissions' => ['title' => 'Lead submissions', 'group' => 'Campaigns', 'description' => 'Report submissions together with the contact details you collected.'],
             'checkout-campaigns' => ['title' => 'Checkout campaigns', 'group' => 'Campaigns', 'description' => 'Attribute paid orders and confirm purchase conversions.'],
             'click-campaigns' => ['title' => 'Clicks & action campaigns', 'group' => 'Campaigns', 'description' => 'Track referral traffic and confirm qualifying actions.'],
             'customer-promotions' => ['title' => 'Customer discounts & plugins', 'group' => 'Integrations', 'description' => 'Connect your store and configure customer discounts.'],
