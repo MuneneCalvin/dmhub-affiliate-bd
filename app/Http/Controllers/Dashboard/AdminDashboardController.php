@@ -3,18 +3,18 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
-use App\Models\Advertiser;
 use App\Models\Campaign;
 use App\Models\Network;
 use App\Models\Offer;
-use App\Models\Publisher;
 use App\Models\User;
+use App\Services\DashboardRevenueService;
+use App\Services\PartnerReportingService;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class AdminDashboardController extends Controller
 {
-    public function index()
+    public function index(DashboardRevenueService $revenue)
     {
         $stats = [
             'total_networks' => Network::count(),
@@ -42,7 +42,7 @@ class AdminDashboardController extends Controller
             ->latest()
             ->take(5)
             ->get(['id', 'network_name', 'owner_email', 'created_at']);
-            
+
         $pendingUsers = User::where('status', 'P')
             ->where(function ($query) {
                 $query->where('is_publisher', true)
@@ -52,14 +52,9 @@ class AdminDashboardController extends Controller
             ->take(10)
             ->get(['id', 'first_name', 'last_name', 'email', 'is_publisher', 'is_advertiser']);
 
-        $performance = DB::table('publisher_campaigns')
-            ->selectRaw('
-                COALESCE(SUM(total_clicks), 0) as total_clicks,
-                COALESCE(SUM(total_conversions), 0) as total_conversions,
-                COALESCE(SUM(total_revenue), 0) as total_revenue,
-                COALESCE(SUM(total_commission), 0) as total_commission
-            ')
-            ->first();
+        $reporting = app(PartnerReportingService::class);
+        $assignments = DB::table('publisher_campaigns');
+        $performance = $reporting->performance($assignments);
 
         $networkBreakdown = Network::withCount(['publishers', 'advertisers', 'campaigns'])
             ->where('status', 'A')
@@ -78,6 +73,7 @@ class AdminDashboardController extends Controller
             'pendingNetworks' => $pendingNetworks,
             'pendingUsers' => $pendingUsers,
             'performance' => $performance,
+            'dailyRevenue' => $reporting->daily($assignments, 'USD'),
             'networkBreakdown' => $networkBreakdown,
             'recentDisputes' => $recentDisputes,
         ]);

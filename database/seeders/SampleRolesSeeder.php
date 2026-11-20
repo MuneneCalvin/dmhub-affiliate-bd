@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -13,11 +12,11 @@ class SampleRolesSeeder extends Seeder
      */
     public function run(): void
     {
-        DB::table('sample_roles')->insert([
-            ['role_name' => 'Super_Admin', 'created_at' => now(), 'updated_at' => now()],
-            ['role_name' => 'Network_Manager', 'created_at' => now(), 'updated_at' => now()],
-            ['role_name' => 'Advertiser', 'created_at' => now(), 'updated_at' => now()],
-            ['role_name' => 'Publisher', 'created_at' => now(), 'updated_at' => now()],
-        ]);
+        foreach (['Super_Admin', 'Network_Manager', 'Advertiser', 'Publisher'] as $roleName) {
+            DB::table('sample_roles')->updateOrInsert(
+                ['role_name' => $roleName],
+                ['updated_at' => now(), 'created_at' => now()]
+            );
+        }
     }
 }

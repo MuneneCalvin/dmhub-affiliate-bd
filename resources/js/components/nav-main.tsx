@@ -1,113 +1,151 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import {
-    Collapsible,
-    CollapsibleContent,
-    CollapsibleTrigger,
-} from '@/components/ui/collapsible';
 import {
     SidebarGroup,
+    SidebarGroupLabel,
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
-    SidebarMenuSub,
-    SidebarMenuSubButton,
-    SidebarMenuSubItem,
+    useSidebar,
 } from '@/components/ui/sidebar';
-import { resolveUrl } from '@/lib/utils';
-import { type NavItem } from '@/types';
+import { type DomainTone } from '@/lib/tones';
+import { cn } from '@/lib/utils';
+import {
+    findActiveKey,
+    type NavCounts,
+    type NavGroup,
+    type NavItem,
+} from '@/navigation/config';
 import { Link, usePage } from '@inertiajs/react';
-import { ChevronRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
-export function NavMain({ items = [] }: { items: NavItem[] }) {
-    const page = usePage();
-    const currentUrl = page.url;
+/** Icon colour on the navy sidebar, per domain. */
+const navText: Record<DomainTone, string> = {
+    brand: 'text-brand-nav',
+    partners: 'text-partners-nav',
+    finance: 'text-finance-nav',
+    admin: 'text-admin-nav',
+    analytics: 'text-analytics-nav',
+};
 
-    const isActive = (url: NonNullable<NavItem['href']>) =>
-        currentUrl === resolveUrl(url) ||
-        currentUrl.startsWith(resolveUrl(url) + '/');
+const navDot: Record<DomainTone, string> = {
+    brand: 'bg-brand-nav',
+    partners: 'bg-partners-nav',
+    finance: 'bg-finance-nav',
+    admin: 'bg-admin-nav',
+    analytics: 'bg-analytics-nav',
+};
 
-    const hasActiveChild = (children: NavItem['children']) =>
-        Array.isArray(children) &&
-        children.some(
-            (sub) => sub?.href && currentUrl === resolveUrl(sub.href)
-        );
+const badgeClasses: Record<string, string> = {
+    pendingApplications: 'bg-admin text-white',
+    fraudFlags: 'bg-finance-nav text-sidebar',
+};
 
+function NavLink({
+    item,
+    active,
+    count,
+}: {
+    item: NavItem;
+    active: boolean;
+    count?: number | null;
+}) {
+    const { t } = useTranslation();
+    const { setOpenMobile } = useSidebar();
+    const title = t(item.titleKey);
+    const showCount = typeof count === 'number' && count > 0;
+    const countLabel = showCount
+        ? t('{{count}} waiting', { count: count as number })
+        : undefined;
     return (
-        <SidebarGroup>
-            <SidebarMenu>
-                {items.map((item) => {
-                    const hasChildren =
-                        Array.isArray(item.children) && item.children.length > 0;
-                    const itemIsActive =
-                        !hasChildren && !!item.href && isActive(item.href);
-                    const childIsActive = hasActiveChild(item.children);
-                    const collapsibleOpen = itemIsActive || !!childIsActive;
+        <SidebarMenuItem>
+            <SidebarMenuButton
+                asChild
+                isActive={active}
+                tooltip={showCount ? `${title} · ${count}` : title}
+            >
+                <Link
+                    href={item.href}
+                    prefetch
+                    onClick={() => setOpenMobile(false)}
+                    aria-current={active ? 'page' : undefined}
+                    data-nav-key={item.key}
+                >
+                    <span
+                        aria-hidden="true"
+                        className={cn(
+                            'flex size-[30px] shrink-0 items-center justify-center rounded-[9px] [&_svg]:size-4',
+                            active
+                                ? 'bg-white/20 text-white'
+                                : cn('bg-white/6', navText[item.domain]),
+                        )}
+                    >
+                        <item.icon />
+                    </span>
+                    <span className="min-w-0 flex-1 truncate group-data-[collapsible=icon]:sr-only">
+                        {title}
+                    </span>
+                    {showCount && (
+                        <span
+                            className={cn(
+                                'rounded-full px-2 py-px text-[11px] font-extrabold tabular-nums group-data-[collapsible=icon]:sr-only',
+                                item.badgeKey && badgeClasses[item.badgeKey],
+                            )}
+                        >
+                            <span aria-hidden="true">{count}</span>
+                            <span className="sr-only">{countLabel}</span>
+                        </span>
+                    )}
+                </Link>
+            </SidebarMenuButton>
+        </SidebarMenuItem>
+    );
+}
 
-                    if (!hasChildren) {
-                        return (
-                            <SidebarMenuItem key={item.title}>
-                                <SidebarMenuButton
-                                    tooltip={item.title}
-                                    asChild
-                                    isActive={itemIsActive}>
-                                    <Link href={item.href} prefetch>
-                                        {item.icon && (
-                                            <item.icon className="size-5 shrink-0" />
-                                        )}
-                                        <span>{item.title}</span>
-                                    </Link>
-                                </SidebarMenuButton>
-                            </SidebarMenuItem>
-                        );
-                    }
-
-                    return (
-                        <Collapsible
-                            key={item.title}
-                            asChild
-                            defaultOpen={collapsibleOpen}
-                            className="group/collapsible">
-                            <SidebarMenuItem>
-                                <CollapsibleTrigger asChild>
-                                    <SidebarMenuButton
-                                        tooltip={item.title}
-                                        isActive={itemIsActive || !!childIsActive}>
-                                        {item.icon && (
-                                            <item.icon className="size-5 shrink-0" />
-                                        )}
-                                        <span>{item.title}</span>
-                                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                                    </SidebarMenuButton>
-                                </CollapsibleTrigger>
-                                <CollapsibleContent>
-                                    <SidebarMenuSub>
-                                        {item.children?.map((child: any) => (
-                                            <SidebarMenuSubItem
-                                                key={child.title}>
-                                                <SidebarMenuSubButton
-                                                    asChild
-                                                    isActive={
-                                                        !!child.href &&
-                                                        currentUrl ===
-                                                            resolveUrl(
-                                                                child.href
-                                                            )
-                                                    }>
-                                                    <Link
-                                                        href={child.href}
-                                                        prefetch>
-                                                        <span>{child.title}</span>
-                                                    </Link>
-                                                </SidebarMenuSubButton>
-                                            </SidebarMenuSubItem>
-                                        ))}
-                                    </SidebarMenuSub>
-                                </CollapsibleContent>
-                            </SidebarMenuItem>
-                        </Collapsible>
-                    );
-                })}
-            </SidebarMenu>
-        </SidebarGroup>
+/** Grouped sidebar navigation; the item owning the current URL is highlighted. */
+export function NavMain({
+    groups,
+    counts = {},
+}: {
+    groups: NavGroup[];
+    counts?: NavCounts | null;
+}) {
+    const { url } = usePage();
+    const { t } = useTranslation();
+    const activeKey = findActiveKey(groups, url);
+    return (
+        <nav
+            aria-label={t('Main navigation')}
+            className="flex flex-col gap-[18px]"
+        >
+            {groups.map((group) => (
+                <SidebarGroup key={group.key} className="gap-1 p-0">
+                    {group.titleKey && (
+                        <SidebarGroupLabel>
+                            <span
+                                aria-hidden="true"
+                                className={cn(
+                                    'size-1.5 rounded-full',
+                                    navDot[group.domain],
+                                )}
+                            />
+                            {t(group.titleKey)}
+                        </SidebarGroupLabel>
+                    )}
+                    <SidebarMenu className="gap-1">
+                        {group.items.map((item) => (
+                            <NavLink
+                                key={item.key}
+                                item={item}
+                                active={item.key === activeKey}
+                                count={
+                                    item.badgeKey
+                                        ? counts?.[item.badgeKey]
+                                        : undefined
+                                }
+                            />
+                        ))}
+                    </SidebarMenu>
+                </SidebarGroup>
+            ))}
+        </nav>
     );
 }

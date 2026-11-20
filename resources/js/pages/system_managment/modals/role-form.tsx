@@ -1,161 +1,174 @@
+import {
+    FormField,
+    PermissionGrid,
+    type PermissionOption,
+} from '@/components/app';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { ReusableTextInput, ReusableCheckbox } from '@/dev/core';
-import { RoleFormModalProps, TPermissions } from '@/types';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Input, InputGroup } from '@/components/ui/input';
+import system from '@/routes/system';
 import { router } from '@inertiajs/react';
-import { useMemo, useState } from 'react';
+import { Search, ShieldPlus } from 'lucide-react';
+import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
+export type RoleFormTarget = { id: number; name: string } | null;
 
-const RoleFormModal = ({ componentProps, handleDialogContextSwitch }: RoleFormModalProps) => {
+/**
+ * Create a role (name + permissions) or rename an existing one. Permissions
+ * of an existing role are edited in the grid on the page, not here.
+ */
+export default function RoleFormModal({
+    open,
+    role,
+    allPermissions,
+    onClose,
+}: {
+    open: boolean;
+    /** The role to rename; null creates a new role. */
+    role: RoleFormTarget;
+    allPermissions: PermissionOption[];
+    onClose: () => void;
+}) {
     const { t } = useTranslation();
-    const { role, allPermissions, isEdit } = componentProps;
+    const editing = role !== null;
+    const [name, setName] = useState(role?.name ?? '');
+    const [permissions, setPermissions] = useState<(number | string)[]>([]);
+    const [query, setQuery] = useState('');
+    const [errors, setErrors] = useState<Record<string, string>>({});
+    const [processing, setProcessing] = useState(false);
 
-    const initialPermissions = useMemo(() => {
-        return role?.permissions?.map((p: TPermissions) => p.id) || [];
-    }, [role]);
-
-    const [name, setName] = useState(role?.name || '');
-    const [selectedPermissions, setSelectedPermissions] = useState<string[]>(initialPermissions);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
-
-    const handlePermissionToggle = (permissionId: string) => {
-        setSelectedPermissions((prev) =>
-            prev.includes(permissionId)
-                ? prev.filter((id) => id !== permissionId)
-                : [...prev, permissionId]
-        );
-    };
-
-    const handleSelectAll = () => {
-        if (selectedPermissions.length === allPermissions.length) {
-            setSelectedPermissions([]);
-        } else {
-            setSelectedPermissions(allPermissions.map((p: TPermissions) => p.id));
+    const submit = (event: FormEvent) => {
+        event.preventDefault();
+        if (!name.trim()) {
+            setErrors({ name: t('Enter a role name.') });
+            document.getElementById('role-name')?.focus();
+            return;
         }
-    };
-
-    const filteredPermissions = allPermissions.filter((p) =>
-        p.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsSubmitting(true);
-
-        const data = {
-            name,
-            permissions: selectedPermissions,
+        const options = {
+            preserveScroll: true,
+            onStart: () => setProcessing(true),
+            onFinish: () => setProcessing(false),
+            onError: (next: Record<string, string>) => setErrors(next),
+            onSuccess: () => onClose(),
         };
-
-        if (isEdit && role?.id) {
-            router.put(`/system/settings/role/${role.id}`, data, {
-                preserveScroll: true,
-                preserveState: false,
-                onSuccess: () => {
-                    handleDialogContextSwitch({ open: false });
-                },
-                onFinish: () => setIsSubmitting(false),
-            });
+        if (editing) {
+            router.put(
+                system.settings.roles.update.url(role.id),
+                { name: name.trim() },
+                options,
+            );
         } else {
-            router.post('/system/settings/role', data, {
-                preserveScroll: true,
-                preserveState: false,
-                onSuccess: () => {
-                    handleDialogContextSwitch({ open: false });
-                },
-                onFinish: () => setIsSubmitting(false),
-            });
+            router.post(
+                system.settings.roles.store.url(),
+                { name: name.trim(), permissions },
+                options,
+            );
         }
     };
 
     return (
-        <div className='w-full'>
-            <div className='flex flex-col gap-1.5 mb-6'>
-                <h1 className='font-bold text-2xl'>
-                    {isEdit
-                        ? t('Update the role name and permissions')
-                        : t('Create a new role and assign permissions')}
-                </h1>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-6">
-                <ReusableTextInput
-                    id="name"
-                    label={t('Role Name')}
-                    value={name}
-                    onChange={setName}
-                    placeholder={t('Enter role name')}
-                    required
-                />
-
-                <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                        <Label>{t('Permissions')}</Label>
+        <Dialog
+            open={open}
+            onOpenChange={(next) => !next && !processing && onClose()}
+        >
+            <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
+                <form
+                    onSubmit={submit}
+                    noValidate
+                    className="flex flex-col gap-5"
+                >
+                    <DialogHeader icon={<ShieldPlus />} tone="admin">
+                        <DialogTitle>
+                            {editing ? t('Rename role') : t('New role')}
+                        </DialogTitle>
+                        <DialogDescription>
+                            {editing
+                                ? t(
+                                      'The new name applies to everyone who has this role.',
+                                  )
+                                : t(
+                                      'Name the role and choose what people with it may do.',
+                                  )}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <FormField
+                        id="role-name"
+                        label={t('Role name')}
+                        error={errors.name}
+                    >
+                        <Input
+                            id="role-name"
+                            required
+                            maxLength={255}
+                            autoFocus
+                            value={name}
+                            onChange={(event) => setName(event.target.value)}
+                        />
+                    </FormField>
+                    {!editing && (
+                        <fieldset className="flex flex-col gap-3">
+                            <legend className="mb-3 flex w-full flex-wrap items-center justify-between gap-2 text-sm font-bold">
+                                <span>{t('Permissions')}</span>
+                                <span className="text-xs font-semibold text-ink-muted tabular-nums">
+                                    {t('{{count}} selected', {
+                                        count: permissions.length,
+                                    })}
+                                </span>
+                            </legend>
+                            <InputGroup
+                                leading={
+                                    <Search
+                                        className="text-brand"
+                                        aria-hidden="true"
+                                    />
+                                }
+                            >
+                                <Input
+                                    type="search"
+                                    aria-label={t('Search permissions')}
+                                    placeholder={t('Search permissions')}
+                                    value={query}
+                                    onChange={(event) =>
+                                        setQuery(event.target.value)
+                                    }
+                                />
+                            </InputGroup>
+                            <PermissionGrid
+                                permissions={allPermissions}
+                                value={permissions}
+                                onValueChange={setPermissions}
+                                query={query}
+                            />
+                            {errors.permissions && (
+                                <p className="text-[13px] font-semibold text-danger-ink">
+                                    {errors.permissions}
+                                </p>
+                            )}
+                        </fieldset>
+                    )}
+                    <DialogFooter>
                         <Button
                             type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={handleSelectAll}
+                            variant="secondary"
+                            onClick={onClose}
+                            disabled={processing}
                         >
-                            {selectedPermissions.length === allPermissions.length
-                                ? t('Deselect All')
-                                : t('Select All')}
+                            {t('Cancel')}
                         </Button>
-                    </div>
-
-                    <ReusableTextInput
-                        id="search-permissions"
-                        label=""
-                        value={searchTerm}
-                        onChange={setSearchTerm}
-                        placeholder={t('Search permissions...')}
-                    />
-                    <div className="h-auto overflow-y-auto border rounded-md p-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {filteredPermissions.map((permission: TPermissions) => (
-                                <ReusableCheckbox
-                                    key={permission.id}
-                                    id={`permission-${permission.id}`}
-                                    label={permission.name}
-                                    checked={selectedPermissions.includes(permission.id)}
-                                    onChange={() => handlePermissionToggle(permission.id)}
-                                />
-                            ))}
-                        </div>
-                        {filteredPermissions.length === 0 && (
-                            <p className="text-center text-muted-foreground py-4">
-                                {t('No permissions found')}
-                            </p>
-                        )}
-                    </div>
-
-                    <p className="text-sm text-muted-foreground">
-                        {t('Selected')}: {selectedPermissions.length} / {allPermissions.length}
-                    </p>
-                </div>
-
-                <div className='flex items-center justify-between w-full gap-12'>
-                    <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => handleDialogContextSwitch({ open: false })}
-                        disabled={isSubmitting}
-                    >
-                        {t('Cancel')}
-                    </Button>
-                    <Button type="submit" disabled={isSubmitting || !name.trim()}>
-                        {isSubmitting
-                            ? t('Saving...')
-                            : isEdit
-                                ? t('Update Role')
-                                : t('Create Role')}
-                    </Button>
-                </div>
-            </form>
-        </div>
+                        <Button type="submit" disabled={processing}>
+                            {editing ? t('Save name') : t('Create role')}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
     );
-};
-
-export default RoleFormModal;
+}

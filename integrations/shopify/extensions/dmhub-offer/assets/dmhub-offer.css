@@ -1,0 +1,10 @@
+.dmhub-notice{position:fixed;z-index:9999;top:16px;left:50%;transform:translateX(-50%);box-sizing:border-box;width:max-content;max-width:min(calc(100vw - 32px),560px);display:flex;align-items:center;gap:12px;background:#111827;color:#fff;border-radius:999px;padding:8px 8px 8px 12px;box-shadow:0 10px 30px #0000003d,0 2px 6px #0000001f;font:inherit;font-size:14px;font-weight:500;line-height:1.35;animation:dmhub-in .35s cubic-bezier(.2,.8,.2,1)}
+.dmhub-notice::before{content:"%";flex:none;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#f5c542;color:#111827;font-size:14px;font-weight:700}
+.dmhub-notice span{flex:1;min-width:0;padding-right:4px}
+.dmhub-popup{max-width:min(calc(100vw - 32px),420px)}
+.dmhub-notice button{flex:none;display:grid;place-items:center;width:44px;height:44px;margin:-8px 0;background:transparent;color:inherit;opacity:.7;border:0;border-radius:50%;font-size:22px;line-height:1;cursor:pointer}
+.dmhub-notice button:hover{opacity:1}
+.dmhub-notice button:focus-visible{outline:2px solid currentColor;outline-offset:-4px}
+@keyframes dmhub-in{from{opacity:0;transform:translate(-50%,-12px)}to{opacity:1;transform:translate(-50%,0)}}
+@media(max-width:480px){.dmhub-notice{top:8px;font-size:13px}}
+@media(prefers-reduced-motion:reduce){.dmhub-notice{animation:none}}

@@ -1,0 +1,86 @@
+DM Hub production readiness evidence
+Date: 29 October 2026
+Base commit: 416945d416c8ae9b7b928b724aef83f738465753
+Scope: current working tree including pre-existing frontend edits.
+
+Existing suite command: php vendor/bin/pest
+Result: 164 failed, 1 passed (1 assertion), 7.31 seconds.
+The feature tests fail during migration setup on SQLite at:
+database/migrations/2026_03_23_032222_create_network_earnings_table.php:35
+SQLSTATE[HY000]: General error: 1 near "OR": syntax error
+CREATE OR REPLACE FUNCTION calculate_network_balance(net_id BIGINT)
+The CI workflow explicitly uses PostgreSQL; its remote result was not inspected.
+
+Focused PHP diagnostic method:
+Fresh in-memory SQLite database; application migrations applied to synthetic data.
+Skipped only PostgreSQL function creation after network_earnings table creation.
+Function arithmetic evaluated using the equivalent SUM aggregate.
+Invoked actual controllers/services directly; this does not exercise every middleware
+or browser behavior and does not test PostgreSQL locking/concurrency.
+No application database records, live emails or payments were used.
+Diagnostic script: /tmp/dmhub-audit-probes.php (temporary local file).
+
+DIAGNOSTIC LIMIT: skipped only PostgreSQL balance function after its table was created
+tracking inactive expired campaign and offer: {"status":302,"location":"https://example.test/buy#details?click_id=1"}
+public lead against expired inactive zero-balance advertiser: {"status":201,"earnings":1,"available_budget":"-10.00","spent":"10.00","custom_fields":{"password":"SYNTHETIC-NOT-A-REAL-SECRET"}}
+calculate same lead commission again: {"earnings_for_lead":2}
+invoice pending EUR campaign earnings: {"currency":"USD","amount":"20.00","status":"pending"}
+postback creates lead not commission: {"leads":1,"earnings_delta":0,"conversions":0}
+second distinct order on same click: {"success":true,"message":"Lead already exists","lead_id":2,"lead_token":"[synthetic token omitted]"}
+creative form attribution: {"status":201,"publisher_id":null,"publisher_campaign_id":null}
+direct creative without publisher 5: {"exception":"Illuminate\\Database\\QueryException","foreign_key_failure":true}
+network user without membership lists applications: {"count":1}
+user verification contract: {"implements":false,"persisted_publisher_flag_type":"integer"}
+reapply after rejection: {"unique_failure":true}
+network SQL function expression: {"after_100_earning":-100,"after_30_payout":-70}
+publisher account deletion cascade: {"before":{"earnings":2,"invoices":1,"clicks":1,"leads":3},"after":{"earnings":0,"invoices":0,"clicks":0,"leads":3}}
+
+Focused browser-script logic diagnostic:
+Actual generated PublisherScriptController script evaluated in Node vm with a
+synthetic document, submit event, FormData and intercepted fetch implementation.
+Fixture: an email/password login form at a URL containing click_id=123.
+Result:
+{"captures_password":true,"forwards_click_id":null,"documented_show_method":"undefined","documented_hide_method":"undefined"}
+This demonstrates script logic only; browser network cancellation remains a code-derived risk.
+
+TypeScript command: npm run types
+Final repeat: PASS with no diagnostics after concurrent frontend edits.
+Earlier run retained below for traceability (these are no longer current failures):
+
+> types
+> tsc --noEmit
+
+resources/js/components/landing/landing-hero.tsx(55,45): error TS2322: Type 'HrefType' is not assignable to type 'string | undefined'.
+  Type 'UrlMethodPair' is not assignable to type 'string'.
+resources/js/components/search.tsx(17,31): error TS2307: Cannot find module '@/hooks/use-media-query' or its corresponding type declarations.
+resources/js/context/language-context.tsx(35,31): error TS2344: Type 'PageProps' does not satisfy the constraint 'import("node_modules/@inertiajs/core/types/types").PageProps'.
+  Index signature for type 'string' is missing in type 'PageProps'.
+resources/js/hooks/index.tsx(10,21): error TS2554: Expected 1 arguments, but got 0.
+resources/js/hooks/use-language.ts(24,35): error TS2344: Type 'PageProps' does not satisfy the constraint 'import("node_modules/@inertiajs/core/types/types").PageProps'.
+  Index signature for type 'string' is missing in type 'PageProps'.
+resources/js/pages/applications/index.tsx(111,21): error TS2322: Type '{ key: string; defaultTab: string; tabs: { title: string; Tab: ComponentType<any>; key: string; }[]; tabProps: { applications: { data: ApplicationData[]; current_page: number; last_page: number; per_page: number; total: number; }; ... 4 more ...; handleStatusFilter: (status: string) => void; }; onTabChange: (status:...' is not assignable to type 'IntrinsicAttributes & { Children?: ComponentType<any> | undefined; tabProps?: Record<string, any> | undefined; tabs: TTab<string>[]; defaultTab: string; header?: ReactNode; } & Partial<...>'.
+  Property 'onTabChange' does not exist on type 'IntrinsicAttributes & { Children?: ComponentType<any> | undefined; tabProps?: Record<string, any> | undefined; tabs: TTab<string>[]; defaultTab: string; header?: ReactNode; } & Partial<...>'.
+
+Build command: npm run build -- --outDir /tmp/dmhub-audit-build
+../../../../../../tmp/dmhub-audit-build/assets/app-wJycchXi.js                    591.29 kB │ gzip: 184.50 kB
+(!) Some chunks are larger than 500 kB after minification. Consider:
+✓ built in 9.63s
+
+ESLint command: ./node_modules/.bin/eslint .
+
+✖ 10 problems (0 errors, 10 warnings)
+  0 errors and 4 warnings potentially fixable with the `--fix` option.
+
+
+Dependency audits:
+composer audit --format=json --no-interaction and npm audit --json attempted.
+Package registries were unreachable in this environment (DNS/network errors).
+No dependency vulnerability assessment could be completed.
+
+No production deployment, PostgreSQL server, real merchant browser journey,
+payment processor, load test or backup restore was exercised.
+
+Final frontend repeat after concurrent edits:
+TypeScript: PASS (no diagnostics).
+Vite build: PASS in 9.56 seconds; main chunk 591.29 kB, gzip 184.49 kB.
+ESLint: 0 errors, 10 warnings.

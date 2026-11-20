@@ -1,65 +1,81 @@
+import { StatePanel } from '@/components/app';
+import { Button } from '@/components/ui/button';
+import { StatusBadge } from '@/components/ui/status-badge';
 import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
-import { logout } from '@/routes'
-import { Head, Link, router } from '@inertiajs/react'
-import React from 'react'
+import AuthLayout from '@/layouts/auth-layout';
+import { logout } from '@/routes';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Hourglass, LogOut, XCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
-const WaitForApproval = () => {
-  const cleanup = useMobileNavigation();
+export default function WaitForApproval() {
+    const { t } = useTranslation();
+    const { status } = usePage<{ status?: string }>().props;
+    const cleanup = useMobileNavigation();
+    const rejected = status === 'R';
 
-  const handleLogout = () => {
-    cleanup();
-    router.flushAll();
-  };
-  return (
-    <>
-      <Head title="Account Pending Approval" />
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8">
-          <div className="text-center">
-            <div className="mx-auto flex items-center justify-center h-24 w-24 rounded-full bg-yellow-100">
-              <svg
-                className="h-12 w-12 text-yellow-600"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </div>
+    return (
+        <AuthLayout width="wide">
+            <Head title={t('Account Pending Approval')} />
 
-            <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-              Wait For Approval
-            </h2>
-            <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm text-blue-800">
-                <strong>Current Status:</strong> {status === 'P' ? 'Pending' : status === 'R' ? 'Rejected' : 'Under Review'}
-              </p>
-            </div>
-
-            <div className="mt-8">
-              <p className="text-sm text-gray-500 mb-4">
-                If you have any questions, please contact our support team.
-              </p>
-
-              <Link
-                className="inline-flex items-center justify-center w-full px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors cursor-pointer"
-                href={logout()}
-                as="button"
-                onClick={handleLogout}
-                data-test="logout-button">
-                Go Back To Login
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  )
+            <StatePanel
+                tone={rejected ? 'danger' : 'warning'}
+                icon={
+                    rejected ? (
+                        <XCircle strokeWidth={1.8} />
+                    ) : (
+                        <Hourglass strokeWidth={1.8} />
+                    )
+                }
+                badge={
+                    rejected ? (
+                        <StatusBadge status="rejected" />
+                    ) : (
+                        <StatusBadge
+                            status="pending"
+                            label={t('Pending approval')}
+                        />
+                    )
+                }
+                title={
+                    rejected
+                        ? t('Your account was not approved')
+                        : t('Your account is under review')
+                }
+                description={
+                    <>
+                        <p>
+                            {rejected
+                                ? t(
+                                      'The network did not approve this account, so you cannot open the workspace.',
+                                  )
+                                : t(
+                                      "The network reviews new partners before they can start. We'll email you as soon as you're in.",
+                                  )}
+                        </p>
+                        <p className="mt-2">
+                            {t(
+                                'If you have any questions, please contact our support team.',
+                            )}
+                        </p>
+                    </>
+                }
+                actions={
+                    <Button variant="soft" tone="brand" asChild>
+                        <Link
+                            href={logout()}
+                            as="button"
+                            onClick={() => {
+                                cleanup();
+                                router.flushAll();
+                            }}
+                        >
+                            <LogOut aria-hidden="true" />
+                            {t('Back to sign in')}
+                        </Link>
+                    </Button>
+                }
+            />
+        </AuthLayout>
+    );
 }
-
-export default WaitForApproval

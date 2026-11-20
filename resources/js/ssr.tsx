@@ -13,7 +13,11 @@ createServer((page) =>
         resolve: (name) =>
             resolvePageComponent(
                 `./pages/${name}.tsx`,
-                import.meta.glob('./pages/**/*.tsx'),
+                // Page tests live beside pages; keep them out of the build.
+                import.meta.glob([
+                    './pages/**/*.tsx',
+                    '!./pages/**/*.test.tsx',
+                ]),
             ),
         setup: ({ App, props }) => {
             return <App {...props} />;

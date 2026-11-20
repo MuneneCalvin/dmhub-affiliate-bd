@@ -3,8 +3,9 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Spatie\Permission\PermissionRegistrar;
 
 class RolePermsSeeder extends Seeder
 {
@@ -22,16 +23,21 @@ class RolePermsSeeder extends Seeder
 
         foreach ($roles as $role) {
             DB::table('roles')->updateOrInsert(
-                ['name' => $role['name']],
+                ['name' => $role['name'], 'guard_name' => $role['guard_name']],
                 [
                     'guard_name' => $role['guard_name'],
                     'created_at' => Carbon::now(),
-                    'updated_at' => Carbon::now()
+                    'updated_at' => Carbon::now(),
                 ]
             );
         }
         // PERMISSIONS
         $permissions = [
+            ['name' => 'manage_funding', 'guard_name' => 'web'],
+            ['name' => 'review_commissions', 'guard_name' => 'web'],
+            ['name' => 'manage_fraud_rules', 'guard_name' => 'web'],
+            ['name' => 'adjust_commissions', 'guard_name' => 'web'],
+            ['name' => 'view_financial_ledger', 'guard_name' => 'web'],
             // ----- Super Admin Permissions -----
             // Platform & Network Management
             ['name' => 'access_admin_dashboard', 'guard_name' => 'web'],
@@ -81,6 +87,7 @@ class RolePermsSeeder extends Seeder
             ['name' => 'create_campaigns', 'guard_name' => 'web'],
             ['name' => 'manage_campaigns', 'guard_name' => 'web'],
             ['name' => 'view_campaigns', 'guard_name' => 'web'],
+            ['name' => 'manage_leads', 'guard_name' => 'web'],
             ['name' => 'set_campaign_budgets', 'guard_name' => 'web'],
             ['name' => 'generate_tracking_links', 'guard_name' => 'web'],
             // Creatives
@@ -111,22 +118,23 @@ class RolePermsSeeder extends Seeder
             ['name' => 'manage_publisher_sites', 'guard_name' => 'web'],
             ['name' => 'view_account_balance', 'guard_name' => 'web'],
 
-            ['name' => 'view_embeded_scripts', 'guard_name' => 'web']
+            ['name' => 'view_embeded_scripts', 'guard_name' => 'web'],
         ];
 
         foreach ($permissions as $perm) {
             DB::table('permissions')->updateOrInsert(
-                ['name' => $perm['name']],
+                ['name' => $perm['name'], 'guard_name' => $perm['guard_name']],
                 [
                     'guard_name' => $perm['guard_name'],
                     'created_at' => Carbon::now(),
-                    'updated_at' => Carbon::now()
+                    'updated_at' => Carbon::now(),
                 ]
             );
         }
         // ROLE-PERMISSION MAPPINGS
         $rolePermissionsMap = [
             'super_admin' => [
+                'manage_funding', 'review_commissions', 'adjust_commissions', 'view_financial_ledger', 'manage_fraud_rules',
 
                 // Full platform access
                 'access_admin_dashboard',
@@ -164,9 +172,9 @@ class RolePermsSeeder extends Seeder
 
                 // Advertiser permissions
                 // 'access_advertiser_dashboard',
-                // 'create_campaigns',
-                // 'manage_campaigns',
-                // 'view_campaigns',
+                'create_campaigns',
+                'manage_campaigns',
+                'view_campaigns',
                 // 'set_campaign_budgets',
                 'upload_creatives',
                 'manage_creatives',
@@ -192,10 +200,18 @@ class RolePermsSeeder extends Seeder
                 'view_account_balance',
 
                 // approve network invoice
-                'approve_network_invoices'
+                'approve_network_invoices',
             ],
 
             'network_owner' => [
+                'review_commissions', 'adjust_commissions', 'view_financial_ledger', 'manage_fraud_rules',
+                'view_conversions',
+                // Network campaign directory (tenant-scoped, read-only).
+                'view_campaigns',
+                'manage_leads',
+                // Promotional materials within the network's campaigns.
+                'upload_creatives',
+                'manage_creatives',
                 // Network dashboard & config
                 'access_network_dashboard',
                 'configure_network',
@@ -228,12 +244,14 @@ class RolePermsSeeder extends Seeder
             ],
 
             'advertiser' => [
+                'view_conversions',
                 // Dashboard
                 'access_advertiser_dashboard',
                 // Campaigns
                 'create_campaigns',
                 'manage_campaigns',
                 'view_campaigns',
+                'manage_leads',
                 'set_campaign_budgets',
                 'generate_tracking_links',
                 // Creatives
@@ -242,8 +260,10 @@ class RolePermsSeeder extends Seeder
                 // Analytics
                 'view_campaign_performance',
                 'view_advertiser_reports',
-                // View offers to link campaigns
+                // Advertisers create and manage offers within their own campaigns.
                 'view_offers',
+                'create_offers',
+                'manage_offers',
                 // 'view_embeded_scripts'
             ],
 
@@ -269,21 +289,21 @@ class RolePermsSeeder extends Seeder
                 'manage_publisher_account',
                 'manage_publisher_sites',
                 'view_account_balance',
-                'view_embeded_scripts'
+                'view_embeded_scripts',
             ],
         ];
 
         foreach ($rolePermissionsMap as $roleName => $permissionsList) {
-            $role = DB::table('roles')->where('name', $roleName)->first();
+            $role = DB::table('roles')->where('name', $roleName)->where('guard_name', 'web')->first();
 
-            if (!$role) {
+            if (! $role) {
                 continue;
             }
 
             foreach ($permissionsList as $permName) {
-                $perm = DB::table('permissions')->where('name', $permName)->first();
+                $perm = DB::table('permissions')->where('name', $permName)->where('guard_name', 'web')->first();
 
-                if (!$perm) {
+                if (! $perm) {
                     continue;
                 }
 
@@ -306,11 +326,11 @@ class RolePermsSeeder extends Seeder
             'is_publisher' => 'publisher',
         ];
 
-        $users = DB::table('users')->get();
+        $users = DB::table('users')->whereNull('closed_at')->where('status', '!=', 'C')->get();
         foreach ($users as $user) {
             foreach ($roleMapping as $flag => $roleName) {
                 if ($user->$flag) {
-                    $role = DB::table('roles')->where('name', $roleName)->first();
+                    $role = DB::table('roles')->where('name', $roleName)->where('guard_name', 'web')->first();
                     if ($role) {
                         DB::table('user_roles')->updateOrInsert(
                             [
@@ -326,5 +346,6 @@ class RolePermsSeeder extends Seeder
                 }
             }
         }
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 }

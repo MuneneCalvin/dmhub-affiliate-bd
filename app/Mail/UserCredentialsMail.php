@@ -14,20 +14,22 @@ class UserCredentialsMail extends Mailable
     use Queueable, SerializesModels;
 
     public User $user;
-    public string $password;
+
+    public string $setupUrl;
+
     public ?string $networkName;
 
-    public function __construct(User $user, string $password, ?string $networkName = null)
+    public function __construct(User $user, string $setupUrl, ?string $networkName = null)
     {
         $this->user = $user;
-        $this->password = $password;
+        $this->setupUrl = $setupUrl;
         $this->networkName = $networkName;
     }
 
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Your Account Credentials',
+            subject: 'Set up your account',
         );
     }
 
@@ -37,9 +39,9 @@ class UserCredentialsMail extends Mailable
             markdown: 'emails.user-credentials',
             with: [
                 'user' => $this->user,
-                'password' => $this->password,
                 'networkName' => $this->networkName,
-                'loginUrl' => config('app.url') . '/login',
+                'setupUrl' => $this->setupUrl,
+                'expiresInMinutes' => config('auth.passwords.users.expire'),
             ],
         );
     }

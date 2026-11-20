@@ -13,11 +13,11 @@ class CommissionTypesSeeder extends Seeder
     public function run(): void
     {
         $types = [
-            ['name' => 'CPL', 'nice_name' => 'Cost Per Lead'],   
-            ['name' => 'CPA', 'nice_name' => 'Cost Per Action'],     
-            ['name' => 'CPS', 'nice_name' => 'Cost Per Sale'],      
-            ['name' => 'RevShare', 'nice_name' => 'Revenue Share'], 
-            ['name' => 'Flat', 'nice_name' => 'Flat Rate'],    
+            ['name' => 'CPL', 'nice_name' => 'Cost Per Submission'],
+            ['name' => 'CPA', 'nice_name' => 'Cost Per Action'],
+            ['name' => 'CPS', 'nice_name' => 'Cost Per Sale'],
+            ['name' => 'RevShare', 'nice_name' => 'Revenue Share'],
+            ['name' => 'Flat', 'nice_name' => 'Flat Rate'],
         ];
 
         foreach ($types as $type) {

@@ -1,164 +1,339 @@
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { InfoCardSkeleton, ReusablePageTitle } from '@/dev/core';
-import AppLayout from '@/layouts/app-layout';
-import publisher from '@/routes/publisher';
-import { BreadcrumbItem, PublisherEarning, PublisherPayoutRequest } from '@/types';
-import { formatCurrency } from '@/utils/utils';
-import { Head, useForm, usePage } from '@inertiajs/react';
-import { DollarSign, AlertTriangle, FileText } from 'lucide-react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { Coins, FilePlus2, Info, ListChecks, ReceiptText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-const InvoiceCreate = () => {
+import { EmptyState, PageHeader, SectionCard } from '@/components/app';
+import {
+    lineAmount,
+    useFormatMoney,
+    type PayoutRequest,
+} from '@/components/finance';
+import { FormErrors } from '@/components/finance-form-controls';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { RadioCard, RadioCardGroup } from '@/components/ui/radio-card';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
+import AppLayout from '@/layouts/app-layout';
+import { useDate } from '@/lib/format';
+import publisher from '@/routes/publisher';
+import { type PublisherEarning } from '@/types';
+
+const key = (group: { network_id: number; currency: string }) =>
+    `${group.network_id}:${group.currency}`;
+
+export default function InvoiceCreate() {
     const { t } = useTranslation();
+    const money = useFormatMoney();
+    const date = useDate();
     const { canRequest, earnings, payoutMethod } = usePage<{
-        canRequest: PublisherPayoutRequest;
+        canRequest: PayoutRequest;
         earnings: PublisherEarning[];
         payoutMethod: string | null;
     }>().props;
-
-    const { post, processing, errors } = useForm({
-        start_date: '',
-        end_date: '',
+    const first =
+        canRequest.groups.find((group) => group.can_request) ??
+        canRequest.groups[0];
+    const form = useForm({
+        currency: first?.currency ?? '',
+        network_id: first?.network_id ?? 0,
     });
+    const group = canRequest.groups.find(
+        (item) =>
+            item.currency === form.data.currency &&
+            item.network_id === form.data.network_id,
+    );
+    const selected = earnings.filter(
+        (earning) =>
+            earning.currency === form.data.currency &&
+            earning.network_id === form.data.network_id,
+    );
 
-    const breadcrumbs: BreadcrumbItem[] = [
-        {
-            title: t('Invoices'),
-            href: publisher.invoices.url(),
-        },
-        {
-            title: t('Request Payout'),
-            href: publisher.invoices.create.url(),
-        }
+    // Live totals in cents, for the selected currency and network only.
+    const grossCents = selected.reduce(
+        (sum, earning) => sum + Math.round(lineAmount(earning) * 100),
+        0,
+    );
+    const availableCents = Math.round(
+        Number(group?.available_amount ?? 0) * 100,
+    );
+    const recoveryCents = Math.max(0, grossCents - availableCents);
+    const currency = group?.currency ?? form.data.currency;
+
+    const breadcrumbs = [
+        { title: t('Invoices'), href: publisher.invoices.url() },
+        { title: t('Request Payout'), href: publisher.invoices.create.url() },
     ];
-
-    const totalAmount = earnings?.reduce((sum, e) => sum + parseFloat(e.amount), 0) || 0;
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        post(publisher.invoices.store.url());
-    };
 
     return (
         <AppLayout>
-            <Head title={t("Request Payout")} />
-            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4">
-                <ReusablePageTitle
-                    title={t("Request Payout")}
-                    description={t("Create an invoice for your accumulated earnings")}
+            <Head title={t('Request Payout')} />
+            <div className="workspace-page flex flex-col gap-6">
+                <PageHeader
+                    title={t('Request Payout')}
+                    description={t(
+                        'Invoice reviewed earnings in one currency from one liable network.',
+                    )}
                     breadcrumbs={breadcrumbs}
+                    icon={<FilePlus2 />}
+                    tone="finance"
                 />
-                {!canRequest?.can_request ? (
-                    <InfoCardSkeleton
-                        icon={<AlertTriangle className="h-5 w-5 text-yellow-600" />}
-                        title={t('Cannot Request Payout')}
-                        description={t('You have not reached the minimum payout threshold')}
-                        className="border-yellow-200 bg-yellow-50 dark:bg-yellow-950 dark:border-yellow-800" >
-                        <p className="text-yellow-800 dark:text-yellow-200">
-                            {t('Minimum payout threshold is')} <strong>{formatCurrency(canRequest?.min_payout || 0, 'USD')}</strong>.
-                            {t(' You have')} <strong>{formatCurrency(canRequest?.available_amount || 0, 'USD')}</strong> {t('available.')}
-                            {t(' You need')} <strong>{formatCurrency(canRequest?.remaining || 0, 'USD')}</strong> {t('more to request a payout.')}
-                        </p>
-                    </InfoCardSkeleton>
-                ) : (
-                    <div className="grid gap-6 lg:grid-cols-3">
-                        <InfoCardSkeleton
-                            icon={<DollarSign className="h-5 w-5" />}
-                            title={t('Payout Summary')}
-                            description={t('Review the earnings to be included in your payout request')}
-                            className="lg:col-span-2">
-                            <div className="mb-6 p-4 bg-green-50 dark:bg-green-950 rounded-lg">
-                                <p className="text-sm text-muted-foreground">{t('Total Amount')}</p>
-                                <p className="text-4xl font-bold text-green-600">{formatCurrency(totalAmount, 'USD')}</p>
-                                <p className="text-sm text-muted-foreground mt-1">
-                                    {earnings?.length || 0} {t('earnings to be included')}
-                                </p>
-                            </div>
-                            {earnings?.length > 0 ? (
-                                <div className="overflow-x-auto max-h-96">
-                                    <table className="w-full text-sm">
-                                        <thead className="sticky top-0 bg-background">
-                                            <tr className="border-b">
-                                                <th className="text-left py-2 px-2">{t('Date')}</th>
-                                                <th className="text-left py-2 px-2">{t('Campaign')}</th>
-                                                <th className="text-left py-2 px-2">{t('Lead')}</th>
-                                                <th className="text-left py-2 px-2">{t('Type')}</th>
-                                                <th className="text-right py-2 px-2">{t('Amount')}</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {earnings?.map((earning) => (
-                                                <tr key={earning?.id} className="border-b">
-                                                    <td className="py-2 px-2 text-xs">
-                                                        {new Date(earning?.created_at).toLocaleDateString()}
-                                                    </td>
-                                                    <td className="py-2 px-2 text-xs">
-                                                        {earning?.publisher_campaign?.campaign?.name || 'N/A'}
-                                                    </td>
-                                                    <td className="py-2 px-2 text-xs">
-                                                        {earning?.lead?.email || 'N/A'}
-                                                    </td>
-                                                    <td className="py-2 px-2">
-                                                        <Badge variant="outline" className="text-xs">
-                                                            {earning?.commission_type}
-                                                        </Badge>
-                                                    </td>
-                                                    <td className="py-2 px-2 text-right font-semibold text-green-600">
-                                                        {formatCurrency(parseFloat(earning?.amount), 'USD')}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            ) : (
-                                <p className="text-muted-foreground">{t('No earnings available for payout')}</p>
+                {!first ? (
+                    <section className="rounded-card border border-border bg-surface shadow-card">
+                        <EmptyState
+                            icon={<Coins />}
+                            tone="finance"
+                            title={t('Nothing to invoice yet')}
+                            description={t(
+                                'No approved earnings are available. Pending earnings require financial review.',
                             )}
-                        </InfoCardSkeleton>
+                            action={
+                                <Button variant="secondary" asChild>
+                                    <Link href={publisher.earnings.url()}>
+                                        {t('My earnings')}
+                                    </Link>
+                                </Button>
+                            }
+                        />
+                    </section>
+                ) : (
+                    <form
+                        className="flex flex-wrap items-start gap-[18px]"
+                        onSubmit={(event) => {
+                            event.preventDefault();
+                            form.post(publisher.invoices.store.url());
+                        }}
+                    >
+                        <div className="flex min-w-0 flex-[3_1_560px] flex-col gap-[18px]">
+                            <SectionCard
+                                title={t('Currency and liable network')}
+                                description={t(
+                                    'Each invoice covers one currency at one network.',
+                                )}
+                                icon={<Coins />}
+                                tone="finance"
+                            >
+                                <RadioCardGroup
+                                    name="payout-group"
+                                    label={t('Currency and liable network')}
+                                    value={key(form.data)}
+                                    onValueChange={(value) => {
+                                        const [network, code] =
+                                            value.split(':');
+                                        form.setData({
+                                            network_id: Number(network),
+                                            currency: code,
+                                        });
+                                    }}
+                                >
+                                    {canRequest.groups.map((item) => (
+                                        <RadioCard
+                                            key={key(item)}
+                                            value={key(item)}
+                                            tone="finance"
+                                            title={`${item.currency} · ${
+                                                item.network_name ??
+                                                `${t('Network')} ${item.network_id}`
+                                            }`}
+                                            hint={
+                                                item.can_request
+                                                    ? t(
+                                                          '{{amount}} available',
+                                                          {
+                                                              amount: money(
+                                                                  item.available_amount,
+                                                                  item.currency,
+                                                              ),
+                                                          },
+                                                      )
+                                                    : t(
+                                                          '{{amount}} available · {{remaining}} below the minimum',
+                                                          {
+                                                              amount: money(
+                                                                  item.available_amount,
+                                                                  item.currency,
+                                                              ),
+                                                              remaining: money(
+                                                                  item.remaining,
+                                                                  item.currency,
+                                                              ),
+                                                          },
+                                                      )
+                                            }
+                                        />
+                                    ))}
+                                </RadioCardGroup>
+                            </SectionCard>
 
-                        <InfoCardSkeleton
-                            icon={<FileText className="h-5 w-5" />}
-                            title={t('Request Invoice')}
-                            description={t('Submit your payout request')}>
-                            <form onSubmit={handleSubmit} className="space-y-4">
+                            <SectionCard
+                                title={t('Included Earnings')}
+                                description={t(
+                                    'All approved earnings for the selected currency and network are included. Outstanding refund recoveries are deducted.',
+                                )}
+                                icon={<ListChecks />}
+                                tone="finance"
+                                flush
+                            >
+                                <Table className="min-w-[560px]">
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead className="pl-[22px]">
+                                                {t('Campaign')}
+                                            </TableHead>
+                                            <TableHead>{t('Type')}</TableHead>
+                                            <TableHead>{t('Date')}</TableHead>
+                                            <TableHead className="pr-[22px] text-right">
+                                                {t('Net commission')}
+                                            </TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {selected.map((earning) => (
+                                            <TableRow key={earning.id}>
+                                                <TableCell className="pl-[22px]">
+                                                    <strong className="block">
+                                                        {earning
+                                                            .publisher_campaign
+                                                            ?.campaign?.name ??
+                                                            '—'}
+                                                    </strong>
+                                                    {earning.publisher_campaign
+                                                        ?.offer?.name && (
+                                                        <span className="block text-xs text-ink-muted">
+                                                            {
+                                                                earning
+                                                                    .publisher_campaign
+                                                                    .offer.name
+                                                            }
+                                                        </span>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell className="text-ink-muted">
+                                                    {earning.commission_type}
+                                                </TableCell>
+                                                <TableCell className="text-ink-muted">
+                                                    {date(earning.created_at)}
+                                                </TableCell>
+                                                <TableCell className="pr-[22px] text-right font-bold tabular-nums">
+                                                    {money(
+                                                        lineAmount(earning),
+                                                        earning.currency ??
+                                                            currency,
+                                                    )}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </SectionCard>
+                        </div>
+
+                        <SectionCard
+                            title={t('Invoice summary')}
+                            icon={<ReceiptText />}
+                            tone="finance"
+                            className="flex-[1_1_300px] lg:sticky lg:top-24"
+                        >
+                            <dl
+                                aria-live="polite"
+                                className="grid grid-cols-[1fr_auto] gap-2 text-sm"
+                            >
+                                <dt className="text-ink-muted">
+                                    {t('{{count}} earnings', {
+                                        count: selected.length,
+                                    })}
+                                </dt>
+                                <dd className="text-right tabular-nums">
+                                    {money(grossCents / 100, currency)}
+                                </dd>
+                                {recoveryCents > 0 && (
+                                    <>
+                                        <dt className="text-ink-muted">
+                                            {t('Outstanding refund recoveries')}
+                                        </dt>
+                                        <dd className="text-right tabular-nums">
+                                            −
+                                            {money(
+                                                recoveryCents / 100,
+                                                currency,
+                                            )}
+                                        </dd>
+                                    </>
+                                )}
+                                <dt className="border-t border-border pt-2.5 font-extrabold">
+                                    {t('Available after refund recoveries')}
+                                </dt>
+                                <dd className="border-t border-border pt-1.5 text-right text-[22px] font-extrabold text-brand-ink tabular-nums">
+                                    {money(availableCents / 100, currency)}
+                                </dd>
+                                {group && (
+                                    <>
+                                        <dt className="text-ink-muted">
+                                            {t('Minimum payout')}
+                                        </dt>
+                                        <dd className="text-right tabular-nums">
+                                            {money(group.threshold, currency)}
+                                        </dd>
+                                    </>
+                                )}
                                 {payoutMethod && (
-                                    <div>
-                                        <p className="text-sm text-muted-foreground">{t('Payout Method')}</p>
-                                        <p className="font-semibold">{payoutMethod}</p>
-                                    </div>
+                                    <>
+                                        <dt className="text-ink-muted">
+                                            {t('Payout method')}
+                                        </dt>
+                                        <dd className="text-right">
+                                            {payoutMethod}
+                                        </dd>
+                                    </>
                                 )}
-
-                                <div className="p-4 bg-muted rounded-lg">
-                                    <p className="text-sm text-muted-foreground mb-2">{t('What happens next?')}</p>
-                                    <ol className="text-sm space-y-1 list-decimal list-inside">
-                                        <li>{t('Invoice is created and sent for review')}</li>
-                                        <li>{t('Network admin reviews and approves')}</li>
-                                        <li>{t('Payment is processed')}</li>
-                                    </ol>
-                                </div>
-
-                                {errors?.start_date && (
-                                    <p className="text-sm text-red-500">{errors.start_date}</p>
-                                )}
-                                {errors?.end_date && (
-                                    <p className="text-sm text-red-500">{errors.end_date}</p>
-                                )}
-
+                            </dl>
+                            {group && !group.can_request && (
+                                <Alert
+                                    variant="warning"
+                                    role="note"
+                                    className="mt-4"
+                                >
+                                    <Info />
+                                    <AlertDescription>
+                                        {t(
+                                            'This balance is below the minimum payout. Choose another currency or wait for more approved earnings.',
+                                        )}
+                                    </AlertDescription>
+                                </Alert>
+                            )}
+                            <div className="mt-4 flex flex-col gap-3">
+                                <FormErrors errors={form.errors} />
                                 <Button
+                                    disabled={
+                                        form.processing || !group?.can_request
+                                    }
                                     type="submit"
                                     className="w-full"
-                                    disabled={processing || !earnings?.length}>
-                                    <DollarSign className="h-4 w-4 mr-1" />
-                                    {processing ? t('Creating...') : t('Request Payout')} ({formatCurrency(totalAmount, 'USD')})
+                                >
+                                    {form.processing
+                                        ? t('Creating…')
+                                        : t('Request Payout')}
                                 </Button>
-                            </form>
-                        </InfoCardSkeleton>
-                    </div>
+                                <Button
+                                    variant="secondary"
+                                    asChild
+                                    className="w-full"
+                                >
+                                    <Link href={publisher.invoices.url()}>
+                                        {t('Cancel')}
+                                    </Link>
+                                </Button>
+                            </div>
+                        </SectionCard>
+                    </form>
                 )}
             </div>
         </AppLayout>
     );
-};
-
-export default InvoiceCreate;
+}

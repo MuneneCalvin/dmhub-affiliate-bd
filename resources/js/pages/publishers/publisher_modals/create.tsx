@@ -1,42 +1,49 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState } from 'react';
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2 } from 'lucide-react';
-import { useLanguage } from '@/context/language-context';
-import { useForm as useInertiaForm } from '@inertiajs/react';
-import { TPublisherOnboardingTypes } from '@/types/schema_types';
 import {
-    ReusableEmailInput,
-    ReusableSearchSelect,
-    ReusableTextInput
-} from '@/dev/core';
-import { PublisherPagesTypes, TCurrency, TNetwork } from '@/types';
-import { usePage } from '@inertiajs/react';
-import { publisherSchema } from '@/utils/form-schema';
+    EmailField,
+    SearchSelect,
+    TextField,
+} from '@/components/app/form-controls';
+import { Button } from '@/components/ui/button';
+import {
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { useLanguage } from '@/context/language-context';
 import { store } from '@/routes/publishers';
+import { PublisherPagesTypes, TCurrency, TNetwork } from '@/types';
+import { TPublisherOnboardingTypes } from '@/types/schema_types';
+import { publisherSchema } from '@/utils/form-schema';
+import { useForm as useInertiaForm, usePage } from '@inertiajs/react';
+import { ArrowLeft, Loader2, Newspaper } from 'lucide-react';
+import React, { useState } from 'react';
 
 const CreatePublisherForm = ({
     handleDialogContextSwitch,
 }: {
-    handleDialogContextSwitch: any
+    handleDialogContextSwitch: any;
 }) => {
     const [step, setStep] = useState<1 | 2 | 3>(1);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const { __ } = useLanguage();
-    const { networks, currencies, extingNetwork } = usePage<PublisherPagesTypes>().props;
+    const { networks, currencies, extingNetwork } =
+        usePage<PublisherPagesTypes>().props;
 
-    const { data, setData, post, processing } = useInertiaForm<TPublisherOnboardingTypes>({
-        business_name: "",
-        website_name: "",
-        industry: "",
-        coc_number: "",
-        first_name: "",
-        last_name: "",
-        email: "",
-        title: "",
-        currency_code: extingNetwork?.network?.default_currency ?? "",
-        network_id: extingNetwork ? String(extingNetwork?.network_id) : "",
-    });
+    const { data, setData, post, processing } =
+        useInertiaForm<TPublisherOnboardingTypes>({
+            business_name: '',
+            website_name: '',
+            industry: '',
+            coc_number: '',
+            first_name: '',
+            last_name: '',
+            email: '',
+            title: '',
+            currency_code: extingNetwork?.network?.default_currency ?? '',
+            network_id: extingNetwork ? String(extingNetwork?.network_id) : '',
+        });
     const validateStepOne = () => {
         const partialSchema = publisherSchema.pick({
             business_name: true,
@@ -120,192 +127,213 @@ const CreatePublisherForm = ({
             <form className="w-full space-y-10" onSubmit={handleSubmit}>
                 {step === 1 && (
                     <div className="space-y-8">
-                        <div className="space-y-2">
-                            <h3 className="text-xl font-semibold">{__("Business Details")}</h3>
-                            <p className="text-sm text-muted-foreground">
-                                {__("Provide accurate business information.")}
-                            </p>
-                        </div>
+                        <DialogHeader icon={<Newspaper />} tone="partners">
+                            <DialogTitle>{__('Business Details')}</DialogTitle>
+                            <DialogDescription>
+                                {__('Provide accurate business information.')}
+                            </DialogDescription>
+                        </DialogHeader>
 
                         <div className="space-y-6">
-                            <ReusableTextInput
+                            <TextField
                                 id="business_name"
-                                label={__("Business Name")}
+                                label={__('Business Name')}
                                 required
                                 value={data.business_name}
-                                placeholder={__("Publisher LLC")}
-                                onChange={(value) => setData("business_name", value)}
+                                placeholder={__('Publisher LLC')}
+                                onChange={(value) =>
+                                    setData('business_name', value)
+                                }
                                 error={errors.business_name}
                             />
 
-                            <ReusableTextInput
+                            <TextField
                                 id="website_name"
-                                label={__("Website URL")}
+                                label={__('Website URL')}
                                 required
-                                type='url'
+                                type="url"
                                 value={data.website_name}
-                                placeholder={__("https://www.example.com")}
-                                onChange={(value) => setData("website_name", value)}
+                                placeholder={__('https://www.example.com')}
+                                onChange={(value) =>
+                                    setData('website_name', value)
+                                }
                                 error={errors.website_name}
                             />
 
-                            <ReusableTextInput
+                            <TextField
                                 id="industry"
-                                label={__("Industry")}
+                                label={__('Industry')}
                                 required
                                 value={data.industry}
-                                placeholder={__("Finance, E-commerce, etc")}
-                                onChange={(value) => setData("industry", value)}
+                                placeholder={__('Finance, E-commerce, etc')}
+                                onChange={(value) => setData('industry', value)}
                                 error={errors.industry}
                             />
 
-                            <ReusableTextInput
+                            <TextField
                                 id="coc_number"
-                                label={__("Chamber Of Commerce Number")}
+                                label={__('Chamber Of Commerce Number')}
                                 required
                                 value={data.coc_number}
-                                placeholder={__("e.g. SB1234567")}
-                                onChange={(value) => setData("coc_number", value)}
+                                placeholder={__('e.g. SB1234567')}
+                                onChange={(value) =>
+                                    setData('coc_number', value)
+                                }
                                 error={errors.coc_number}
                             />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-6 pt-4">
-                            <Button variant="outline" disabled className="w-full">
-                                <ArrowLeft className="h-4 w-4 mr-2" />
-                                {__("Back")}
+                        <DialogFooter>
+                            <Button type="button" onClick={handleNextToStep2}>
+                                {__('Next')}
                             </Button>
-
-                            <Button type="button" className="w-full" onClick={handleNextToStep2}>
-                                {__("Next")}
-                            </Button>
-                        </div>
+                        </DialogFooter>
                     </div>
                 )}
 
                 {/* Step 2: Personal Information */}
                 {step === 2 && (
                     <div className="space-y-8">
-                        <div className="space-y-2">
-                            <h3 className="text-xl font-semibold">{__("Personal Information")}</h3>
-                            <p className="text-sm text-muted-foreground">
-                                {__("Enter personal details for the publisher account.")}
-                            </p>
-                        </div>
+                        <DialogHeader icon={<Newspaper />} tone="partners">
+                            <DialogTitle>
+                                {__('Personal Information')}
+                            </DialogTitle>
+                            <DialogDescription>
+                                {__(
+                                    'Enter personal details for the publisher account.',
+                                )}
+                            </DialogDescription>
+                        </DialogHeader>
 
                         <div className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <ReusableTextInput
+                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                                <TextField
                                     id="first_name"
-                                    label={__("First Name")}
+                                    label={__('First Name')}
                                     required
                                     value={data.first_name}
-                                    placeholder={__("John")}
-                                    onChange={(value) => setData("first_name", value)}
+                                    placeholder={__('John')}
+                                    onChange={(value) =>
+                                        setData('first_name', value)
+                                    }
                                     error={errors.first_name}
                                 />
-                                <ReusableTextInput
+                                <TextField
                                     id="last_name"
-                                    label={__("Last Name")}
+                                    label={__('Last Name')}
                                     required
                                     value={data.last_name}
-                                    placeholder={__("Doe")}
-                                    onChange={(value) => setData("last_name", value)}
+                                    placeholder={__('Doe')}
+                                    onChange={(value) =>
+                                        setData('last_name', value)
+                                    }
                                     error={errors.last_name}
                                 />
                             </div>
 
-                            <ReusableEmailInput
+                            <EmailField
                                 id="email"
-                                label={__("Email Address")}
+                                label={__('Email Address')}
                                 required
                                 value={data.email}
-                                placeholder={__("john.doe@example.com")}
-                                onChange={(value) => setData("email", value)}
+                                placeholder={__('john.doe@example.com')}
+                                onChange={(value) => setData('email', value)}
                                 error={errors.email}
                             />
 
-                            <p className="text-sm text-muted-foreground">
-                                {__("Login credentials will be sent to this email after creation.")}
+                            <p className="text-sm text-ink-muted">
+                                {__(
+                                    'Login credentials will be sent to this email after creation.',
+                                )}
                             </p>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-6 pt-4">
+                        <DialogFooter>
                             <Button
                                 type="button"
-                                variant="outline"
-                                className="w-full"
-                                onClick={() => setStep(1)}>
-                                <ArrowLeft className="h-4 w-4 mr-2" />
-                                {__("Back")}
+                                variant="secondary"
+                                onClick={() => setStep(1)}
+                            >
+                                <ArrowLeft />
+                                {__('Back')}
                             </Button>
 
-                            <Button type="button" className="w-full" onClick={handleNextToStep3}>
-                                {__("Next")}
+                            <Button type="button" onClick={handleNextToStep3}>
+                                {__('Next')}
                             </Button>
-                        </div>
+                        </DialogFooter>
                     </div>
                 )}
 
                 {/* Step 3: Network & Other Details */}
                 {step === 3 && (
                     <div className="space-y-8">
-                        <div className="space-y-2">
-                            <h3 className="text-xl font-semibold">{__("Network & Settings")}</h3>
-                            <p className="text-sm text-muted-foreground">
-                                {__("Assign network and configure settings.")}
-                            </p>
-                        </div>
+                        <DialogHeader icon={<Newspaper />} tone="partners">
+                            <DialogTitle>
+                                {__('Network & Settings')}
+                            </DialogTitle>
+                            <DialogDescription>
+                                {__('Assign network and configure settings.')}
+                            </DialogDescription>
+                        </DialogHeader>
 
                         <div className="space-y-6">
-                            <ReusableSearchSelect
+                            <SearchSelect
                                 id="network_id"
-                                label={__("Network")}
+                                label={__('Network')}
                                 required
-                                data={networkOptions}
-                                placeholder={__("Select Network")}
+                                options={networkOptions}
+                                placeholder={__('Select Network')}
                                 value={String(data.network_id)}
-                                onChange={(value) => value && setData("network_id", String(value))}
+                                onChange={(value) =>
+                                    value &&
+                                    setData('network_id', String(value))
+                                }
                                 error={errors.network_id}
                             />
 
-                            <ReusableSearchSelect
+                            <SearchSelect
                                 id="currency_code"
-                                label={__("Default Currency")}
+                                label={__('Default Currency')}
                                 required
-                                data={curOptions}
-                                placeholder={__("Select Default Currency")}
+                                options={curOptions}
+                                placeholder={__('Select Default Currency')}
                                 value={String(data.currency_code)}
-                                onChange={(value) => value && setData("currency_code", String(value))}
+                                onChange={(value) =>
+                                    value &&
+                                    setData('currency_code', String(value))
+                                }
                                 error={errors.currency_code}
                             />
 
-                            <ReusableTextInput
+                            <TextField
                                 id="title"
-                                label={__("Title")}
+                                label={__('Title')}
                                 value={data.title}
-                                placeholder={__("Publisher")}
-                                onChange={(value) => setData("title", value)}
+                                placeholder={__('Publisher')}
+                                onChange={(value) => setData('title', value)}
                                 error={errors.title}
                             />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-6 pt-4">
+                        <DialogFooter>
                             <Button
                                 type="button"
-                                variant="outline"
-                                className="w-full"
+                                variant="secondary"
                                 onClick={() => setStep(2)}
-                                disabled={processing}>
-                                <ArrowLeft className="h-4 w-4 mr-2" />
-                                {__("Back")}
+                                disabled={processing}
+                            >
+                                <ArrowLeft />
+                                {__('Back')}
                             </Button>
 
-                            <Button type="submit" className="w-full" disabled={processing}>
-                                {processing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                {__("Submit")}
+                            <Button type="submit" disabled={processing}>
+                                {processing && (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                )}
+                                {__('Submit')}
                             </Button>
-                        </div>
+                        </DialogFooter>
                     </div>
                 )}
             </form>

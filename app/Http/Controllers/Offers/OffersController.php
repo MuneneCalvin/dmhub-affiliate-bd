@@ -8,6 +8,8 @@ use App\Models\CommissionType;
 use App\Models\Offer;
 use App\Models\OfferCommission;
 use App\Models\PublisherCampaigns;
+use App\Support\MediaStorage;
+use App\Support\TrackingUrlTemplate;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -32,25 +34,27 @@ class OffersController extends Controller
     {
         return [
             'name' => 'required|string|max:255',
+            'offer_status' => 'sometimes|in:A,I,P',
             'commission_type_1' => 'nullable|exists:commission_types,id',
             'commission_type_2' => 'nullable|exists:commission_types,id',
-            'commission_value_1' => 'nullable|numeric|min:0',
-            'commission_value_2' => 'nullable|numeric|min:0',
+            'commission_value_1' => 'required_with:commission_type_1|nullable|numeric|min:0',
+            'commission_value_2' => 'required_with:commission_type_2|nullable|numeric|min:0',
             'minimum_payout' => 'nullable|numeric|min:0',
             'conversion_window_hours' => 'nullable|integer|min:0',
             'click_cookie_lifetime_hours' => 'nullable|integer|min:0',
             'preview_url' => 'nullable|url:http,https|max:2048',
-            'thumbnail_url' => 'nullable|url:http,https|max:2048',
+            'thumbnail' => 'nullable|image|mimes:jpg,jpeg,png,gif,webp|max:10240',
         ];
     }
 
     public function index($id)
     {
-        Campaign::visibleTo(auth()->user())->findOrFail($id);
+        $campaign = Campaign::visibleTo(auth()->user())->findOrFail($id);
 
         return inertia('advertisercampaigns/offers/index', [
             'commissions' => CommissionType::all(),
             'id' => $id,
+            'campaign' => ['id' => $campaign->id, 'name' => $campaign->name, 'currency' => $campaign->currency],
         ]);
     }
 
@@ -58,13 +62,15 @@ class OffersController extends Controller
     {
         $this->authorizeOffer($offer);
         try {
-            $offer->load(['commissions.commissionType']);
+            $offer->load(['commissions.commissionType', 'campaign']);
+            $offer->setAttribute('currency', $offer->campaign->currency);
             $hasPublishers = PublisherCampaigns::where('offer_id', $offer->id)->exists();
 
             return inertia('advertisercampaigns/offers/show', [
                 'offer' => $offer,
                 'commissions' => CommissionType::all(),
                 'hasPublishers' => $hasPublishers,
+                'materials' => $offer->creatives()->latest()->paginate(12, ['*'], 'materials_page')->appends(['tab' => 'materials']),
             ]);
         } catch (Exception $e) {
             report($e);
@@ -76,7 +82,8 @@ class OffersController extends Controller
     public function edit(Offer $offer)
     {
         $this->authorizeOffer($offer);
-        $offer->load(['commissions.commissionType']);
+        $offer->load(['commissions.commissionType', 'campaign']);
+        $offer->setAttribute('currency', $offer->campaign->currency);
 
         return inertia('advertisercampaigns/offers/edit', [
             'offer' => $offer,
@@ -89,8 +96,13 @@ class OffersController extends Controller
         $this->authorizeOffer($offer);
         $request->validate($this->offerRules());
 
+        $thumbnailPath = null;
         try {
-            DB::transaction(function () use ($request, $offer) {
+            if ($request->hasFile('thumbnail')) {
+                $thumbnailPath = $request->file('thumbnail')->store('offers/thumbnails', MediaStorage::disk());
+                throw_unless($thumbnailPath, \RuntimeException::class, 'Could not store the offer thumbnail.');
+            }
+            DB::transaction(function () use ($request, $offer, $thumbnailPath) {
                 $offer->update([
                     'name' => $request->name,
                     'description' => $request->description,
@@ -103,12 +115,12 @@ class OffersController extends Controller
                     'allowed_traffic_sources' => $request->allowed_traffic_sources,
                     'prohibited_traffic_sources' => $request->prohibited_traffic_sources,
                     'preview_url' => $request->preview_url,
-                    'tracking_url_template' => $request->tracking_url_template,
-                    'thumbnail_url' => $request->thumbnail_url,
+                    'tracking_url_template' => TrackingUrlTemplate::fromLandingPage($request->preview_url),
+                    'thumbnail_url' => $thumbnailPath ? MediaStorage::url($thumbnailPath) : $offer->thumbnail_url,
                 ]);
                 OfferCommission::where('offer_id', $offer->id)->delete();
                 $commissions = [];
-                if (! empty($request->commission_type_1) && ! empty($request->commission_value_1)) {
+                if (! empty($request->commission_type_1) && $request->filled('commission_value_1')) {
                     $commissions[] = [
                         'offer_id' => $offer->id,
                         'commission_type_id' => $request->commission_type_1,
@@ -117,7 +129,7 @@ class OffersController extends Controller
                         'updated_at' => now(),
                     ];
                 }
-                if (! empty($request->commission_type_2) && ! empty($request->commission_value_2)) {
+                if (! empty($request->commission_type_2) && $request->filled('commission_value_2')) {
                     $commissions[] = [
                         'offer_id' => $offer->id,
                         'commission_type_id' => $request->commission_type_2,
@@ -131,8 +143,13 @@ class OffersController extends Controller
                 }
             });
 
-            return redirect()->route('advertiser.offers.show', $offer->id)->with('success', 'Offer updated successfully!');
+            return ($request->boolean('workspace')
+                ? redirect()->route('advertiser.campaign.show', ['id' => $offer->campaign_id, 'tab' => 'offers', 'offer' => $offer->id])
+                : redirect()->route('advertiser.offers.show', $offer->id))->with('success', 'Offer updated successfully!');
         } catch (Exception $e) {
+            if ($thumbnailPath) {
+                MediaStorage::delete($thumbnailPath);
+            }
             report($e);
 
             return redirect()->back()->with('error', 'Offer could not be updated.');
@@ -178,7 +195,6 @@ class OffersController extends Controller
         $this->authorizeOffer($offer);
         try {
             $offer->update(['offer_status' => 'I']);
-            PublisherCampaigns::where('offer_id', $offer->id)->update(['status' => 'I']);
 
             return back()->with('success', 'Offer deactivated successfully.');
         } catch (Exception $e) {
@@ -211,8 +227,13 @@ class OffersController extends Controller
         Campaign::visibleTo(auth()->user())->findOrFail($id);
         $request->validate($this->offerRules());
 
+        $thumbnailPath = null;
         try {
-            DB::transaction(function () use ($request, $id) {
+            if ($request->hasFile('thumbnail')) {
+                $thumbnailPath = $request->file('thumbnail')->store('offers/thumbnails', MediaStorage::disk());
+                throw_unless($thumbnailPath, \RuntimeException::class, 'Could not store the offer thumbnail.');
+            }
+            $offer = DB::transaction(function () use ($request, $id, $thumbnailPath) {
                 $campaign = Campaign::visibleTo(auth()->user())->findOrFail($id);
                 $offer = Offer::create([
                     'campaign_id' => $campaign->id,
@@ -228,11 +249,11 @@ class OffersController extends Controller
                     'allowed_traffic_sources' => $request->allowed_traffic_sources,
                     'prohibited_traffic_sources' => $request->prohibited_traffic_sources,
                     'preview_url' => $request->preview_url,
-                    'tracking_url_template' => $request->tracking_url_template,
-                    'thumbnail_url' => $request->thumbnail_url,
+                    'tracking_url_template' => TrackingUrlTemplate::fromLandingPage($request->preview_url),
+                    'thumbnail_url' => $thumbnailPath ? MediaStorage::url($thumbnailPath) : null,
                 ]);
                 $commissions = [];
-                if (! empty($request->commission_type_1) && ! empty($request->commission_value_1)) {
+                if (! empty($request->commission_type_1) && $request->filled('commission_value_1')) {
                     $commissions[] = [
                         'offer_id' => $offer->id,
                         'commission_type_id' => $request->commission_type_1,
@@ -241,7 +262,7 @@ class OffersController extends Controller
                         'updated_at' => now(),
                     ];
                 }
-                if (! empty($request->commission_type_2) && ! empty($request->commission_value_2)) {
+                if (! empty($request->commission_type_2) && $request->filled('commission_value_2')) {
                     $commissions[] = [
                         'offer_id' => $offer->id,
                         'commission_type_id' => $request->commission_type_2,
@@ -253,13 +274,21 @@ class OffersController extends Controller
                 if (! empty($commissions)) {
                     OfferCommission::insert($commissions);
                 }
+
+                return $offer;
             });
 
-            return redirect()->route('advertiser.campaign.show', [$id])->with('success', 'Successfully created!!');
+            return ($request->boolean('workspace')
+                ? redirect()->route('advertiser.campaign.show', ['id' => $offer->campaign_id, 'tab' => 'offers', 'offer' => $offer->id])
+                : redirect()->route('advertiser.offers.show', $offer->id))->with('success', 'Successfully created!!');
         } catch (Exception $e) {
+            if ($thumbnailPath) {
+                MediaStorage::delete($thumbnailPath);
+            }
             report($e);
 
-            return redirect()->route('advertiser.campaign.show', [$id])->with('error', 'Offer could not be created.');
+            return ($request->boolean('workspace') ? back() : redirect()->route('advertiser.offers.index', [$id]))
+                ->with('error', 'Offer could not be created.');
         }
     }
 }

@@ -1,14 +1,19 @@
-import React, { createContext, useContext, useEffect, useMemo, ReactNode } from 'react';
-import { usePage } from '@inertiajs/react';
 import {
+    clearPermissions,
+    hasAllPermissions,
+    hasAnyPermission,
+    hasPermission,
     Permission,
     savePermissions,
-    loadPermissions,
-    clearPermissions,
-    hasPermission,
-    hasAnyPermission,
-    hasAllPermissions,
 } from '@/utils/permissions';
+import { usePage } from '@inertiajs/react';
+import React, {
+    createContext,
+    ReactNode,
+    useContext,
+    useEffect,
+    useMemo,
+} from 'react';
 
 interface PermissionContextType {
     permissions: Permission[];
@@ -18,42 +23,44 @@ interface PermissionContextType {
     clearPermissions: () => void;
 }
 
-const PermissionContext = createContext<PermissionContextType | undefined>(undefined);
+const PermissionContext = createContext<PermissionContextType | undefined>(
+    undefined,
+);
 
 interface PermissionProviderProps {
     children: ReactNode;
 }
 
-export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children }) => {
+export const PermissionProvider: React.FC<PermissionProviderProps> = ({
+    children,
+}) => {
     // Get permissions from Inertia page props (server-provided)
-    const { auth } = usePage().props as { auth?: { permissions?: Permission[] } };
-    const serverPermissions = useMemo(() => auth?.permissions ?? [], [auth?.permissions]);
+    const { auth } = usePage().props as {
+        auth?: { permissions?: Permission[] };
+    };
+    const serverPermissions = useMemo(
+        () => auth?.permissions ?? [],
+        [auth?.permissions],
+    );
 
-    // On mount, sync server permissions to localStorage (only when we have valid server permissions)
+    // Never revive another account's cached grants after logout or revocation.
     useEffect(() => {
-        if (serverPermissions.length > 0) {
-            savePermissions(serverPermissions);
-        }
+        savePermissions(serverPermissions);
     }, [serverPermissions]);
-
-    // Use server permissions if available, otherwise fall back to localStorage
-    const permissions = useMemo(() => {
-        if (serverPermissions.length > 0) {
-            return serverPermissions;
-        }
-        // Fallback to cached permissions (useful during initial load or offline)
-        return loadPermissions() ?? [];
-    }, [serverPermissions]);
+    const permissions = serverPermissions;
 
     const value = useMemo<PermissionContextType>(
         () => ({
             permissions,
-            hasPermission: (permission: Permission) => hasPermission(permissions, permission),
-            hasAnyPermission: (perms: Permission[]) => hasAnyPermission(permissions, perms),
-            hasAllPermissions: (perms: Permission[]) => hasAllPermissions(permissions, perms),
+            hasPermission: (permission: Permission) =>
+                hasPermission(permissions, permission),
+            hasAnyPermission: (perms: Permission[]) =>
+                hasAnyPermission(permissions, perms),
+            hasAllPermissions: (perms: Permission[]) =>
+                hasAllPermissions(permissions, perms),
             clearPermissions,
         }),
-        [permissions]
+        [permissions],
     );
 
     return (
@@ -69,7 +76,9 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
 export const usePermissions = (): PermissionContextType => {
     const context = useContext(PermissionContext);
     if (!context) {
-        throw new Error('usePermissions must be used within a PermissionProvider');
+        throw new Error(
+            'usePermissions must be used within a PermissionProvider',
+        );
     }
     return context;
 };
@@ -80,7 +89,7 @@ export const usePermissions = (): PermissionContextType => {
 export function withPermission<P extends object>(
     WrappedComponent: React.ComponentType<P>,
     requiredPermissions: Permission[],
-    matchAll = false
+    matchAll = false,
 ): React.FC<P> {
     return function PermissionWrapper(props: P) {
         const { hasAnyPermission, hasAllPermissions } = usePermissions();

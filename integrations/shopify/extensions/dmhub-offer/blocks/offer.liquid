@@ -1,0 +1,10 @@
+<div id="dmhub-offer-config" data-proxy="{{ block.settings.proxy_path | escape }}" hidden></div>
+{% schema %}
+{
+  "name": "DM Hub customer offers",
+  "target": "body",
+  "javascript": "dmhub-offer.js",
+  "stylesheet": "dmhub-offer.css",
+  "settings": [{ "type": "text", "id": "proxy_path", "label": "App proxy path", "default": "/apps/dmhub" }]
+}
+{% endschema %}

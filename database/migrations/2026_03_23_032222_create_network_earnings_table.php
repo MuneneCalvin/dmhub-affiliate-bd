@@ -2,8 +2,8 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -15,12 +15,12 @@ return new class extends Migration
         Schema::create('network_earnings', function (Blueprint $table) {
             $table->id();
             $table->foreignId('network_id')->constrained()->onDelete('cascade');
-            
-            // Set these to nullable() immediately during creation 
+
+            // Set these to nullable() immediately during creation
             // instead of calling ->change() later in the same block.
             $table->foreignId('advertiser_id')->nullable()->constrained()->onDelete('cascade');
             $table->foreignId('campaign_id')->nullable()->constrained()->onDelete('cascade');
-            
+
             $table->decimal('amount_debited', 20, 4)->default(0);
             $table->decimal('amount_credited', 20, 4)->default(0);
             $table->decimal('total_amount', 20, 4)->default(0);
@@ -32,7 +32,8 @@ return new class extends Migration
         });
 
         // Use DB::unprepared for the PostgreSQL Function
-        DB::unprepared("
+        if (DB::getDriverName() === 'pgsql') {
+            DB::unprepared("
             CREATE OR REPLACE FUNCTION calculate_network_balance(net_id BIGINT)
             RETURNS DECIMAL(20,4) AS $$
             BEGIN
@@ -44,6 +45,7 @@ return new class extends Migration
             END;
             $$ LANGUAGE plpgsql;
         ");
+        }
     }
 
     /**
@@ -51,7 +53,9 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::unprepared("DROP FUNCTION IF EXISTS calculate_network_balance(BIGINT);");
+        if (DB::getDriverName() === 'pgsql') {
+            DB::unprepared('DROP FUNCTION IF EXISTS calculate_network_balance(BIGINT);');
+        }
         Schema::dropIfExists('network_earnings');
     }
 };

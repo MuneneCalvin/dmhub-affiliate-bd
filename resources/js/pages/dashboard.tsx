@@ -1,41 +1,42 @@
-
-import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
-import { ReusablePageTitle } from '@/dev/core';
+import { PageHeader, StatePanel } from '@/components/app';
+import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
-import { dashboard } from '@/routes';
-import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
+import { edit } from '@/routes/profile';
+import { Head, Link } from '@inertiajs/react';
+import { ArrowRight, LayoutDashboard, Settings } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Home',
-        href: dashboard().url,
-    },
-];
-
+/** Fallback home for accounts without a role dashboard. */
 export default function Dashboard() {
+    const { t } = useTranslation();
     return (
         <AppLayout>
-            <Head title="Dashboard" />
-            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
-                <ReusablePageTitle
-                    title="Dashboard"
-                    breadcrumbs={breadcrumbs}
+            <Head title={t('Workspace')} />
+            <div className="workspace-page flex flex-1 flex-col gap-7">
+                <PageHeader
+                    title={t('Workspace')}
+                    description={t('Manage your profile and account settings')}
+                    icon={<LayoutDashboard />}
+                    breadcrumbs={[{ title: t('Overview'), href: '' }]}
                 />
-                <div className="flex flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
-                    <div className="grid auto-rows-min gap-4 md:grid-cols-3">
-                        {[...Array(3)].map((_, i) => (
-                            <div
-                                key={i}
-                                className="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
-                            >
-                                <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
-                            </div>
-                        ))}
-                    </div>
-                    <div className="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 md:min-h-min dark:border-sidebar-border">
-                        <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
-                    </div>
+                <div className="rounded-card border border-border bg-surface shadow-card">
+                    <StatePanel
+                        icon={<Settings />}
+                        tone="brand"
+                        headingLevel={2}
+                        title={t('Your account')}
+                        description={t(
+                            'Use the navigation to access the tools available to your role, or manage your account settings below.',
+                        )}
+                        actions={
+                            <Button asChild>
+                                <Link href={edit()}>
+                                    {t('Settings')}
+                                    <ArrowRight aria-hidden="true" />
+                                </Link>
+                            </Button>
+                        }
+                    />
                 </div>
             </div>
         </AppLayout>

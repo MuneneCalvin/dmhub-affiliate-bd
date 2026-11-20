@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Models\PublisherCampaigns;
+use App\Support\PublisherAttribution;
 use Illuminate\Http\Request;
 
 class PublisherAssetsController extends Controller
@@ -42,6 +43,8 @@ class PublisherAssetsController extends Controller
             ], 404);
         }
 
+        PublisherAttribution::assertActive($publisherCampaign);
+
         return response()->json([
             'success' => true,
             'data' => $publisherCampaign->getAllAssets(),
@@ -62,42 +65,11 @@ class PublisherAssetsController extends Controller
             ], 404);
         }
 
+        PublisherAttribution::assertActive($publisherCampaign);
+
         return response()->json([
             'success' => true,
             'data' => $publisherCampaign->getAllAssets(),
-        ]);
-    }
-
-    public function updateFormSettings(Request $request, int $publisherCampaignId)
-    {
-        $publisherCampaign = $this->findOwned($request, $publisherCampaignId);
-
-        if (! $publisherCampaign) {
-            return response()->json([
-                'success' => false,
-                'error' => 'Publisher campaign not found',
-            ], 404);
-        }
-
-        $validated = $request->validate([
-            'form_title' => 'nullable|string|max:255',
-            'form_button_text' => 'nullable|string|max:100',
-            'form_success_message' => 'nullable|string|max:255',
-            'form_redirect_url' => 'nullable|url:http,https|max:500',
-            'form_trigger' => 'nullable|in:auto,click,delay,exit_intent,scroll',
-            'form_delay_seconds' => 'nullable|integer|min:0|max:300',
-            'form_scroll_percent' => 'nullable|integer|min:0|max:100',
-            'form_settings' => 'nullable|array',
-            'form_settings.fields' => 'nullable|array',
-            'form_settings.colors' => 'nullable|array',
-        ]);
-
-        $publisherCampaign->update($validated);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Form settings updated successfully',
-            'data' => $publisherCampaign->getFormConfig(),
         ]);
     }
 

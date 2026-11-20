@@ -5,9 +5,9 @@ namespace App\Http\Controllers\Network;
 use App\Http\Controllers\Controller;
 use App\Models\Network;
 use App\Models\UserNetworks;
+use App\Support\MediaStorage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class NetworkSettingsController extends Controller
@@ -70,32 +70,29 @@ class NetworkSettingsController extends Controller
         $logoFiles = $request->file('logo');
         if ($logoFiles && count($logoFiles) > 0) {
             if ($network->logo_url) {
-                $oldPath = str_replace('/storage/', '', $network->logo_url);
-                Storage::disk('public')->delete($oldPath);
+                MediaStorage::deleteUrl($network->logo_url);
             }
 
-            $logoPath = $logoFiles[0]->store('network_logos', 'public');
-            $network->logo_url = '/storage/'.$logoPath;
+            $logoPath = $logoFiles[0]->store('network_logos', MediaStorage::disk());
+            $network->logo_url = MediaStorage::url($logoPath);
         }
         $sidebarLogoFiles = $request->file('sidebar_logo');
         if ($sidebarLogoFiles && count($sidebarLogoFiles) > 0) {
             if ($network->sidebar_logo_url) {
-                $oldPath = str_replace('/storage/', '', $network->sidebar_logo_url);
-                Storage::disk('public')->delete($oldPath);
+                MediaStorage::deleteUrl($network->sidebar_logo_url);
             }
 
-            $sidebarLogoPath = $sidebarLogoFiles[0]->store('network_logos', 'public');
-            $network->sidebar_logo_url = '/storage/'.$sidebarLogoPath;
+            $sidebarLogoPath = $sidebarLogoFiles[0]->store('network_logos', MediaStorage::disk());
+            $network->sidebar_logo_url = MediaStorage::url($sidebarLogoPath);
         }
         $faviconFiles = $request->file('favicon');
         if ($faviconFiles && count($faviconFiles) > 0) {
             if ($network->favicon_url) {
-                $oldPath = str_replace('/storage/', '', $network->favicon_url);
-                Storage::disk('public')->delete($oldPath);
+                MediaStorage::deleteUrl($network->favicon_url);
             }
 
-            $faviconPath = $faviconFiles[0]->store('network_logos', 'public');
-            $network->favicon_url = '/storage/'.$faviconPath;
+            $faviconPath = $faviconFiles[0]->store('network_logos', MediaStorage::disk());
+            $network->favicon_url = MediaStorage::url($faviconPath);
         }
 
         $network->save();

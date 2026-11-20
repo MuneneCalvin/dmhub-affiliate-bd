@@ -1,0 +1,106 @@
+/*
+ * Campaign workspace. The header, tabs and overview are built from shared
+ * components; this file keeps the overview chart, the legacy panel class used
+ * by advertiser settings, and card surfaces for the tab sections that still
+ * use their own stylesheets (campaign-*.css).
+ */
+.campaign-workspace :is(button, a, input, summary):focus-visible {
+    outline: 2px solid var(--brand-base);
+    outline-offset: 2px;
+}
+
+.campaign-panel {
+    min-width: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    box-shadow: var(--elevation-card);
+}
+
+.campaign-text-action {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    min-height: 44px;
+    color: var(--brand-ink);
+    font-weight: 700;
+}
+.campaign-text-action:hover {
+    text-decoration: underline;
+}
+
+/* Overview chart */
+.campaign-chart {
+    position: relative;
+    margin-top: 4px;
+}
+.campaign-chart svg text {
+    fill: var(--ink-muted);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+}
+.campaign-chart-tooltip {
+    position: absolute;
+    top: -9px;
+    right: 0;
+    padding: 4px 10px;
+    border-radius: 8px;
+    background: var(--sidebar);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    pointer-events: none;
+}
+.campaign-chart-data {
+    margin-top: 4px;
+    color: var(--ink-muted);
+    font-size: 12px;
+}
+.campaign-chart-data summary {
+    width: max-content;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+.campaign-data-scroll {
+    max-height: 220px;
+    overflow: auto;
+    margin-top: 8px;
+}
+.campaign-data-scroll table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+.campaign-data-scroll :is(td, th) {
+    padding: 6px;
+    text-align: right;
+    border-bottom: 1px solid var(--border);
+}
+.campaign-data-scroll :is(td, th):first-child {
+    text-align: left;
+}
+
+/* Card surfaces for the tab sections */
+.campaign-workspace
+    :is(
+        .offers-table-wrap,
+        .publisher-table-wrap,
+        .finance-table-scroll,
+        .analytics-table-scroll,
+        .analytics-chart-panel,
+        .tracking-panel,
+        .offer-material-card
+    ) {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    box-shadow: var(--elevation-card);
+}
+.campaign-workspace
+    :is(.offers-table, .publisher-table, .finance-table)
+    tbody
+    tr:hover {
+    background: var(--surface-muted);
+}

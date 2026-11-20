@@ -5,7 +5,12 @@ namespace App\Http\Middleware;
 use App\Models\Advertiser;
 use App\Models\Network;
 use App\Models\Publisher;
+use App\Models\PublisherCampaigns;
+use App\Models\PublisherEarning;
+use App\Models\User;
 use App\Models\UserNetworks;
+use App\Support\SettingsSections;
+use App\Support\Tenancy;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
@@ -43,6 +48,7 @@ class HandleInertiaRequests extends Middleware
     {
         [$message, $author] = str(Inspiring::quotes()->random())->explode('-');
         $networkBranding = $this->getNetworkBranding($request);
+        $permissions = $request->user()?->permissionNames() ?? collect();
 
         return [
             ...parent::share($request),
@@ -57,16 +63,59 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user()?->load(['notifications' => function ($query) {
                     $query->latest()->limit(20);
                 }]),
-                'permissions' => $request->user()?->permissionNames() ?? [],
+                'permissions' => $permissions,
             ],
+            // Sidebar badges. A count is null when the user may not see that page.
+            'navCounts' => fn () => $request->user()
+                ? $this->navCounts($request->user(), $permissions->all())
+                : null,
+            // Optional account settings sections (only resolved on settings pages).
+            'settingsSections' => fn () => $request->user() && $request->routeIs('profile.*', 'settings.*', 'user-password.*', 'two-factor.*', 'appearance.*')
+                ? SettingsSections::for($request->user())
+                : null,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'flash' => [
+                'store_setup' => fn () => $request->session()->get('store_setup'),
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
                 'warning' => fn () => $request->session()->get('warning'),
                 'info' => fn () => $request->session()->get('info'),
             ],
             'networkBranding' => $networkBranding,
+        ];
+    }
+
+    /**
+     * Counts for sidebar badges, scoped like the pages they link to.
+     *
+     * @param  array<int, string>  $permissions
+     * @return array{pendingApplications: int|null, fraudFlags: int|null}
+     */
+    private function navCounts(User $user, array $permissions): array
+    {
+        $networkId = $user->is_super_admin ? null : $user->networkId();
+        // Both pages sit behind ensure.network: super admins, or network members.
+        $networkStaff = $user->is_super_admin || ($user->is_network && $networkId !== null);
+        $can = fn (string $permission) => $user->is_super_admin || in_array($permission, $permissions, true);
+
+        return [
+            // Same scope as PublisherApplicationController@index with status "P".
+            'pendingApplications' => $networkStaff && $can('review_applications')
+                ? PublisherCampaigns::query()
+                    ->whereIn('campaign_id', Tenancy::campaignIds($user))
+                    ->when($networkId !== null, fn ($q) => $q->where('network_id', $networkId))
+                    ->where('status', 'P')
+                    ->count()
+                : null,
+            // Pending earnings whose latest fraud assessment asks for manual review
+            // (FinanceController@index with fraud=manual_review).
+            'fraudFlags' => $networkStaff && $can('review_commissions')
+                ? PublisherEarning::query()
+                    ->when($networkId !== null, fn ($q) => $q->where('network_id', $networkId))
+                    ->where('status', 'pending')
+                    ->whereHas('latestFraudAssessment', fn ($q) => $q->where('recommendation', 'manual_review')->where('status', 'completed'))
+                    ->count()
+                : null,
         ];
     }
 

@@ -1,0 +1,405 @@
+[
+    {
+        "id": "002",
+        "name": "Africa",
+        "countries": [],
+        "children": [
+            {
+                "id": "015",
+                "name": "Northern Africa",
+                "countries": ["DZA", "EGY", "ESH", "LBY", "MAR", "SDN", "TUN"],
+                "children": []
+            },
+            {
+                "id": "202",
+                "name": "Sub-Saharan Africa",
+                "countries": [],
+                "children": [
+                    {
+                        "id": "014",
+                        "name": "Eastern Africa",
+                        "countries": [
+                            "ATF",
+                            "BDI",
+                            "COM",
+                            "DJI",
+                            "ERI",
+                            "ETH",
+                            "IOT",
+                            "KEN",
+                            "MDG",
+                            "MOZ",
+                            "MUS",
+                            "MWI",
+                            "MYT",
+                            "REU",
+                            "RWA",
+                            "SOM",
+                            "SSD",
+                            "SYC",
+                            "TZA",
+                            "UGA",
+                            "ZMB",
+                            "ZWE"
+                        ],
+                        "children": []
+                    },
+                    {
+                        "id": "017",
+                        "name": "Middle Africa",
+                        "countries": [
+                            "AGO",
+                            "CAF",
+                            "CMR",
+                            "COD",
+                            "COG",
+                            "GAB",
+                            "GNQ",
+                            "STP",
+                            "TCD"
+                        ],
+                        "children": []
+                    },
+                    {
+                        "id": "018",
+                        "name": "Southern Africa",
+                        "countries": ["BWA", "LSO", "NAM", "SWZ", "ZAF"],
+                        "children": []
+                    },
+                    {
+                        "id": "011",
+                        "name": "Western Africa",
+                        "countries": [
+                            "BEN",
+                            "BFA",
+                            "CIV",
+                            "CPV",
+                            "GHA",
+                            "GIN",
+                            "GMB",
+                            "GNB",
+                            "LBR",
+                            "MLI",
+                            "MRT",
+                            "NER",
+                            "NGA",
+                            "SEN",
+                            "SHN",
+                            "SLE",
+                            "TGO"
+                        ],
+                        "children": []
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": "019",
+        "name": "Americas",
+        "countries": [],
+        "children": [
+            {
+                "id": "419",
+                "name": "Latin America and the Caribbean",
+                "countries": [],
+                "children": [
+                    {
+                        "id": "029",
+                        "name": "Caribbean",
+                        "countries": [
+                            "ABW",
+                            "AIA",
+                            "ATG",
+                            "BES",
+                            "BHS",
+                            "BLM",
+                            "BRB",
+                            "CUB",
+                            "CUW",
+                            "CYM",
+                            "DMA",
+                            "DOM",
+                            "GLP",
+                            "GRD",
+                            "HTI",
+                            "JAM",
+                            "KNA",
+                            "LCA",
+                            "MAF",
+                            "MSR",
+                            "MTQ",
+                            "PRI",
+                            "SXM",
+                            "TCA",
+                            "TTO",
+                            "VCT",
+                            "VGB",
+                            "VIR"
+                        ],
+                        "children": []
+                    },
+                    {
+                        "id": "013",
+                        "name": "Central America",
+                        "countries": [
+                            "BLZ",
+                            "CRI",
+                            "GTM",
+                            "HND",
+                            "MEX",
+                            "NIC",
+                            "PAN",
+                            "SLV"
+                        ],
+                        "children": []
+                    },
+                    {
+                        "id": "005",
+                        "name": "South America",
+                        "countries": [
+                            "ARG",
+                            "BOL",
+                            "BRA",
+                            "BVT",
+                            "CHL",
+                            "COL",
+                            "ECU",
+                            "FLK",
+                            "GUF",
+                            "GUY",
+                            "PER",
+                            "PRY",
+                            "SGS",
+                            "SUR",
+                            "URY",
+                            "VEN"
+                        ],
+                        "children": []
+                    }
+                ]
+            },
+            {
+                "id": "021",
+                "name": "Northern America",
+                "countries": ["BMU", "CAN", "GRL", "SPM", "USA"],
+                "children": []
+            }
+        ]
+    },
+    {
+        "id": "142",
+        "name": "Asia",
+        "countries": [],
+        "children": [
+            {
+                "id": "143",
+                "name": "Central Asia",
+                "countries": ["KAZ", "KGZ", "TJK", "TKM", "UZB"],
+                "children": []
+            },
+            {
+                "id": "030",
+                "name": "Eastern Asia",
+                "countries": ["CHN", "HKG", "JPN", "KOR", "MAC", "MNG", "PRK"],
+                "children": []
+            },
+            {
+                "id": "035",
+                "name": "South-eastern Asia",
+                "countries": [
+                    "BRN",
+                    "IDN",
+                    "KHM",
+                    "LAO",
+                    "MMR",
+                    "MYS",
+                    "PHL",
+                    "SGP",
+                    "THA",
+                    "TLS",
+                    "VNM"
+                ],
+                "children": []
+            },
+            {
+                "id": "034",
+                "name": "Southern Asia",
+                "countries": [
+                    "AFG",
+                    "BGD",
+                    "BTN",
+                    "IND",
+                    "IRN",
+                    "LKA",
+                    "MDV",
+                    "NPL",
+                    "PAK"
+                ],
+                "children": []
+            },
+            {
+                "id": "145",
+                "name": "Western Asia",
+                "countries": [
+                    "ARE",
+                    "ARM",
+                    "AZE",
+                    "BHR",
+                    "CYP",
+                    "GEO",
+                    "IRQ",
+                    "ISR",
+                    "JOR",
+                    "KWT",
+                    "LBN",
+                    "OMN",
+                    "PSE",
+                    "QAT",
+                    "SAU",
+                    "SYR",
+                    "TUR",
+                    "YEM"
+                ],
+                "children": []
+            }
+        ]
+    },
+    {
+        "id": "150",
+        "name": "Europe",
+        "countries": [],
+        "children": [
+            {
+                "id": "151",
+                "name": "Eastern Europe",
+                "countries": [
+                    "BGR",
+                    "BLR",
+                    "CZE",
+                    "HUN",
+                    "MDA",
+                    "POL",
+                    "ROU",
+                    "RUS",
+                    "SVK",
+                    "UKR"
+                ],
+                "children": []
+            },
+            {
+                "id": "154",
+                "name": "Northern Europe",
+                "countries": [
+                    "ALA",
+                    "DNK",
+                    "EST",
+                    "FIN",
+                    "FRO",
+                    "GBR",
+                    "GGY",
+                    "IMN",
+                    "IRL",
+                    "ISL",
+                    "JEY",
+                    "LTU",
+                    "LVA",
+                    "NOR",
+                    "SJM",
+                    "SWE"
+                ],
+                "children": []
+            },
+            {
+                "id": "039",
+                "name": "Southern Europe",
+                "countries": [
+                    "ALB",
+                    "AND",
+                    "BIH",
+                    "ESP",
+                    "GIB",
+                    "GRC",
+                    "HRV",
+                    "ITA",
+                    "MKD",
+                    "MLT",
+                    "MNE",
+                    "PRT",
+                    "SMR",
+                    "SRB",
+                    "SVN",
+                    "VAT"
+                ],
+                "children": []
+            },
+            {
+                "id": "155",
+                "name": "Western Europe",
+                "countries": [
+                    "AUT",
+                    "BEL",
+                    "CHE",
+                    "DEU",
+                    "FRA",
+                    "LIE",
+                    "LUX",
+                    "MCO",
+                    "NLD"
+                ],
+                "children": []
+            }
+        ]
+    },
+    {
+        "id": "009",
+        "name": "Oceania",
+        "countries": [],
+        "children": [
+            {
+                "id": "053",
+                "name": "Australia and New Zealand",
+                "countries": ["AUS", "CCK", "CXR", "HMD", "NFK", "NZL"],
+                "children": []
+            },
+            {
+                "id": "054",
+                "name": "Melanesia",
+                "countries": ["FJI", "NCL", "PNG", "SLB", "VUT"],
+                "children": []
+            },
+            {
+                "id": "057",
+                "name": "Micronesia",
+                "countries": [
+                    "FSM",
+                    "GUM",
+                    "KIR",
+                    "MHL",
+                    "MNP",
+                    "NRU",
+                    "PLW",
+                    "UMI"
+                ],
+                "children": []
+            },
+            {
+                "id": "061",
+                "name": "Polynesia",
+                "countries": [
+                    "ASM",
+                    "COK",
+                    "NIU",
+                    "PCN",
+                    "PYF",
+                    "TKL",
+                    "TON",
+                    "TUV",
+                    "WLF",
+                    "WSM"
+                ],
+                "children": []
+            }
+        ]
+    }
+]

@@ -1,243 +1,137 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { CustomDialogComponent, InfoRow, ReusablePageTitle, useConfirmationDialog } from '@/dev/core';
-import { useCustomDialogContextFactory } from '@/hooks';
-import AppLayout from '@/layouts/app-layout';
-import { BreadcrumbItem } from '@/types';
-import { Head, router, usePage } from '@inertiajs/react';
-import { Building2, Calendar, Globe, Mail, User, Briefcase, DollarSign } from 'lucide-react';
+import { PoolProfile } from '@/components/pool-profile';
+import { useDate } from '@/lib/format';
+import { usePage } from '@inertiajs/react';
+import { Building2, ShieldCheck, UserRound, Wallet } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import RejectModal from './modals/reject';
-import { formatDate } from '@/utils/utils';
-import { StatusBadge } from '@/dev/statusBadge';
-import networks from '@/routes/networks';
 
-
-const AdvertiserShowPage = () => {
-    const { t } = useTranslation();
-    const { advertiser } = usePage<any>().props;
-    const { confirm, ConfirmDialog } = useConfirmationDialog();
-
-    const breadcrumbs: BreadcrumbItem[] = [
-        {
-            title: t('Pool'),
-            href: networks.pool.advertisers.url(),
-        },
-        {
-            title: t('Advertisers'),
-            href: networks.pool.advertisers.url(),
-        },
-        {
-            title: advertiser.business_name || `${advertiser.user?.first_name} ${advertiser.user?.last_name}`,
-            href: '',
-        },
-    ];
-
-    const { handleDialogContextSwitch, dialogContent, dialogOpen } =
-        useCustomDialogContextFactory<{
-            advertiser?: any;
-            type?: 'advertiser' | 'publisher';
-        }>();
-    const handleApprove = () => {
-        confirm({
-            title: t('Approve Advertiser'),
-            description: `Are you sure you want to approve ${advertiser.user?.first_name} ${advertiser.user?.last_name} (${advertiser.business_name}) and assign them to your network?`,
-            confirmLabel: t('Approve'),
-            cancelLabel: t('Cancel'),
-            onConfirm: () => {
-                router.post(networks.pool.advertisers.approve(advertiser?.id));
-            },
-        });
-    };
-
-    return (
-        <AppLayout>
-            <Head title={`${t('Advertiser')} - ${advertiser.business_name || advertiser.user?.first_name}`} />
-            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
-                <ReusablePageTitle
-                    title={t('Advertiser Details')}
-                    breadcrumbs={breadcrumbs}
-                >
-                    {!advertiser.is_verified && (
-                        <div className="flex items-center gap-2">
-                            <Button
-                                onClick={handleApprove}
-                                className="bg-green-600 hover:bg-green-700"
-                            >
-                                {t('Approve & Add to Network')}
-                            </Button>
-                            <Button
-                                variant="destructive"
-                                onClick={() => handleDialogContextSwitch({
-                                    Component: RejectModal,
-                                    componentProps: {
-                                        advertiser,
-                                        type: 'advertiser',
-                                    },
-                                })}
-                            >
-                                {t('Reject')}
-                            </Button>
-                        </div>
-                    )}
-                </ReusablePageTitle>
-
-                <div className="w-full">
-                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <User className="h-5 w-5" />
-                                    {t('Contact Information')}
-                                </CardTitle>
-                                <CardDescription>{t('Details about the advertiser')}</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-1">
-                                <InfoRow
-                                    label={t('Name')}
-                                    value={`${advertiser?.user?.first_name} ${advertiser.user?.last_name}`}
-                                    icon={User}
-                                />
-                                <Separator />
-                                <InfoRow
-                                    label={t('Email')}
-                                    value={advertiser.user?.email}
-                                    icon={Mail}
-                                />
-                                <Separator />
-                                <InfoRow
-                                    label={t('Registered At')}
-                                    value={formatDate(advertiser.user?.created_at)}
-                                    icon={Calendar}
-                                />
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Building2 className="h-5 w-5" />
-                                    {t('Business Information')}
-                                </CardTitle>
-                                <CardDescription>{t('Company details')}</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-1">
-                                <InfoRow
-                                    label={t('Business Name')}
-                                    value={advertiser.business_name || 'N/A'}
-                                    icon={Building2}
-                                />
-                                <Separator />
-                                <InfoRow
-                                    label={t('Website')}
-                                    value={
-                                        advertiser.website_name ? (
-                                            <a href={advertiser.website_name} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                                                {advertiser.website_name}
-                                            </a>
-                                        ) : 'N/A'
-                                    }
-                                    icon={Globe}
-                                />
-                                <Separator />
-                                <InfoRow
-                                    label={t('Industry')}
-                                    value={advertiser.industry || 'N/A'}
-                                    icon={Briefcase}
-                                />
-                                <Separator />
-                                <InfoRow
-                                    label={t('COC Number')}
-                                    value={advertiser.coc_number || 'N/A'}
-                                />
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <DollarSign className="h-5 w-5" />
-                                    {t('Budget Information')}
-                                </CardTitle>
-                                <CardDescription>{t('Financial details')}</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-1">
-                                <InfoRow
-                                    label={t('Total Budget')}
-                                    value={advertiser.total_budget ? `${advertiser.currency || ''} ${parseFloat(String(advertiser.total_budget)).toFixed(2)}` : 'N/A'}
-                                    icon={DollarSign}
-                                />
-                                <Separator />
-                                <InfoRow
-                                    label={t('Available Budget')}
-                                    value={advertiser.available_budget ? `${advertiser.currency || ''} ${parseFloat(String(advertiser.available_budget)).toFixed(2)}` : 'N/A'}
-                                    icon={DollarSign}
-                                />
-                                <Separator />
-                                <InfoRow
-                                    label={t('Currency')}
-                                    value={advertiser.currency || 'N/A'}
-                                />
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Calendar className="h-5 w-5" />
-                                    {t('Status')}
-                                </CardTitle>
-                                <CardDescription>{t('Current status and verification')}</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-1">
-                                <InfoRow
-                                    label={t('Status')}
-                                    value = {<StatusBadge status={advertiser?.status} />}
-                                />
-                                <Separator />
-                                <InfoRow
-                                    label={t('Verified')}
-                                    value={advertiser.is_verified ? 'Yes' : 'No'}
-                                />
-                                {advertiser.verified_at && (
-                                    <>
-                                        <Separator />
-                                        <InfoRow
-                                            label={t('Verified At')}
-                                            value={formatDate(advertiser.verified_at)}
-                                            icon={Calendar}
-                                        />
-                                    </>
-                                )}
-                                <Separator />
-                                <InfoRow
-                                    label={t('Auto-approve Publishers')}
-                                    value={advertiser.auto_approve_publishers ? 'Yes' : 'No'}
-                                />
-                            </CardContent>
-                        </Card>
-                    </div>
-                </div>
-
-                <CustomDialogComponent
-                    {...{ handleDialogContextSwitch, dialogOpen }}
-                    className='sm:max-w-[500px]'>
-                    {dialogContent?.Component && (
-                        <dialogContent.Component
-                            {...{
-                                componentProps: dialogContent.componentProps,
-                                handleDialogContextSwitch,
-                            }}
-                        />
-                    )}
-                </CustomDialogComponent>
-
-                <ConfirmDialog />
-            </div>
-        </AppLayout>
-    );
+type PoolAdvertiser = {
+    id: number;
+    business_name: string | null;
+    website_name: string | null;
+    industry: string | null;
+    coc_number: string | null;
+    currency: string | null;
+    total_budget: string | number | null;
+    available_budget: string | number | null;
+    status: string;
+    is_verified: boolean;
+    verified_at: string | null;
+    auto_approve_publishers: boolean;
+    user?: {
+        first_name: string | null;
+        last_name: string | null;
+        email: string;
+        created_at: string;
+    } | null;
 };
 
-export default AdvertiserShowPage;
+export default function PoolAdvertiserShow() {
+    const { t, i18n } = useTranslation();
+    const { advertiser: a } = usePage<{ advertiser: PoolAdvertiser }>().props;
+    const formatDate = useDate();
+    const contact = [a.user?.first_name, a.user?.last_name]
+        .filter(Boolean)
+        .join(' ');
+    const name = a.business_name || contact || a.user?.email || '—';
+    const amount = (value: string | number | null) =>
+        value == null || value === ''
+            ? null
+            : `${a.currency ?? ''} ${new Intl.NumberFormat(i18n.language, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+              }).format(Number(value))}`;
+    const yes = (value: unknown) => t(value ? 'Yes' : 'No');
+
+    return (
+        <PoolProfile
+            kind="advertiser"
+            entity={a}
+            name={name}
+            verified={a.is_verified}
+            chips={[
+                { label: t('Advertiser'), tone: 'partners' },
+                ...(a.industry
+                    ? [{ label: a.industry, tone: 'analytics' as const }]
+                    : []),
+                ...(a.currency ? [{ label: a.currency }] : []),
+            ]}
+            sections={[
+                {
+                    title: t('Contact information'),
+                    icon: <UserRound />,
+                    tone: 'partners',
+                    rows: [
+                        { label: t('Name'), value: contact },
+                        { label: t('Email'), value: a.user?.email },
+                        {
+                            label: t('Registered'),
+                            value: formatDate(a.user?.created_at),
+                        },
+                    ],
+                },
+                {
+                    title: t('Company details'),
+                    icon: <Building2 />,
+                    tone: 'partners',
+                    rows: [
+                        { label: t('Business Name'), value: a.business_name },
+                        {
+                            label: t('Website'),
+                            value:
+                                a.website_name &&
+                                /^https?:\/\//i.test(a.website_name) ? (
+                                    <a
+                                        href={a.website_name}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-brand-ink hover:underline"
+                                    >
+                                        {a.website_name}
+                                    </a>
+                                ) : (
+                                    a.website_name
+                                ),
+                        },
+                        { label: t('Industry'), value: a.industry },
+                        {
+                            label: t('Chamber of Commerce number'),
+                            value: a.coc_number,
+                        },
+                    ],
+                },
+                {
+                    title: t('Budget'),
+                    icon: <Wallet />,
+                    tone: 'finance',
+                    rows: [
+                        {
+                            label: t('Total Budget'),
+                            value: amount(a.total_budget),
+                        },
+                        {
+                            label: t('Available Budget'),
+                            value: amount(a.available_budget),
+                        },
+                        { label: t('Currency'), value: a.currency },
+                    ],
+                },
+                {
+                    title: t('Verification'),
+                    icon: <ShieldCheck />,
+                    tone: 'success',
+                    rows: [
+                        { label: t('Verified'), value: yes(a.is_verified) },
+                        a.verified_at && {
+                            label: t('Verified at'),
+                            value: formatDate(a.verified_at),
+                        },
+                        {
+                            label: t('Auto-approve publishers'),
+                            value: yes(a.auto_approve_publishers),
+                        },
+                    ],
+                },
+            ]}
+        />
+    );
+}

@@ -4,10 +4,13 @@ namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
+use App\Support\SettingsSections;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -25,13 +28,27 @@ class ProfileController extends Controller
     }
 
     /**
+     * Show the company details the user may edit (advertiser / publisher).
+     */
+    public function company(Request $request): Response
+    {
+        $companies = SettingsSections::companies($request->user());
+        abort_if($companies === [], 404);
+
+        return Inertia::render('settings/company', ['companies' => $companies]);
+    }
+
+    /**
      * Update the user's profile settings.
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
         $validated = $request->validated();
-        // The profile form's "Name" field edits the username; users have no `name` column.
-        $request->user()->fill(['user_name' => $validated['name'], 'email' => $validated['email']]);
+        // Preserve the existing request key for the username.
+        $request->user()->fill([
+            ...collect($validated)->except('name')->all(),
+            'user_name' => $validated['name'],
+        ]);
         if ($request->user()->isDirty('email')) {
             $request->user()->email_verified_at = null;
         }
@@ -41,7 +58,7 @@ class ProfileController extends Controller
     }
 
     /**
-     * Delete the user's account.
+     * Close access while retaining attribution and financial evidence.
      */
     public function destroy(Request $request): RedirectResponse
     {
@@ -50,8 +67,23 @@ class ProfileController extends Controller
         ]);
 
         $user = $request->user();
+        DB::transaction(function () use ($user) {
+            $user->forceFill([
+                'status' => 'C',
+                'closed_at' => now(),
+                'password' => Str::random(64),
+                'remember_token' => null,
+                'two_factor_secret' => null,
+                'two_factor_recovery_codes' => null,
+            ])->save();
+            DB::table('sessions')->where('user_id', $user->id)->delete();
+            DB::table('password_reset_tokens')->where('email', $user->email)->delete();
+            if ($user->advertiser) {
+                DB::table('postback_credentials')->where('advertiser_id', $user->advertiser->id)
+                    ->update(['revoked_at' => now()]);
+            }
+        });
         Auth::logout();
-        $user->delete();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 

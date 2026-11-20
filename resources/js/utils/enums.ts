@@ -1,7 +1,4 @@
-
 /* eslint-disable @typescript-eslint/no-explicit-any */
-
-import type { LandingFeatureData, LandingStatData, LandingStepData } from '@/types/landing';
 
 export enum SORT_ORDER {
     'Descending' = 'DESC',
@@ -27,19 +24,19 @@ export enum EADVERTISERSTATUS_TYPE {
 }
 
 export enum DEFAULT_COMMISSION_MODEL {
-    P = "Percentage",
-    F = "Fixed",
+    P = 'Percentage',
+    F = 'Fixed',
 }
 export const COMMISSION_MODELS = Object.entries(DEFAULT_COMMISSION_MODEL).map(
-    ([key, value]) => ({ key, value })
+    ([key, value]) => ({ key, value }),
 );
 
 export enum PAYMENT_FREQUENCY {
-    W = "Weekly",
-    M = "Monthly",
+    W = 'Weekly',
+    M = 'Monthly',
 }
 export const FREQUENCY = Object.entries(PAYMENT_FREQUENCY).map(
-    ([key, value]) => ({ key, value })
+    ([key, value]) => ({ key, value }),
 );
 
 export enum HTTP_VERBS {
@@ -51,12 +48,13 @@ export enum HTTP_VERBS {
 }
 
 export const VARIANTCOLOR: Record<
-    "default" | "delete" | "update" | "primary", any
+    'default' | 'delete' | 'update' | 'primary',
+    any
 > = {
-    default: "default",
-    delete: "destructive",
-    update: "secondary",
-    primary: "primary",
+    default: 'default',
+    delete: 'destructive',
+    update: 'secondary',
+    primary: 'primary',
 };
 
 export const DEVICES = [
@@ -139,17 +137,17 @@ export const OFFER_TERMS = [
 ];
 
 export const statusOptions = [
-    { value: "new", label: "New" },
-    { value: "contacted", label: "Contacted" },
-    { value: "qualified", label: "Qualified" },
-    { value: "converted", label: "Converted" },
-    { value: "lost", label: "Lost" },
+    { value: 'new', label: 'New' },
+    { value: 'contacted', label: 'Contacted' },
+    { value: 'qualified', label: 'Qualified' },
+    { value: 'converted', label: 'Converted' },
+    { value: 'lost', label: 'Lost' },
 ];
 
 export const priorityOptions = [
-    { value: "high", label: "High" },
-    { value: "medium", label: "Medium" },
-    { value: "low", label: "Low" },
+    { value: 'high', label: 'High' },
+    { value: 'medium', label: 'Medium' },
+    { value: 'low', label: 'Low' },
 ];
 
 export const CREATIVE_TYPES = [
@@ -160,79 +158,9 @@ export const CREATIVE_TYPES = [
     { value: 'video', label: 'Video' },
 ];
 
-export const LANDING_FEATURES: LandingFeatureData[] = [
-    {
-        iconName: 'BarChart3',
-        title: 'Transparante Commissies',
-        desc: 'Volledige inzicht in je verdiensten. Geen verborgen kosten, alleen eerlijke vergoedingen.',
-    },
-    {
-        iconName: 'Zap',
-        title: 'Snelle Uitbetalingen',
-        desc: 'Ontvang je commissies snel en betrouwbaar via ons geautomatiseerde betalingssysteem.',
-    },
-    {
-        iconName: 'LineChart',
-        title: 'Real-time Analytics',
-        desc: 'Volg je prestaties met gedetailleerde dashboards en rapporten.',
-    },
-    {
-        iconName: 'Shield',
-        title: 'Betrouwbaar Platform',
-        desc: 'Een veilig en stabiel platform waar je op kunt bouwen.',
-    },
-    {
-        iconName: 'Globe',
-        title: 'Marketing Materialen',
-        desc: 'Toegang tot professionele banners, links en content.',
-    },
-    {
-        iconName: 'Users',
-        title: 'Persoonlijke Support',
-        desc: 'Dedicated accountmanagers om je te helpen groeien.',
-    },
-];
-
-export const LANDING_STATS: LandingStatData[] = [
-    { value: '€100M+', label: 'Uitbetaalde Commissies' },
-    { value: '200+', label: 'Actieve Partners' },
-    { value: '98%', label: 'Klanttevredenheid' },
-    { value: '24/7', label: 'Platform Beschikbaarheid' },
-];
-
-export const LANDING_STEPS: LandingStepData[] = [
-    {
-        number: '01',
-        title: 'Registreer je',
-        desc: 'Meld je gratis aan en krijg direct toegang tot ons affiliate platform.',
-    },
-    {
-        number: '02',
-        title: 'Kies je campagnes',
-        desc: 'Selecteer uit diverse campagnes die passen bij jouw doelgroep.',
-    },
-    {
-        number: '03',
-        title: 'Promoot & Verdien',
-        desc: 'Deel je unieke links en verdien commissie op elke succesvolle conversie.',
-    },
-];
-
-export const LANDING_NAV_LINKS = [
-    { label: 'Voordelen', href: '#features' },
-    { label: 'Hoe het werkt', href: '#how-it-works' },
-    { label: 'Resultaten', href: '#stats' },
-];
-
-export const LANDING_HERO_CHECKMARKS = [
-    'Gratis aanmelden',
-    'Geen verborgen kosten',
-    'Direct starten',
-];
-
 export enum ESTATUSTABS {
     P = 'Pending',
     A = 'Approved',
     R = 'Rejected',
-    all = 'All'
+    all = 'All',
 }

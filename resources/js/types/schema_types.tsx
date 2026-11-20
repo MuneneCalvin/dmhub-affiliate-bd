@@ -1,15 +1,15 @@
-import { advertiserSchema,
+import {
+    advertiserSchema,
     campaignApplicationSchema,
     campaignSchema,
     campaignTermsSchema,
     changeNetworkSchema,
     commissionnSchema,
-    creativeSchema,
     networkSchema,
     networkUsersSchema,
     offersSchema,
     publisherSchema,
-    registerUserSchema
+    registerUserSchema,
 } from '@/utils/form-schema';
 import z from 'zod';
 
@@ -23,6 +23,7 @@ export type CampaignFormValues = z.infer<typeof campaignSchema>;
 
 export type OffersFormValueTypes = z.infer<typeof offersSchema>;
 export type CommissionFormValuesTypes = z.infer<typeof commissionnSchema>;
-export type CampaignApplicationTypes = z.infer<typeof campaignApplicationSchema>;
-export type CreativeFormValuesTypes = z.infer<typeof creativeSchema>;
+export type CampaignApplicationTypes = z.infer<
+    typeof campaignApplicationSchema
+>;
 export type TCampaignTermsTypes = z.infer<typeof campaignTermsSchema>;

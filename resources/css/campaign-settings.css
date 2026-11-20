@@ -1,0 +1,444 @@
+/* Settings content only; shared app and campaign layouts remain unchanged. */
+.campaign-settings {
+    min-width: 0;
+}
+.campaign-settings-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 24px;
+}
+.campaign-settings-toolbar h2 {
+    font-size: 25px;
+    font-weight: 750;
+    letter-spacing: -0.6px;
+}
+.campaign-settings-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+.campaign-settings-actions > span {
+    color: var(--muted-foreground);
+    font-size: 13px;
+    margin-right: 12px;
+}
+.campaign-settings-actions button {
+    border-radius: var(--radius-control);
+}
+.campaign-settings-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.52fr) minmax(0, 1fr);
+    gap: 22px;
+    min-width: 0;
+}
+.campaign-settings-card {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--card);
+    padding: 16px;
+    min-width: 0;
+}
+.campaign-settings-card h3 {
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.35;
+    letter-spacing: -0.4px;
+    margin-bottom: 17px;
+}
+.campaign-settings-field {
+    display: grid;
+    grid-template-columns: minmax(135px, 24%) minmax(0, 1fr);
+    align-items: start;
+    gap: 14px;
+    margin-top: 11px;
+}
+.campaign-settings-field > label {
+    padding-top: 7px;
+    font-weight: 500;
+}
+.campaign-settings-control {
+    min-width: 0;
+}
+.campaign-settings-required {
+    color: var(--danger-ink);
+}
+.campaign-settings
+    :is(
+        input:not([type='checkbox']),
+        [data-slot='select-trigger'],
+        textarea,
+        .campaign-settings-select
+    ) {
+    width: 100%;
+    min-width: 0;
+    border: 1px solid
+        color-mix(in srgb, var(--muted-foreground) 45%, var(--border));
+    border-radius: var(--radius-control);
+    background: var(--background);
+    color: var(--foreground);
+    font-size: 14px;
+    line-height: 1.4;
+    padding: 6px 11px;
+    min-height: 33px;
+}
+.campaign-settings textarea {
+    resize: vertical;
+    min-height: 60px;
+    display: block;
+}
+.campaign-settings [data-slot='select-trigger'] {
+    padding-right: 22px;
+}
+.campaign-settings
+    :is(input, textarea, [data-slot='select-trigger']):focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+.campaign-settings
+    :is(input, [data-slot='select-trigger'], textarea)[aria-invalid='true'] {
+    border-color: var(--destructive);
+}
+.campaign-settings :is(button, input, textarea):disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
+}
+.campaign-settings input.campaign-settings-locked {
+    background: var(--muted);
+    color: var(--muted-foreground);
+    border-color: var(--border);
+}
+.campaign-settings-currency {
+    position: relative;
+}
+.campaign-settings-currency svg {
+    position: absolute;
+    right: 11px;
+    top: 9px;
+    color: var(--muted-foreground);
+}
+.campaign-settings-currency input {
+    padding-right: 34px;
+}
+.campaign-settings-divider {
+    border-top: 1px solid var(--border);
+    margin: 20px 0 12px;
+}
+.campaign-settings-short > :last-child {
+    max-width: 325px;
+}
+.campaign-settings-dates {
+    display: flex;
+    align-items: start;
+    gap: 20px;
+    margin-top: 11px;
+}
+.campaign-settings-dates .campaign-settings-field {
+    margin: 0;
+}
+.campaign-settings-dates .campaign-settings-field:first-child {
+    flex: 1.25;
+    grid-template-columns: minmax(135px, 44%) minmax(130px, 1fr);
+}
+.campaign-settings-dates .campaign-settings-field:nth-child(2) {
+    flex: 1;
+    grid-template-columns: auto minmax(130px, 1fr);
+    gap: 12px;
+}
+.campaign-settings-dates > label {
+    padding-top: 8px;
+}
+.campaign-settings-check {
+    display: inline-flex;
+    gap: 10px;
+    align-items: center;
+    white-space: nowrap;
+}
+.campaign-settings input[type='checkbox'],
+.campaign-settings-options input[type='checkbox'] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--primary);
+    flex-shrink: 0;
+}
+.campaign-settings-with-note {
+    display: grid;
+    grid-template-columns: minmax(130px, 1.1fr) minmax(100px, 1fr);
+    align-items: center;
+    gap: 20px;
+}
+.campaign-settings small {
+    color: var(--muted-foreground);
+    font-size: 12px;
+    line-height: 1.4;
+}
+.campaign-settings-help {
+    display: block;
+    margin-top: 5px;
+}
+.campaign-settings-number {
+    display: flex;
+    align-items: center;
+    position: relative;
+    border: 1px solid
+        color-mix(in srgb, var(--muted-foreground) 45%, var(--border));
+    border-radius: var(--radius-control);
+    background: var(--background);
+    overflow: hidden;
+}
+.campaign-settings-number > span {
+    padding: 0 10px;
+    font-size: 14px;
+}
+.campaign-settings .campaign-settings-number input {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+}
+.campaign-settings-number:has(input:focus-visible) {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+.campaign-settings-number input:focus-visible {
+    outline: none;
+}
+.campaign-settings-number:has(input[aria-invalid='true']) {
+    border-color: var(--destructive);
+}
+.campaign-settings-number span + input {
+    padding-left: 0;
+}
+.campaign-settings-link {
+    color: var(--primary);
+    font-weight: 550;
+    text-align: left;
+    font-size: 13px;
+}
+.campaign-settings-link:hover {
+    text-decoration: underline;
+}
+.campaign-settings-audience .campaign-settings-field {
+    grid-template-columns: minmax(110px, 27%) minmax(0, 1fr);
+}
+.campaign-settings-chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 9px 0;
+}
+.campaign-settings-chips:empty {
+    display: none;
+}
+.campaign-settings-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    background: color-mix(in srgb, var(--primary) 12%, var(--background));
+    padding: 3px 10px;
+    border-radius: 999px;
+    overflow-wrap: anywhere;
+    max-width: 100%;
+}
+.campaign-settings-chip button {
+    display: inline-flex;
+    padding: 2px;
+}
+.campaign-settings-select {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    text-align: left;
+}
+.campaign-settings-select svg {
+    flex-shrink: 0;
+}
+.campaign-settings-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: var(--warning-soft);
+    border: 1px solid var(--warning-dot);
+    border-radius: var(--radius-control);
+    padding: 12px;
+    margin: 20px 0 23px;
+    color: var(--warning-ink);
+}
+.campaign-settings-warning > svg {
+    color: var(--warning-ink);
+    flex-shrink: 0;
+}
+.campaign-settings-warning p {
+    font-size: 12px;
+    line-height: 1.5;
+    margin-top: 3px;
+}
+.campaign-settings-warning > button {
+    align-self: center;
+    flex-shrink: 0;
+    font-size: 12px;
+}
+.campaign-settings-warning strong {
+    font-size: 14px;
+}
+.campaign-settings-devices {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+    min-height: 33px;
+}
+.campaign-settings-audience .campaign-settings-divider {
+    margin-top: 27px;
+    margin-bottom: 15px;
+}
+.campaign-settings-tags {
+    margin-top: 23px;
+}
+.campaign-settings-notice {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    margin: 20px 0 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-control);
+    background: var(--muted);
+    color: var(--muted-foreground);
+    font-size: 13px;
+}
+.campaign-settings-notice svg {
+    flex-shrink: 0;
+}
+.campaign-settings-toolbar + .campaign-settings-notice {
+    margin: 0 0 16px;
+}
+.campaign-settings-error {
+    color: var(--destructive);
+    font-size: 12px;
+    margin: 5px 0;
+}
+.campaign-settings-options {
+    padding: 8px;
+}
+.campaign-settings-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border-bottom: 1px solid var(--border);
+}
+.campaign-settings-search input {
+    width: 100%;
+    min-width: 0;
+    font-size: 14px;
+    outline: none;
+}
+.campaign-settings-option-list {
+    max-height: 240px;
+    overflow-y: auto;
+}
+.campaign-settings-option-list :is(label, button) {
+    display: flex;
+    align-items: start;
+    gap: 9px;
+    padding: 9px;
+    font-size: 13px;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    overflow-wrap: anywhere;
+}
+.campaign-settings-option-list :is(label, button):hover {
+    background: var(--muted);
+}
+.campaign-settings-option-list p {
+    padding: 9px;
+    color: var(--muted-foreground);
+    font-size: 13px;
+}
+@media (max-width: 1450px) {
+    .campaign-settings-dates {
+        flex-wrap: wrap;
+    }
+    .campaign-settings-dates .campaign-settings-field:first-child {
+        flex-basis: 100%;
+        grid-template-columns: minmax(135px, 24%) minmax(0, 1fr);
+    }
+    .campaign-settings-dates .campaign-settings-field:first-child input {
+        max-width: 325px;
+    }
+    .campaign-settings-dates .campaign-settings-field:nth-child(2) {
+        grid-template-columns: minmax(135px, 32%) minmax(130px, 1fr);
+    }
+    .campaign-settings-with-note {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 5px;
+    }
+    .campaign-settings-warning {
+        flex-wrap: wrap;
+    }
+    .campaign-settings-warning > div {
+        flex: 1;
+    }
+    .campaign-settings-warning > button {
+        margin-left: 37px;
+    }
+}
+@media (max-width: 1050px) {
+    .campaign-settings-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    .campaign-settings-dates .campaign-settings-field:nth-child(2) {
+        grid-template-columns: minmax(135px, 29%) minmax(130px, 1fr);
+    }
+    .campaign-settings-with-note {
+        grid-template-columns: minmax(130px, 1fr) minmax(100px, 1fr);
+        gap: 16px;
+    }
+}
+@media (max-width: 600px) {
+    .campaign-settings-toolbar {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 12px;
+    }
+    .campaign-settings-toolbar h2 {
+        font-size: 23px;
+    }
+    .campaign-settings-actions {
+        width: 100%;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    .campaign-settings-actions > span {
+        margin-right: auto;
+        font-size: 12px;
+    }
+    .campaign-settings-card {
+        padding: 14px;
+    }
+    .campaign-settings-field,
+    .campaign-settings-audience .campaign-settings-field,
+    .campaign-settings-dates .campaign-settings-field:first-child,
+    .campaign-settings-dates .campaign-settings-field:nth-child(2) {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 5px;
+    }
+    .campaign-settings-dates {
+        gap: 11px;
+    }
+    .campaign-settings-dates .campaign-settings-field {
+        flex-basis: 100%;
+    }
+    .campaign-settings-short > :last-child,
+    .campaign-settings-dates .campaign-settings-field:first-child input {
+        max-width: none;
+    }
+    .campaign-settings-with-note {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 7px;
+    }
+}

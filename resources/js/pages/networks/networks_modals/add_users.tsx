@@ -1,96 +1,112 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { EmailField, TextField } from '@/components/app/form-controls';
 import { Button } from '@/components/ui/button';
-import { ReusableEmailInput, ReusableModalHeader, ReusableTextInput } from '@/dev/core';
-import { cn } from '@/lib/utils';
+import {
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { createusers } from '@/routes/networks';
 import { TNetworkUserTypes } from '@/types/schema_types';
 import { networkUsersSchema } from '@/utils/form-schema';
 import { router, useForm } from '@inertiajs/react';
-import React from 'react'
+import { UserPlus } from 'lucide-react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 
 const AddUsers = ({
     componentProps,
-    handleDialogContextSwitch
+    handleDialogContextSwitch,
 }: {
-    componentProps: any,
-    handleDialogContextSwitch: any
+    componentProps: any;
+    handleDialogContextSwitch: any;
 }) => {
     const { t } = useTranslation();
-    const { data, setData, errors, setError, processing } = useForm<TNetworkUserTypes>({
-        first_name: '',
-        last_name: '',
-        email: '',
-        title: '',
-        network_id: componentProps?.network?.id || '',
-    });
+    const { data, setData, errors, setError, processing } =
+        useForm<TNetworkUserTypes>({
+            first_name: '',
+            last_name: '',
+            email: '',
+            title: '',
+            network_id: componentProps?.network?.id || '',
+        });
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         const result = networkUsersSchema.safeParse(data);
         if (!result.success) {
             result.error.issues.forEach((err: any) => {
                 if (err.path && err.path.length > 0) {
-                    setError(err.path[0] as keyof TNetworkUserTypes, err.message);
+                    setError(
+                        err.path[0] as keyof TNetworkUserTypes,
+                        err.message,
+                    );
                 }
             });
             return;
         }
         router.post(createusers(), data);
-        handleDialogContextSwitch?.({ state: false })
+        handleDialogContextSwitch?.({ state: false });
     };
     return (
-        <div className='w-full'>
-            <ReusableModalHeader title={t("Add Network Users")} className="text-left text-primary" />
+        <div className="w-full">
+            <DialogHeader icon={<UserPlus />} tone="partners">
+                <DialogTitle>{t('Add Network Users')}</DialogTitle>
+                <DialogDescription>
+                    {t('They receive an email to sign in to this network.')}
+                </DialogDescription>
+            </DialogHeader>
             <form onSubmit={handleSubmit} className="w-full space-y-4">
-                <ReusableTextInput
+                <TextField
                     id="first_name"
-                    label={t("First Name")}
+                    label={t('First Name')}
                     value={data.first_name}
                     onChange={(value: string) => setData('first_name', value)}
                     error={errors.first_name}
-                    placeholder='eg. Donald'
+                    placeholder="eg. Donald"
                 />
-                <ReusableTextInput
+                <TextField
                     id="last_name"
-                    label={t("Last Name")}
+                    label={t('Last Name')}
                     value={data.last_name}
                     onChange={(value: string) => setData('last_name', value)}
                     error={errors.last_name}
-                    placeholder='eg. Trump'
+                    placeholder="eg. Trump"
                 />
-                <ReusableEmailInput
+                <EmailField
                     id="email"
-                    label={t("Email Address")}
+                    label={t('Email Address')}
                     value={data.email}
                     onChange={(value: string) => setData('email', value)}
                     error={errors.email}
-                    placeholder='network@example.com'
+                    placeholder="network@example.com"
                 />
-                <ReusableTextInput
+                <TextField
                     id="title"
-                    label={t("Title")}
+                    label={t('Title')}
                     value={data.title}
                     onChange={(value: string) => setData('title', value)}
                     error={errors.title}
-                    placeholder='eg. Mr, Mrs, Eng'
+                    placeholder="eg. Mr, Mrs, Eng"
                 />
-                <div className="col-span-2 flex gap-4 justify-between mt-2">
+                <DialogFooter>
                     <Button
                         type="button"
-                        className={cn('bg-destructive')}
+                        variant="secondary"
                         onClick={() =>
                             handleDialogContextSwitch?.({ state: false })
-                        }>
-                        {t('Clear')}
+                        }
+                    >
+                        {t('Cancel')}
                     </Button>
-                    <Button type="submit" disabled={processing} className={cn('bg-primary')}>
+                    <Button type="submit" disabled={processing}>
                         {processing ? `${t('Saving...')}` : `${t('Add User')}`}
                     </Button>
-                </div>
+                </DialogFooter>
             </form>
         </div>
-    )
-}
+    );
+};
 
 export default AddUsers;

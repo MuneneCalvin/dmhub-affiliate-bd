@@ -1,143 +1,153 @@
 import InputError from '@/components/input-error';
 import TextLink from '@/components/text-link';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
+import { Input, InputGroup } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Spinner } from '@/components/ui/spinner';
-import { useLanguage } from '@/context/language-context';
 import AuthLayout from '@/layouts/auth-layout';
+import { useAuthBrand } from '@/layouts/auth/auth-brand-panel';
 import { register } from '@/routes';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
 import { LoginProps } from '@/types';
 import { Form, Head } from '@inertiajs/react';
-import { Eye, EyeOff } from 'lucide-react';
-import { useState } from 'react';
+import { ArrowRight, CircleCheck, Mail } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export default function Login({
     status,
     canResetPassword,
     canRegister,
 }: LoginProps) {
-    const { __ } = useLanguage();
-    const [showPassword, setShowPassword] = useState(false);
+    const { t } = useTranslation();
+    const { name } = useAuthBrand();
 
     return (
         <AuthLayout
-            title={__('Log in to your account')}
-            description={__('Enter your email and password below to log in')}
+            title={t('Welcome back')}
+            description={t('Sign in to your workspace.')}
         >
-            <Head title={__('Log in')} />
+            <Head title={t('Sign in')} />
+
+            {status && (
+                <Alert variant="success">
+                    <CircleCheck aria-hidden="true" />
+                    <AlertDescription>{status}</AlertDescription>
+                </Alert>
+            )}
 
             <Form
                 {...store.form()}
                 resetOnSuccess={['password']}
-                className="flex flex-col gap-6"
+                className="flex flex-col gap-[18px]"
             >
                 {({ processing, errors }) => (
                     <>
-                        <div className="grid gap-6">
-                            <div className="grid gap-2">
-                                <Label htmlFor="email">
-                                    {__('Email address')}
-                                </Label>
+                        <div className="grid gap-1.5">
+                            <Label htmlFor="email">{t('Email address')}</Label>
+                            <InputGroup
+                                leading={
+                                    <Mail
+                                        className="text-brand"
+                                        aria-hidden="true"
+                                    />
+                                }
+                            >
                                 <Input
                                     id="email"
                                     type="email"
                                     name="email"
                                     required
                                     autoFocus
-                                    tabIndex={1}
                                     autoComplete="email"
-                                    placeholder="email@example.com"
+                                    placeholder="you@company.com"
+                                    aria-invalid={
+                                        errors.email ? true : undefined
+                                    }
+                                    aria-describedby={
+                                        errors.email ? 'email-error' : undefined
+                                    }
                                 />
-                                <InputError message={errors.email} />
-                            </div>
-
-                            <div className="grid gap-2">
-                                <div className="flex items-center">
-                                    <Label htmlFor="password">
-                                        {__('Password')}
-                                    </Label>
-                                    {canResetPassword && (
-                                        <TextLink
-                                            href={request()}
-                                            className="ml-auto text-sm"
-                                            tabIndex={5}>
-                                            {__('Forgot your password?')}
-                                        </TextLink>
-                                    )}
-                                </div>
-                                <div className="relative flex items-center">
-                                    <Input
-                                        id="password"
-                                        type={
-                                            showPassword
-                                                ? ('text')
-                                                : ('password')
-                                        }
-                                        name="password"
-                                        required
-                                        tabIndex={2}
-                                        autoComplete="current-password"
-                                        placeholder="Password"
-                                    />
-                                    <button
-                                        type="button"
-                                        className="absolute right-2"
-                                        onClick={() =>
-                                            setShowPassword((prev) => !prev)
-                                        }>
-                                        {showPassword ? (
-                                            <EyeOff className="h-4 w-4" />
-                                        ) : (
-                                            <Eye className="h-4 w-4" />
-                                        )}
-                                    </button>
-                                </div>
-                                <InputError message={errors.password} />
-                            </div>
-
-                            <div className="flex items-center space-x-3">
-                                <Checkbox
-                                    id="remember"
-                                    name="remember"
-                                    tabIndex={3}
-                                />
-                                <Label htmlFor="remember">
-                                    {__('Remember me')}
-                                </Label>
-                            </div>
-
-                            <Button
-                                type="submit"
-                                className="mt-4 w-full"
-                                tabIndex={4}
-                                disabled={processing}
-                                data-test="login-button"
-                            >
-                                {processing && <Spinner />}
-                                {__('Log in')}
-                            </Button>
+                            </InputGroup>
+                            <InputError
+                                id="email-error"
+                                message={errors.email}
+                            />
                         </div>
 
-                        {canRegister && (
-                            <div className="text-center text-sm text-muted-foreground">
-                                Don't have an account?{' '}
-                                <TextLink href={register()} tabIndex={5}>
-                                    {__('Sign up')}
-                                </TextLink>
+                        <div className="grid gap-1.5">
+                            <div className="flex items-center justify-between gap-3">
+                                <Label htmlFor="password">
+                                    {t('Password')}
+                                </Label>
+                                {canResetPassword && (
+                                    <TextLink
+                                        href={request()}
+                                        className="text-[13px]"
+                                    >
+                                        {t('Forgot password?')}
+                                    </TextLink>
+                                )}
                             </div>
+                            <PasswordInput
+                                id="password"
+                                name="password"
+                                required
+                                autoComplete="current-password"
+                                aria-invalid={
+                                    errors.password ? true : undefined
+                                }
+                                aria-describedby={
+                                    errors.password
+                                        ? 'password-error'
+                                        : undefined
+                                }
+                            />
+                            <InputError
+                                id="password-error"
+                                message={errors.password}
+                            />
+                        </div>
+
+                        <div className="flex min-h-11 items-center gap-2.5">
+                            <Checkbox id="remember" name="remember" />
+                            <Label htmlFor="remember" className="font-medium">
+                                {t('Keep me signed in')}
+                            </Label>
+                        </div>
+
+                        <Button
+                            type="submit"
+                            className="w-full"
+                            disabled={processing}
+                            data-test="login-button"
+                        >
+                            {processing && <Spinner />}
+                            {t('Sign in')}
+                            {!processing && <ArrowRight aria-hidden="true" />}
+                        </Button>
+
+                        {canRegister && (
+                            <p className="text-center text-ink-muted">
+                                {t('New to {{name}}?', { name })}{' '}
+                                <TextLink href={register()}>
+                                    {t('Create an account')}
+                                </TextLink>
+                            </p>
                         )}
                     </>
                 )}
             </Form>
-            {status && (
-                <div className="mb-4 text-center text-sm font-medium text-green-600">
-                    {status}
-                </div>
-            )}
+
+            <a
+                href="/docs"
+                className="self-center rounded-sm text-[13px] font-semibold text-ink-muted underline-offset-4 hover:text-ink hover:underline"
+            >
+                {t('Documentation')}
+            </a>
         </AuthLayout>
     );
 }

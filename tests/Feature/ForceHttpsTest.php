@@ -1,6 +1,7 @@
 <?php
 
 use App\Providers\AppServiceProvider;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\URL;
 
 function bootWith(string $env, string $appUrl): string
@@ -8,6 +9,7 @@ function bootWith(string $env, string $appUrl): string
     app()->detectEnvironment(fn () => $env);
     config(['app.url' => $appUrl]);
     URL::forceScheme(null);
+    URL::setRequest(Request::create('http://localhost'));
     app()->getProvider(AppServiceProvider::class)->boot();
 
     return url('/dashboard');

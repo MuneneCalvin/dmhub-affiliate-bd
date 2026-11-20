@@ -12,10 +12,11 @@ class PublisherEarning extends Model
     protected $table = 'publisher_earnings';
 
     protected $fillable = [
+        'currency', 'commission_snapshot', 'reversed_minor', 'refunded_basis_minor', 'ledger_transaction_id', 'reviewed_by', 'reviewed_at', 'review_reason',
+        'conversion_event_id',
         'publisher_id',
         'network_id',
         'publisher_campaign_id',
-        'lead_id',
         'conversion_id',
         'amount',
         'commission_type',
@@ -27,6 +28,7 @@ class PublisherEarning extends Model
     ];
 
     protected $casts = [
+        'commission_snapshot' => 'array', 'reviewed_at' => 'datetime', 'reversed_minor' => 'integer', 'refunded_basis_minor' => 'integer',
         'amount' => 'decimal:2',
         'commission_rate' => 'decimal:4',
         'base_value' => 'decimal:2',
@@ -47,14 +49,24 @@ class PublisherEarning extends Model
         return $this->belongsTo(PublisherCampaigns::class, 'publisher_campaign_id');
     }
 
-    public function lead()
-    {
-        return $this->belongsTo(Lead::class, 'lead_id');
-    }
-
     public function conversion()
     {
         return $this->belongsTo(Conversion::class, 'conversion_id');
+    }
+
+    public function event()
+    {
+        return $this->belongsTo(ConversionEvent::class, 'conversion_event_id');
+    }
+
+    public function fraudAssessments()
+    {
+        return $this->hasMany(FraudAssessment::class, 'earning_id');
+    }
+
+    public function latestFraudAssessment()
+    {
+        return $this->hasOne(FraudAssessment::class, 'earning_id')->latestOfMany();
     }
 
     public function invoice()
@@ -74,7 +86,7 @@ class PublisherEarning extends Model
 
     public function isInvoiced(): bool
     {
-        return $this->status === 'invoiced';
+        return in_array($this->status, ['locked', 'payable'], true);
     }
 
     public function isPaid(): bool
@@ -94,7 +106,7 @@ class PublisherEarning extends Model
 
     public function scopeNotInvoiced($query)
     {
-        return $query->whereIn('status', ['pending', 'approved']);
+        return $query->where('status', 'approved')->whereNull('invoice_id')->whereNotNull('ledger_transaction_id');
     }
 
     public function scopeForPublisher($query, int $publisherId)

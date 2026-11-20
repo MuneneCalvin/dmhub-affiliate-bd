@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1.7
 #
 # Production image definitions. Build two targets from the repository root:
-#   docker build -f docker/production/Dockerfile --target app -t <repo>/app:<tag> .
-#   docker build -f docker/production/Dockerfile --target web -t <repo>/web:<tag> .
+#   docker build -f docker/production/Dockerfile --build-arg RELEASE_SHA=<full-git-sha> --target app -t <repo>/app:<tag> .
+#   docker build -f docker/production/Dockerfile --build-arg RELEASE_SHA=<full-git-sha> --target web -t <repo>/web:<tag> .
 # "app" runs PHP-FPM (web requests, queue worker); "web" is Caddy (TLS, static files, FastCGI proxy).
 
 ARG PHP_VERSION=8.4
@@ -40,6 +40,10 @@ COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 
 COPY . .
+ARG RELEASE_SHA
+RUN test -n "$RELEASE_SHA" && echo "$RELEASE_SHA" | grep -Eq '^[0-9a-f]{40}$' \
+    && printf '%s\n' "$RELEASE_SHA" > REVISION \
+    && cp REVISION public/revision.txt
 RUN mkdir -p bootstrap/cache storage/app/public storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs \
     && composer dump-autoload --no-dev --optimize --no-interaction \
     && cp .env.example .env \
@@ -51,6 +55,8 @@ RUN mkdir -p bootstrap/cache storage/app/public storage/framework/cache/data sto
 # app: PHP-FPM runtime (also used for the queue worker)
 # ---------------------------------------------------------------------------
 FROM php-base AS app
+ARG RELEASE_SHA
+LABEL org.opencontainers.image.revision=$RELEASE_SHA
 
 COPY docker/production/php.ini /usr/local/etc/php/conf.d/zz-app.ini
 COPY docker/production/php-fpm.conf /usr/local/etc/php-fpm.d/zz-app.conf
@@ -73,6 +79,8 @@ CMD ["php-fpm"]
 # web: Caddy in front of PHP-FPM, with the compiled public/ directory baked in
 # ---------------------------------------------------------------------------
 FROM caddy:2-alpine AS web
+ARG RELEASE_SHA
+LABEL org.opencontainers.image.revision=$RELEASE_SHA
 
 COPY docker/production/Caddyfile /etc/caddy/Caddyfile
 COPY --from=build /var/www/public /var/www/public

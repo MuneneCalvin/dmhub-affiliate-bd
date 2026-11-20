@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Support\TrackingUrl;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
@@ -13,6 +15,7 @@ class PublisherCampaigns extends Model
     protected $table = 'publisher_campaigns';
 
     protected $fillable = [
+        'requested_offer_id', 'terms_version', 'terms_snapshot', 'terms_accepted_at',
         'publisher_id',
         'campaign_id',
         'offer_id',
@@ -31,27 +34,19 @@ class PublisherCampaigns extends Model
         'total_commission',
         'tracking_link',
         'script_token',
-        'form_settings',
-        'form_title',
-        'form_button_text',
-        'form_success_message',
-        'form_redirect_url',
-        'form_trigger',
-        'form_delay_seconds',
-        'form_scroll_percent',
         'script_impressions',
         'sub',
         'terminated_at',
     ];
 
     protected $casts = [
+        'terms_snapshot' => 'array', 'terms_accepted_at' => 'datetime', 'requested_offer_id' => 'integer',
         'commission_value' => 'decimal:2',
         'total_revenue' => 'decimal:2',
         'total_commission' => 'decimal:2',
         'applied_at' => 'datetime',
         'approved_at' => 'datetime',
         'terminated_at' => 'datetime',
-        'form_settings' => 'array',
     ];
 
     protected static function boot()
@@ -80,6 +75,7 @@ class PublisherCampaigns extends Model
             $this->script_token = self::generateUniqueScriptToken();
             $this->save();
         }
+
         return $this->script_token;
     }
 
@@ -90,22 +86,27 @@ class PublisherCampaigns extends Model
     {
         return $this->belongsTo(Publisher::class, 'publisher_id');
     }
+
     public function campaign()
     {
         return $this->belongsTo(Campaign::class, 'campaign_id');
     }
+
     public function offer()
     {
         return $this->belongsTo(Offer::class, 'offer_id');
     }
+
     public function network()
     {
         return $this->belongsTo(Network::class, 'network_id');
     }
+
     public function clicks()
     {
         return $this->hasMany(Clicks::class, 'publisher_campaign_id');
     }
+
     public function conversions()
     {
         return $this->hasMany(Conversion::class, 'publisher_campaign_id');
@@ -114,24 +115,25 @@ class PublisherCampaigns extends Model
     public function creatives()
     {
         return Creative::where('campaign_id', $this->campaign_id)
-            ->orWhere('offer_id', $this->offer_id)
+            ->where('offer_id', $this->offer_id)
             ->where('status', 'A')
             ->get();
     }
 
     public function getScriptUrl(): string
     {
-        return url("/s/{$this->generateScriptToken()}.js");
+        return TrackingUrl::to("/s/{$this->generateScriptToken()}.js");
     }
 
     public function getImpressionPixelUrl(): string
     {
-        return url("/sp/{$this->generateScriptToken()}");
+        return TrackingUrl::to("/sp/{$this->generateScriptToken()}");
     }
 
     public function getEmbedScriptTag(): string
     {
         $scriptUrl = $this->getScriptUrl();
+
         return "<script src=\"{$scriptUrl}\" async></script>";
     }
 
@@ -139,14 +141,22 @@ class PublisherCampaigns extends Model
     {
         $trackingId = $this->extractTrackingId();
         if ($trackingId) {
-            return url("/t/{$trackingId}/c/{$creative->id}");
+            return TrackingUrl::to("/t/{$trackingId}/c/{$creative->id}");
         }
-        return url("/t/{$this->tracking_link}?creative_id={$creative->id}");
+
+        return TrackingUrl::to("/t/{$this->tracking_link}?creative_id={$creative->id}");
     }
 
     public function getCreativeImpressionUrl(Creative $creative): string
     {
-        return url("/i/{$creative->tracking_code}?pc={$this->script_token}");
+        return TrackingUrl::to("/i/{$creative->tracking_code}?pc={$this->script_token}");
+    }
+
+    /** Stored links keep the host they were created on; always present them on the tracking host. */
+    protected function trackingLink(): Attribute
+    {
+        return Attribute::get(fn (?string $value) => $value && preg_match('/\/t\/([^\/\?]+)/', $value, $matches)
+            ? TrackingUrl::to('/t/'.$matches[1]) : $value);
     }
 
     public function extractTrackingId(): ?string
@@ -157,34 +167,13 @@ class PublisherCampaigns extends Model
         if (preg_match('/^[a-zA-Z0-9]+$/', $this->tracking_link)) {
             return $this->tracking_link;
         }
+
         return null;
     }
 
-    public function getFormConfig(): array
+    public function getSdkConfig(): array
     {
-        return [
-            'title' => $this->form_title ?? 'Get Started Today',
-            'button_text' => $this->form_button_text ?? 'Submit',
-            'success_message' => $this->form_success_message ?? 'Thank you! We\'ll be in touch soon.',
-            'redirect_url' => $this->form_redirect_url,
-            'trigger' => $this->form_trigger ?? 'auto',
-            'delay_seconds' => $this->form_delay_seconds ?? 0,
-            'scroll_percent' => $this->form_scroll_percent ?? 50,
-            'fields' => $this->form_settings['fields'] ?? [
-                ['name' => 'first_name', 'label' => 'First Name', 'type' => 'text', 'required' => true],
-                ['name' => 'last_name', 'label' => 'Last Name', 'type' => 'text', 'required' => true],
-                ['name' => 'email', 'label' => 'Email', 'type' => 'email', 'required' => true],
-                ['name' => 'phone', 'label' => 'Phone', 'type' => 'tel', 'required' => false],
-            ],
-            'colors' => $this->form_settings['colors'] ?? [
-                'primary' => '#2563eb',
-                'primary_hover' => '#1d4ed8',
-                'background' => '#ffffff',
-                'text' => '#111827',
-                'label' => '#374151',
-                'border' => '#d1d5db',
-            ],
-        ];
+        return ['sdk_version' => 2, 'popup_supported' => false, 'methods' => ['getReferral']];
     }
 
     public function getAllAssets(): array
@@ -213,7 +202,7 @@ class PublisherCampaigns extends Model
         return [
             'publisher_campaign_id' => $this->id,
             'script_token' => $this->script_token,
-            'main_tracking_link' => url("/t/{$this->extractTrackingId()}"),
+            'main_tracking_link' => TrackingUrl::to("/t/{$this->extractTrackingId()}"),
             'embed_script' => [
                 'tag' => $this->getEmbedScriptTag(),
                 'url' => $this->getScriptUrl(),
@@ -223,15 +212,16 @@ class PublisherCampaigns extends Model
                 'html' => "<img src=\"{$this->getImpressionPixelUrl()}\" width=\"1\" height=\"1\" style=\"display:none;\" alt=\"\" />",
             ],
             'creatives' => $creativeAssets,
-            'form_config' => $this->getFormConfig(),
+            'sdk_config' => $this->getSdkConfig(),
         ];
     }
 
     protected function buildCreativeEmbedCode(Creative $creative): string
     {
-        $trackingUrl = $this->getCreativeTrackingUrl($creative);
-        $impressionUrl = $this->getCreativeImpressionUrl($creative);
-        $altText = $creative->alt_text ?? $creative->name;
+        $trackingUrl = e($this->getCreativeTrackingUrl($creative));
+        $impressionUrl = e($this->getCreativeImpressionUrl($creative));
+        $altText = e($creative->alt_text ?? $creative->name);
+        $fileUrl = e($creative->file_url);
         $width = $creative->width ? (int) $creative->width : '';
         $height = $creative->height ? (int) $creative->height : '';
 
@@ -240,13 +230,14 @@ class PublisherCampaigns extends Model
             case 'image':
                 $widthAttr = $width ? " width=\"{$width}\"" : '';
                 $heightAttr = $height ? " height=\"{$height}\"" : '';
-                return "<a href=\"{$trackingUrl}\" target=\"_blank\" rel=\"noopener\">\n  <img src=\"{$creative->file_url}\" alt=\"{$altText}\"{$widthAttr}{$heightAttr} />\n</a>\n<img src=\"{$impressionUrl}\" width=\"1\" height=\"1\" style=\"display:none;\" alt=\"\" />";
+
+                return "<a href=\"{$trackingUrl}\" target=\"_blank\" rel=\"noopener\">\n  <img src=\"{$fileUrl}\" alt=\"{$altText}\"{$widthAttr}{$heightAttr} />\n</a>\n<img src=\"{$impressionUrl}\" width=\"1\" height=\"1\" style=\"display:none;\" alt=\"\" />";
 
             case 'text':
                 return "<a href=\"{$trackingUrl}\" target=\"_blank\" rel=\"noopener\">{$altText}</a>\n<img src=\"{$impressionUrl}\" width=\"1\" height=\"1\" style=\"display:none;\" alt=\"\" />";
 
             default:
-                return "<a href=\"{$trackingUrl}\" target=\"_blank\" rel=\"noopener\">\n  <img src=\"{$creative->file_url}\" alt=\"{$altText}\" />\n</a>\n<img src=\"{$impressionUrl}\" width=\"1\" height=\"1\" style=\"display:none;\" alt=\"\" />";
+                return "<a href=\"{$trackingUrl}\" target=\"_blank\" rel=\"noopener\">\n  <img src=\"{$fileUrl}\" alt=\"{$altText}\" />\n</a>\n<img src=\"{$impressionUrl}\" width=\"1\" height=\"1\" style=\"display:none;\" alt=\"\" />";
         }
     }
 }

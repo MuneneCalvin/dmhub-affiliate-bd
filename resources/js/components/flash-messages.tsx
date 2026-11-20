@@ -20,24 +20,28 @@ export function FlashMessages() {
     useEffect(() => {
         if (flash?.success) {
             toast.success(flash.success, {
+                id: 'flash-success',
                 duration: 5000,
             });
         }
 
         if (flash?.error) {
             toast.error(flash.error, {
+                id: 'flash-error',
                 duration: 5000,
             });
         }
 
         if (flash?.warning) {
             toast.warning(flash.warning, {
+                id: 'flash-warning',
                 duration: 5000,
             });
         }
 
         if (flash?.info) {
             toast.info(flash.info, {
+                id: 'flash-info',
                 duration: 5000,
             });
         }

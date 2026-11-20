@@ -10,6 +10,7 @@ use App\Models\Currency;
 use App\Models\Network;
 use App\Models\User;
 use App\Models\UserNetworks;
+use App\Services\AdvertiserWorkspaceService;
 use Exception;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
@@ -65,7 +66,16 @@ class AdvertiserController extends Controller
     {
         $pageSize = $request->get('pageSize', 10);
         $user = Auth::user();
+        $status = in_array($request->query('status'), ['active', 'inactive'], true) ? $request->query('status') : 'all';
         try {
+            // Same scope as the list, used for the status tiles (counts across every page).
+            $scoped = fn () => DB::table('advertisers')->where('advertisers.is_verified', true)
+                ->tap(fn ($q) => $this->scopeToNetwork($q));
+            $statusCounts = [
+                'all' => $scoped()->count(),
+                'active' => $scoped()->where('advertisers.status', 'A')->count(),
+                'inactive' => $scoped()->where('advertisers.status', '!=', 'A')->count(),
+            ];
             $adverts = DB::table('advertisers')
                 ->select([
                     'advertisers.*',
@@ -77,18 +87,25 @@ class AdvertiserController extends Controller
                     'users.last_name',
                     'users.email',
                     'users.id as userId',
+                    // Approved advertisers that are no longer active are deactivated, not pending approval.
+                    DB::raw("CASE WHEN advertisers.status = 'A' THEN 'A' ELSE 'D' END as status"),
+                    DB::raw('(select count(*) from campaigns where campaigns.advertiser_id = advertisers.id) as campaigns_count'),
                 ])
                 ->join('users', 'advertisers.user_id', '=', 'users.id')
                 ->join('currencies', 'advertisers.currency', '=', 'currencies.currency_code')
                 ->leftJoin('networks', 'advertisers.network_id', '=', 'networks.id')
-                ->where('advertisers.status', 'A')
                 ->where('advertisers.is_verified', true)
                 ->tap(fn ($q) => $this->scopeToNetwork($q))
+                ->when($status === 'active', fn ($q) => $q->where('advertisers.status', 'A'))
+                ->when($status === 'inactive', fn ($q) => $q->where('advertisers.status', '!=', 'A'))
                 ->orderByDesc('advertisers.created_at')
-                ->paginate($pageSize);
+                ->paginate($pageSize)
+                ->withQueryString();
 
             return Inertia::render('advertisers/index', [
                 'advrts' => $adverts,
+                'status' => $status,
+                'statusCounts' => $statusCounts,
                 'networks' => $this->networkOptions(),
                 'extingNetwork' => $user->is_network ? UserNetworks::where('user_id', $user->id)->with('network')->first() : null,
                 'currencies' => Currency::all(),
@@ -103,11 +120,11 @@ class AdvertiserController extends Controller
     public function store(Request $request)
     {
         try {
-            $password = Str::password(8);
+            $password = Str::random(64);
             DB::beginTransaction();
             $request->validate([
                 'business_name' => ['required', 'string', 'max:255'],
-                'coc_number' => ['required', 'string'],
+                'coc_number' => ['required', 'string', 'max:10', Rule::unique('advertisers', 'coc_number')],
                 'website_name' => ['nullable', 'string'],
                 'industry' => ['required', 'string'],
                 'first_name' => ['required', 'string', 'max:255'],
@@ -131,6 +148,8 @@ class AdvertiserController extends Controller
                 'status' => 'A',
             ]);
             $user->user_name = $user->generateUsername();
+            // An administrator vouches for the address; without this the account is locked out by the `verified` gate.
+            $user->email_verified_at = now();
             $user->save();
 
             $role = Role::where('name', $request['role_name'])->firstOrFail();
@@ -150,7 +169,7 @@ class AdvertiserController extends Controller
                     'is_verified' => true,
                 ]);
             }
-            SendUserCredentialsJob::dispatch($user, $password, $user?->user_name);
+            SendUserCredentialsJob::dispatch($user)->afterCommit();
             DB::commit();
 
             return redirect()->route('advertisers.show', $user->id)->with('success', 'Advertiser created successfully');
@@ -165,8 +184,10 @@ class AdvertiserController extends Controller
         }
     }
 
-    public function show($id)
+    public function show(Request $request, $id, AdvertiserWorkspaceService $workspace)
     {
+        $account = $workspace->find($request->user(), (int) $id);
+        $data = $workspace->build($account, $request);
         try {
 
             $columns = [
@@ -181,14 +202,21 @@ class AdvertiserController extends Controller
                 'users.country_iso',
                 'users.timezone',
                 'users.language',
+                'users.email_verified_at',
+                'users.is_advertiser',
+                'users.is_publisher',
+                'users.is_super_admin',
+                'users.two_factor_confirmed_at',
                 'advertisers.id as advertiser_id',
                 'advertisers.user_id',
                 'advertisers.network_id',
                 'advertisers.business_name',
                 'advertisers.website_name',
                 'advertisers.industry',
+                'advertisers.coc_number',
                 'advertisers.total_budget',
                 'advertisers.available_budget',
+                'advertisers.credit_limit',
                 'advertisers.currency as advertiser_currency',
                 'advertisers.auto_approve_publishers',
                 'advertisers.require_publisher_approval',
@@ -208,13 +236,19 @@ class AdvertiserController extends Controller
                 ->leftJoin('currencies', 'currencies.currency_code', '=', 'advertisers.currency')
                 ->leftJoin('networks', 'advertisers.network_id', '=', 'networks.id')
                 ->where('users.id', $id)
-                ->tap(fn ($q) => $this->scopeToNetwork($q))
+                ->where('advertisers.id', $account->id)
                 ->first();
             abort_if($advertiserDetails === null, 404);
 
+            if (! $data['permissions']['funding']) {
+                unset($advertiserDetails->available_budget);
+            }
+
             return inertia('advertisers/show', [
                 'advertiser' => $advertiserDetails,
-                'networks' => $this->networkOptions(),
+                'workspace' => $data,
+                'networks' => $data['permissions']['changeNetwork'] ? $this->networkOptions() : [],
+                'currencies' => $data['permissions']['edit'] ? Currency::all() : [],
             ]);
         } catch (HttpExceptionInterface $e) {
             throw $e;
@@ -231,7 +265,8 @@ class AdvertiserController extends Controller
             $advertiser = $this->findManaged($id);
             Validator::make($request->all(), [
                 'business_name' => ['required', 'string', 'max:255'],
-                'coc_number' => ['required', 'string'],
+                // Legacy advertisers may have no CoC number yet; they can still be edited until one is entered.
+                'coc_number' => [$advertiser->coc_number ? 'required' : 'nullable', 'string', 'max:10', Rule::unique('advertisers', 'coc_number')->ignore($advertiser->id)],
                 'website_name' => ['nullable', 'string'],
                 'industry' => ['required', 'string'],
                 'network_id' => ['nullable', 'integer'],
@@ -250,7 +285,7 @@ class AdvertiserController extends Controller
             $advertiser->coc_number = $request->input('coc_number');
             $advertiser->save();
 
-            return redirect()->route('advertisers.show', $advertiser->user_id)->with('success', 'Advertiser updated successfully');
+            return redirect()->route('advertisers.show', ['id' => $advertiser->user_id, 'tab' => 'settings'])->with('success', 'Advertiser updated successfully');
         } catch (HttpExceptionInterface|ValidationException|ModelNotFoundException $e) {
             throw $e;
         } catch (Exception $e) {
@@ -311,9 +346,9 @@ class AdvertiserController extends Controller
             $advertiser = $this->findManaged($id);
 
             DB::transaction(function () use ($advertiser) {
+                // Stay verified so the advertiser remains in the list and can be reactivated.
                 $advertiser->update([
                     'status' => 'P',
-                    'is_verified' => false,
                 ]);
                 $advertiser->user()->update([
                     'status' => 'P',

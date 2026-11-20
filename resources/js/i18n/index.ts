@@ -1,50 +1,60 @@
-import i18n from 'i18next';
+import i18n, { type BackendModule } from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
-// Import translation files
-import nlTranslations from './locales/nl.json';
-import enTranslations from './locales/en.json';
+export const SUPPORTED_LOCALES = ['nl', 'en'] as const;
+export type Locale = (typeof SUPPORTED_LOCALES)[number];
 
-// Type-safe resources
-const resources = {
-    nl: { translation: nlTranslations },
-    en: { translation: enTranslations },
-} as const;
+const DEFAULT_LOCALE: Locale = 'nl';
 
-// Get initial locale from page props or default to Dutch
-const getInitialLocale = (): string => {
-    // Try to get from Inertia page props
-    if (typeof window !== 'undefined') {
-        const pageProps = (window as unknown as { __page?: { props?: { locale?: { current?: string } } } }).__page?.props;
-        if (pageProps?.locale?.current) {
-            return pageProps.locale.current;
-        }
-    }
-    return 'nl';
+/**
+ * Each locale bundle is its own chunk and only the active language is
+ * downloaded (both together were ~450 kB of the entry chunk). Keys are the
+ * English source strings, so a missing entry falls back to the key itself.
+ */
+const lazyLocales: BackendModule = {
+    type: 'backend',
+    init() {},
+    read(language, _namespace, callback) {
+        const locale = (SUPPORTED_LOCALES as readonly string[]).includes(
+            language,
+        )
+            ? language
+            : DEFAULT_LOCALE;
+        import(`./locales/${locale}.json`)
+            .then((bundle) => callback(null, bundle.default))
+            .catch((error) => callback(error, false));
+    },
 };
 
-i18n.use(initReactI18next).init({
-    resources,
-    lng: getInitialLocale(),
-    fallbackLng: 'nl',
+// The server renders <html lang> from the user's locale (app.blade.php), so
+// the right bundle is requested first.
+const initialLocale = (): string => {
+    if (typeof document !== 'undefined' && document.documentElement.lang) {
+        return document.documentElement.lang.slice(0, 2).toLowerCase();
+    }
+    return DEFAULT_LOCALE;
+};
 
-    interpolation: {
-        escapeValue: false, // React handles escaping
-    },
-
-    // Return key if translation missing (helps identify missing translations)
-    returnEmptyString: false,
-
-    // Debug mode for development
-    debug: import.meta.env.DEV,
-
-    // React specific options
-    react: {
-        useSuspense: false, // Disable suspense for SSR compatibility
-    },
-});
+/** Resolves once the initial locale bundle has loaded. */
+export const i18nReady = i18n
+    .use(lazyLocales)
+    .use(initReactI18next)
+    .init({
+        lng: initialLocale(),
+        // No cross-language fallback: a missing key shows its English source
+        // string (the translation test keeps both bundles complete).
+        fallbackLng: false,
+        supportedLngs: [...SUPPORTED_LOCALES],
+        interpolation: {
+            escapeValue: false, // React handles escaping
+        },
+        returnEmptyString: false,
+        debug: import.meta.env.DEV && import.meta.env.MODE !== 'test',
+        react: {
+            useSuspense: false, // Disable suspense for SSR compatibility
+        },
+    });
 
 export default i18n;
 
-// Export type for translation keys
-export type TranslationKey = keyof typeof nlTranslations;
+export type TranslationKey = keyof typeof import('./locales/nl.json');

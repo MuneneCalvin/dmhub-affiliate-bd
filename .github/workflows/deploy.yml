@@ -1,26 +1,16 @@
 name: deploy
 
-# Builds the production images, pushes them to GitHub Container Registry and asks Dokploy to redeploy.
-#   staging    : every push to main
-#   production : run this workflow manually (Actions > deploy > Run workflow, environment = production).
-#                Protect the "production" environment with required reviewers in the repository settings.
-# Nothing happens on pushes until the repository variable DEPLOY_ENABLED is "true".
-
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
     inputs:
       environment:
-        description: Where to deploy
         type: choice
-        options:
-          - staging
-          - production
+        options: [staging, production]
         default: staging
       ref:
-        description: Git ref (branch, tag or sha) to build and deploy
+        description: Ref to resolve once, qualify, build and deploy
         default: main
 
 permissions:
@@ -32,89 +22,118 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  REGISTRY: ghcr.io
   TARGET_ENV: ${{ github.event.inputs.environment || 'staging' }}
 
 jobs:
-  images:
+  resolve:
     if: ${{ vars.DEPLOY_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     outputs:
-      repo: ${{ steps.meta.outputs.repo }}
-      sha: ${{ steps.meta.outputs.sha }}
+      sha: ${{ steps.revision.outputs.sha }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.ref || github.sha }}
+      - id: revision
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
-      - name: Image names and tags
-        id: meta
+  qualify:
+    needs: resolve
+    uses: ./.github/workflows/tests.yml
+    with:
+      revision: ${{ needs.resolve.outputs.sha }}
+
+  images:
+    needs: [resolve, qualify]
+    runs-on: ubuntu-latest
+    outputs:
+      repo: ${{ steps.meta.outputs.repo }}
+      app: ${{ steps.app.outputs.digest }}
+      web: ${{ steps.web.outputs.digest }}
+      backup: ${{ steps.backup.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.qualify.outputs.revision }}
+      - id: meta
+        env:
+          TESTED_SHA: ${{ needs.qualify.outputs.revision }}
+          RESOLVED_SHA: ${{ needs.resolve.outputs.sha }}
         run: |
-          echo "repo=${REGISTRY}/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
-          echo "sha=$(git rev-parse --short=12 HEAD)" >> "$GITHUB_OUTPUT"
-
+          test "$(git rev-parse HEAD)" = "$TESTED_SHA"
+          test "$TESTED_SHA" = "$RESOLVED_SHA"
+          echo "repo=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
       - uses: docker/setup-buildx-action@v3
-
       - uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      # Each image gets an immutable sha tag (for rollbacks) and a moving environment tag
-      # (staging | production) that the Dokploy stack follows via IMAGE_TAG.
-      - name: Build and push app image
-        uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v6
+        id: app
         with:
           context: .
           file: docker/production/Dockerfile
           target: app
+          build-args: RELEASE_SHA=${{ needs.qualify.outputs.revision }}
           push: true
           tags: |
-            ${{ steps.meta.outputs.repo }}/app:${{ steps.meta.outputs.sha }}
+            ${{ steps.meta.outputs.repo }}/app:${{ needs.qualify.outputs.revision }}
             ${{ steps.meta.outputs.repo }}/app:${{ env.TARGET_ENV }}
           cache-from: type=gha,scope=app
-          cache-to: type=gha,mode=max,scope=app
-
-      - name: Build and push web image
-        uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v6
+        id: web
         with:
           context: .
           file: docker/production/Dockerfile
           target: web
+          build-args: RELEASE_SHA=${{ needs.qualify.outputs.revision }}
           push: true
           tags: |
-            ${{ steps.meta.outputs.repo }}/web:${{ steps.meta.outputs.sha }}
+            ${{ steps.meta.outputs.repo }}/web:${{ needs.qualify.outputs.revision }}
             ${{ steps.meta.outputs.repo }}/web:${{ env.TARGET_ENV }}
           cache-from: type=gha,scope=web
-          cache-to: type=gha,mode=max,scope=web
+      - uses: docker/build-push-action@v6
+        id: backup
+        with:
+          context: .
+          file: docker/backup/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.repo }}/backup:${{ needs.qualify.outputs.revision }}
+            ${{ steps.meta.outputs.repo }}/backup:${{ env.TARGET_ENV }}
 
   deploy:
-    needs: images
+    needs: [qualify, images]
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     environment: ${{ github.event.inputs.environment || 'staging' }}
     steps:
+      # Dokploy follows IMAGE_TAG=<environment> (staging | production), set once in its environment
+      # settings. The webhook makes it pull the images pushed above and recreate the stack.
       - name: Trigger Dokploy redeploy
         env:
           DOKPLOY_WEBHOOK_URL: ${{ secrets.DOKPLOY_WEBHOOK_URL }}
-          SHA: ${{ needs.images.outputs.sha }}
+          SHA: ${{ needs.qualify.outputs.revision }}
         run: |
           if [ -z "$DOKPLOY_WEBHOOK_URL" ]; then
-            echo "::notice::Images ${SHA} pushed. No DOKPLOY_WEBHOOK_URL secret set for '${TARGET_ENV}', so press Deploy in Dokploy."
-            echo "skip=true" >> "$GITHUB_ENV"
-            exit 0
+            echo "::error::No DOKPLOY_WEBHOOK_URL secret for '${TARGET_ENV}'. Images ${SHA} are pushed; press Deploy in Dokploy."
+            exit 1
           fi
           curl -fsS --max-time 30 -X POST -H 'Content-Type: application/json' \
             -d "{\"ref\":\"refs/heads/main\",\"head_commit\":{\"id\":\"${SHA}\"}}" "$DOKPLOY_WEBHOOK_URL"
 
-      - name: Smoke test
-        if: env.skip != 'true'
+      # The image carries the tested commit (RELEASE_SHA build arg), so this proves the new build is serving.
+      - name: Verify served revision
         env:
           APP_URL: ${{ vars.APP_URL }}
+          SHA: ${{ needs.qualify.outputs.revision }}
         run: |
-          for i in $(seq 1 24); do
-            if curl -fsS --max-time 10 "$APP_URL/up" >/dev/null; then echo "OK: $APP_URL/up"; exit 0; fi
+          for i in $(seq 1 60); do
+            served=$(curl -fsS --max-time 10 "${APP_URL%/}/up/revision" 2>/dev/null | sed -n 's/.*"revision":"\([^"]*\)".*/\1/p' || true)
+            if [ "$served" = "$SHA" ]; then echo "OK: ${APP_URL} serves ${SHA}"; exit 0; fi
+            echo "Waiting for ${SHA} (serving: ${served:-nothing yet})"
             sleep 10
           done
-          echo "Smoke test failed for $APP_URL/up" >&2
+          echo "::error::${APP_URL} did not serve ${SHA} within 10 minutes" >&2
           exit 1

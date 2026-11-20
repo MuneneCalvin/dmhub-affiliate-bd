@@ -3,7 +3,6 @@
 use App\Models\Advertiser;
 use App\Models\Campaign;
 use App\Models\Creative;
-use App\Models\Lead;
 use App\Models\Offer;
 use App\Models\Publisher;
 use App\Models\User;
@@ -51,19 +50,8 @@ it('fails closed for roles without a profile or network', function (array $flags
     'no role' => [[]],
 ]);
 
-it('scopes offers, creatives and leads through visible campaigns', function (string $model) {
+it('scopes offers and creatives through visible campaigns', function (string $model) {
     $sql = $model::visibleTo(scopedUser(['is_advertiser' => true], advertiserId: 7))->toSql();
 
     expect($sql)->toContain('campaign_id" in (select "campaigns"."id" from "campaigns" where "campaigns"."advertiser_id" = ?)');
-})->with([Offer::class, Creative::class, Lead::class]);
-
-it('shows publishers only their own leads', function () {
-    $q = Lead::visibleTo(scopedUser(['is_publisher' => true], publisherId: 9));
-
-    expect($q->toSql())->toContain('"leads"."publisher_id" = ?');
-    expect($q->getBindings())->toBe([9]);
-});
-
-it('hides all leads from a publisher without a profile', function () {
-    expect(Lead::visibleTo(scopedUser(['is_publisher' => true]))->toSql())->toContain('1 = 0');
-});
+})->with([[Offer::class], [Creative::class]]);

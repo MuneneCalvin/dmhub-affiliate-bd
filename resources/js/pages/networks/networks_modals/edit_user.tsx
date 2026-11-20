@@ -1,10 +1,20 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import {
+    EmailField,
+    SelectField,
+    TextField,
+} from '@/components/app/form-controls';
 import { Button } from '@/components/ui/button';
-import { ReusableEmailInput, ReusableNormalSelect, ReusableTextInput } from '@/dev/core';
-import { cn } from '@/lib/utils';
+import {
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { User } from '@/types';
 import { router, useForm } from '@inertiajs/react';
+import { UserRound } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 type EditNetworkUserForm = {
@@ -17,13 +27,13 @@ type EditNetworkUserForm = {
 
 const EditNetworkUser = ({
     componentProps,
-    handleDialogContextSwitch
+    handleDialogContextSwitch,
 }: {
     componentProps: {
         user: User;
         networkId: number;
-    },
-    handleDialogContextSwitch: any
+    };
+    handleDialogContextSwitch: any;
 }) => {
     const { t } = useTranslation();
     const { user, networkId } = componentProps;
@@ -38,14 +48,18 @@ const EditNetworkUser = ({
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        router.post(`/networks/users/${user?.id}/update`, {
-            ...data,
-            network_id: networkId,
-        }, {
-            onSuccess: () => {
-                handleDialogContextSwitch?.({ state: false });
+        router.post(
+            `/networks/users/${user?.id}/update`,
+            {
+                ...data,
+                network_id: networkId,
             },
-        });
+            {
+                onSuccess: () => {
+                    handleDialogContextSwitch?.({ state: false });
+                },
+            },
+        );
     };
 
     const statusOptions = [
@@ -55,12 +69,18 @@ const EditNetworkUser = ({
     ];
 
     return (
-        <div className=''>
-            <h4 className='text-xl font-semibold'>
-                {t('Edit Network User')}
-            </h4>
-            <form onSubmit={handleSubmit} className="w-full py-2 mt-4 space-y-4">
-                <ReusableTextInput
+        <div className="">
+            <DialogHeader icon={<UserRound />} tone="partners">
+                <DialogTitle>{t('Edit Network User')}</DialogTitle>
+                <DialogDescription>
+                    {t('Update this person’s details and access status.')}
+                </DialogDescription>
+            </DialogHeader>
+            <form
+                onSubmit={handleSubmit}
+                className="mt-4 w-full space-y-4 py-2"
+            >
+                <TextField
                     id="first_name"
                     label={t('First Name')}
                     value={data.first_name}
@@ -69,7 +89,7 @@ const EditNetworkUser = ({
                     placeholder={t('eg. Donald')}
                     required
                 />
-                <ReusableTextInput
+                <TextField
                     id="last_name"
                     label={t('Last Name')}
                     value={data.last_name}
@@ -78,7 +98,7 @@ const EditNetworkUser = ({
                     placeholder={t('eg. Trump')}
                     required
                 />
-                <ReusableEmailInput
+                <EmailField
                     id="email"
                     label={t('Email Address')}
                     value={data.email}
@@ -87,7 +107,7 @@ const EditNetworkUser = ({
                     placeholder="user@example.com"
                     required
                 />
-                <ReusableTextInput
+                <TextField
                     id="title"
                     label={t('Title')}
                     value={data.title}
@@ -96,28 +116,29 @@ const EditNetworkUser = ({
                     placeholder={t('eg. Mr, Mrs, Eng')}
                     required
                 />
-                <ReusableNormalSelect
+                <SelectField
                     id="status"
                     label={t('Status')}
                     value={data.status}
                     onChange={(value: string) => setData('status', value)}
-                    data={statusOptions}
+                    options={statusOptions}
                     placeholder={t('Select status')}
                     error={errors.status}
                 />
-                <div className="col-span-2 flex gap-4 justify-between mt-4">
+                <DialogFooter>
                     <Button
                         type="button"
-                        variant="outline"
+                        variant="secondary"
                         onClick={() =>
                             handleDialogContextSwitch?.({ state: false })
-                        }>
+                        }
+                    >
                         {t('Cancel')}
                     </Button>
-                    <Button type="submit" disabled={processing} className={cn('bg-primary')}>
+                    <Button type="submit" disabled={processing}>
                         {processing ? t('Saving...') : t('Update User')}
                     </Button>
-                </div>
+                </DialogFooter>
             </form>
         </div>
     );

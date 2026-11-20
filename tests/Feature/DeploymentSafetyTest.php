@@ -11,6 +11,14 @@ function asProduction(): void
     app()->detectEnvironment(fn () => 'production');
 }
 
+it('reports the baked revision without cache and checks database availability', function () {
+    config(['release.revision' => str_repeat('a', 40)]);
+    $this->getJson('/up/revision')->assertOk()->assertJsonPath('revision', str_repeat('a', 40))
+        ->assertHeader('Cache-Control', 'no-store, private');
+    DB::partialMock()->shouldReceive('select')->with('SELECT 1')->once()->andThrow(new RuntimeException('Database unavailable'));
+    $this->getJson('/up/revision')->assertStatus(500);
+});
+
 // Invoke seeders directly: `db:seed` would ask for confirmation in a production environment.
 function runSeeder(string $class): void
 {

@@ -13,6 +13,13 @@ use App\Models\Offer;
 use App\Models\Publisher;
 use App\Models\User;
 use App\Notifications\CampaignCreated;
+use App\Services\CampaignAnalyticsService;
+use App\Services\CampaignFinanceService;
+use App\Services\CampaignOffersService;
+use App\Services\CampaignOverviewService;
+use App\Services\CampaignPublishersService;
+use App\Services\CampaignSettingsService;
+use App\Services\CampaignTrackingService;
 use App\Support\Tenancy;
 use Carbon\Carbon;
 use Exception;
@@ -21,6 +28,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Validation\ValidationException;
 
 class AdvertiserCampaignController extends Controller
 {
@@ -36,6 +44,7 @@ class AdvertiserCampaignController extends Controller
                 'campaigns.name',
                 'campaigns.total_budget',
                 'campaigns.daily_budget',
+                'campaigns.spent_amount',
                 'campaigns.currency',
                 'campaigns.start_date',
                 'campaigns.end_date',
@@ -43,10 +52,24 @@ class AdvertiserCampaignController extends Controller
                 'campaigns.target_conversions',
                 'campaigns.target_roi',
                 'campaigns.created_at',
-                'networks.network_name'
-            );
+                'networks.network_name',
+                'advertisers.business_name as advertiser_name'
+            )
+            ->selectSub(DB::table('offers')->selectRaw('COUNT(*)')->whereColumn('offers.campaign_id', 'campaigns.id'), 'offers_count')
+            ->orderByDesc('campaigns.created_at')->orderByDesc('campaigns.id');
         Tenancy::campaigns($query, $user);
-        $campaigns = $query->paginate(25);
+        // select() replaces the list columns: PostgreSQL rejects ungrouped columns.
+        $statusCounts = (clone $query)->reorder()->select('campaigns.campaign_status as status')->selectRaw('COUNT(*) as total')
+            ->groupBy('campaigns.campaign_status')->pluck('total', 'status');
+        $status = in_array($request->query('status'), ['A', 'P', 'I'], true) ? $request->query('status') : 'all';
+        if ($status !== 'all') {
+            $query->where('campaigns.campaign_status', $status);
+        }
+        $campaigns = $query->paginate(25)->withQueryString();
+        $campaigns->getCollection()->each(function ($campaign) {
+            $this->serializeDates($campaign);
+            $campaign->offers_count = (int) $campaign->offers_count;
+        });
 
         return inertia('advertisercampaigns/index', [
             'campaigns' => [
@@ -58,26 +81,32 @@ class AdvertiserCampaignController extends Controller
                 'from' => $campaigns->firstItem(),
                 'to' => $campaigns->lastItem(),
             ],
+            'status' => $status,
+            'statusCounts' => [
+                'all' => (int) $statusCounts->sum(),
+                'A' => (int) ($statusCounts['A'] ?? 0),
+                'P' => (int) ($statusCounts['P'] ?? 0),
+                'I' => (int) ($statusCounts['I'] ?? 0),
+            ],
         ]);
     }
 
-    public function createPage()
+    public function createPage(Request $request)
     {
         $user = Auth::user();
-        $advertiserId = $user->advertiser?->id;
-        $terms = CampaignTerms::query()
-            ->where(function ($query) use ($advertiserId) {
-                $query->whereNull('advertiser_id');
-                if ($advertiserId) {
-                    $query->orWhere('advertiser_id', $advertiserId);
-                }
-            })
-            ->get();
+        $terms = CampaignTerms::where(fn ($q) => $q->whereNull('advertiser_id')
+            ->orWhereIn('advertiser_id', $this->advertisersForUser()->select('id')))->get();
+
+        $selectedAdvertiser = $request->filled('advertiser_id')
+            ? $this->advertisersForUser()->whereKey($request->input('advertiser_id'))->firstOrFail()->id
+            : null;
 
         return inertia('advertisercampaigns/create', [
+            'selectedAdvertiserId' => $selectedAdvertiser,
             'currencies' => Currency::all(),
             'countries' => Country::where('status', 'A')->get(['country_iso', 'country_name']),
             'terms' => $terms,
+            'advertisers' => $this->advertisersForUser()->get(['id', 'business_name', 'available_budget', 'currency']),
         ]);
     }
 
@@ -92,8 +121,8 @@ class AdvertiserCampaignController extends Controller
                 'terms' => 'nullable',
                 'start_date' => 'required|date',
                 'end_date' => 'required|date|after_or_equal:start_date',
-                'total_budget' => 'required|numeric|min:0',
-                'daily_budget' => 'required|numeric|min:0',
+                'total_budget' => 'nullable|numeric|min:0',
+                'daily_budget' => 'nullable|numeric|min:0',
                 'currency' => 'required|string|size:3',
                 'geo_targeting' => 'nullable',
                 'device_targeting' => 'nullable',
@@ -101,42 +130,44 @@ class AdvertiserCampaignController extends Controller
                 'target_conversions' => 'nullable|integer|min:0',
                 'target_roi' => 'nullable|numeric|min:0',
                 'metadata' => 'nullable',
+                'campaign_status' => 'sometimes|in:A,I,P',
             ]);
             $user = Auth::user();
-            $advertiser = Advertiser::where('user_id', $user->id)
-                ->whereNotNull('network_id')
+            $advertiser = $this->advertisersForUser()
+                ->when($user->is_network || $user->is_super_admin, fn ($q) => $q->whereKey($request->input('advertiser_id')))
                 ->first();
-
             if (! $advertiser) {
-                throw new Exception('No advertiser account linked to this user');
+                throw ValidationException::withMessages(['advertiser_id' => 'Select an active advertiser in your network.']);
             }
             $networkId = $advertiser->network_id;
-            $validated['terms'] = $this->safeJson($validated['terms']);
-            $validated['geo_targeting'] = $this->safeJson($validated['geo_targeting']);
-            $validated['device_targeting'] = $this->safeJson($validated['device_targeting']);
-            $validated['metadata'] = $this->safeJson($validated['metadata']);
+            $validated['terms'] = $this->safeJson($validated['terms'] ?? null);
+            $validated['geo_targeting'] = $this->safeJson($validated['geo_targeting'] ?? null);
+            $validated['device_targeting'] = $this->safeJson($validated['device_targeting'] ?? null);
+            $validated['metadata'] = $this->safeJson($validated['metadata'] ?? null);
 
             $campaign = Campaign::create([
                 'network_id' => $networkId,
                 'advertiser_id' => $advertiser->id,
 
+                'campaign_status' => $validated['campaign_status'] ?? 'A',
                 'name' => $validated['name'],
-                'description' => $validated['description'],
+                'description' => $validated['description'] ?? null,
                 'terms' => $validated['terms'],
 
                 'start_date' => Carbon::parse($validated['start_date']),
                 'end_date' => Carbon::parse($validated['end_date']),
 
-                'total_budget' => $validated['total_budget'],
-                'daily_budget' => $validated['daily_budget'],
+                // Zero represents an unset spending limit throughout campaign eligibility.
+                'total_budget' => $validated['total_budget'] ?? 0,
+                'daily_budget' => $validated['daily_budget'] ?? 0,
 
                 'currency' => $validated['currency'],
                 'geo_targeting' => $validated['geo_targeting'],
                 'device_targeting' => $validated['device_targeting'],
 
-                'max_publishers' => $validated['max_publishers'],
-                'target_conversions' => $validated['target_conversions'],
-                'target_roi' => $validated['target_roi'],
+                'max_publishers' => $validated['max_publishers'] ?? null,
+                'target_conversions' => $validated['target_conversions'] ?? null,
+                'target_roi' => $validated['target_roi'] ?? 0,
 
                 'metadata' => $validated['metadata'],
             ]);
@@ -151,6 +182,9 @@ class AdvertiserCampaignController extends Controller
             return redirect()
                 ->route('advertiser.campaign.show', [$campaign->id])
                 ->with('success', 'Campaign created successfully.');
+        } catch (ValidationException $e) {
+            DB::rollBack();
+            throw $e;
         } catch (Exception $e) {
             DB::rollBack();
             report($e);
@@ -161,7 +195,7 @@ class AdvertiserCampaignController extends Controller
         }
     }
 
-    public function show($id)
+    public function show($id, ?int $offerId = null)
     {
         $query = DB::table('campaigns')
             ->join('networks', 'networks.id', '=', 'campaigns.network_id')
@@ -183,30 +217,42 @@ class AdvertiserCampaignController extends Controller
             );
         $campaign = Tenancy::campaigns($query, Auth::user())->where('campaigns.id', $id)->first();
         abort_if($campaign === null, 404);
+        if ($offerId !== null || (request('tab') === 'tracking' && request()->anyFilled(['offer', 'publisher']))) {
+            return inertia('campaigns/offer-tracking', [
+                'trackingWorkspace' => fn () => app(CampaignTrackingService::class)->detail(Campaign::findOrFail($campaign->id), request(), $offerId),
+            ]);
+        }
+
+        $this->serializeDates($campaign);
         $offers = Offer::with(['commissions.commissionType'])
             ->where('campaign_id', $campaign->id)
             ->get()
-            ->map(function ($offer) {
-                // Map commission values for table display
-                $commissions = $offer->commissions;
-                $offer->commission_value_1 = $commissions[0]->commission_value ?? null;
-                $offer->commission_type_1 = $commissions[0]->commissionType->nice_name ?? null;
-                $offer->commission_value_2 = $commissions[1]->commission_value ?? null;
-                $offer->commission_type_2 = $commissions[1]->commissionType->nice_name ?? null;
+            ->map(function ($offer) use ($campaign) {
+                // Commission values/types are exposed by the Offer accessors.
+                $offer->currency = $campaign->currency;
 
                 return $offer;
             });
 
         return inertia('advertisercampaigns/show', [
             'campaign' => $campaign,
+            'overview' => app(CampaignOverviewService::class)->build(Campaign::findOrFail($campaign->id), Auth::user()),
             'offers' => $offers,
+            'publisherWorkspace' => fn () => app(CampaignPublishersService::class)->build(Campaign::findOrFail($campaign->id), Auth::user()),
+            'financeWorkspace' => fn () => request('tab') === 'finance' ? app(CampaignFinanceService::class)->build(Campaign::findOrFail($campaign->id), request()) : null,
+            'analyticsWorkspace' => fn () => request('tab') === 'analytics' ? app(CampaignAnalyticsService::class)->build(Campaign::findOrFail($campaign->id), request()) : null,
+            'settingsWorkspace' => fn () => request('tab') === 'settings' ? app(CampaignSettingsService::class)->build(Campaign::findOrFail($campaign->id), Auth::user()) : null,
+            'trackingHub' => fn () => request('tab') === 'tracking' ? app(CampaignTrackingService::class)->hub(Campaign::findOrFail($campaign->id)) : null,
+            'offerWorkspace' => fn () => app(CampaignOffersService::class)->build(Campaign::findOrFail($campaign->id), Auth::user()),
+            'funding' => Advertiser::whereKey(Campaign::findOrFail($campaign->id)->advertiser_id)->first(['available_budget', 'currency']),
         ]);
     }
 
     public function edit($id)
     {
         $user = Auth::user();
-        $advertiserId = $user->advertiser?->id;
+        $campaign = Campaign::visibleTo($user)->findOrFail($id);
+        $advertiserId = $campaign->advertiser_id;
         $terms = CampaignTerms::query()
             ->where(function ($query) use ($advertiserId) {
                 $query->whereNull('advertiser_id');
@@ -219,8 +265,10 @@ class AdvertiserCampaignController extends Controller
         return inertia('advertisercampaigns/edit', [
             'currencies' => Currency::all(),
             'countries' => Country::where('status', 'A')->get(['country_iso', 'country_name']),
-            'campaign' => Campaign::visibleTo($user)->findOrFail($id),
+            'campaign' => $campaign,
+            'advertiserName' => $campaign->advertiser?->business_name,
             'terms' => $terms,
+            'funding' => $campaign->advertiser()->first(['available_budget', 'currency']),
         ]);
     }
 
@@ -234,8 +282,8 @@ class AdvertiserCampaignController extends Controller
                 'terms' => 'nullable',
                 'start_date' => 'required|date',
                 'end_date' => 'required|date|after_or_equal:start_date',
-                'total_budget' => 'required|numeric|min:0',
-                'daily_budget' => 'required|numeric|min:0',
+                'total_budget' => 'nullable|numeric|min:0',
+                'daily_budget' => 'nullable|numeric|min:0',
                 'currency' => 'required|string|size:3',
                 'geo_targeting' => 'nullable',
                 'device_targeting' => 'nullable',
@@ -243,34 +291,36 @@ class AdvertiserCampaignController extends Controller
                 'target_conversions' => 'nullable|integer|min:0',
                 'target_roi' => 'nullable|numeric|min:0',
                 'metadata' => 'nullable',
+                'campaign_status' => 'sometimes|in:A,I,P',
             ]);
             $campaign = Campaign::visibleTo(Auth::user())->findOrFail($id);
-            $validated['terms'] = $this->safeJson($validated['terms']);
-            $validated['geo_targeting'] = $this->safeJson($validated['geo_targeting']);
-            $validated['device_targeting'] = $this->safeJson($validated['device_targeting']);
-            $validated['metadata'] = $this->safeJson($validated['metadata']);
+            $validated['terms'] = $this->safeJson($validated['terms'] ?? null);
+            $validated['geo_targeting'] = $this->safeJson($validated['geo_targeting'] ?? null);
+            $validated['device_targeting'] = $this->safeJson($validated['device_targeting'] ?? null);
+            $validated['metadata'] = $this->safeJson($validated['metadata'] ?? null);
 
             $campaign->update([
+                'campaign_status' => $validated['campaign_status'] ?? $campaign->campaign_status,
                 'name' => $validated['name'],
                 'description' => $validated['description'] ?? null,
                 'terms' => $validated['terms'] ?? null,
                 'start_date' => $validated['start_date'],
                 'end_date' => $validated['end_date'],
-                'total_budget' => $validated['total_budget'],
-                'daily_budget' => $validated['daily_budget'],
+                'total_budget' => $validated['total_budget'] ?? 0,
+                'daily_budget' => $validated['daily_budget'] ?? 0,
                 'currency' => $validated['currency'],
                 'geo_targeting' => $validated['geo_targeting'] ?? null,
                 'device_targeting' => $validated['device_targeting'] ?? null,
                 'max_publishers' => $validated['max_publishers'] ?? null,
                 'target_conversions' => $validated['target_conversions'] ?? null,
-                'target_roi' => $validated['target_roi'] ?? null,
+                'target_roi' => $validated['target_roi'] ?? 0,
                 'metadata' => $validated['metadata'] ?? null,
             ]);
             DB::commit();
 
             return redirect()->route('advertiser.campaign.show', [$id])
                 ->with('success', 'Updated Successfully!!');
-        } catch (ModelNotFoundException $e) {
+        } catch (ModelNotFoundException|ValidationException $e) {
             DB::rollBack();
             throw $e;
         } catch (Exception $e) {
@@ -282,10 +332,37 @@ class AdvertiserCampaignController extends Controller
         }
     }
 
+    private function serializeDates(object $campaign): void
+    {
+        // Query-builder rows lack Eloquent's UTC date serialization.
+        foreach (['start_date', 'end_date'] as $field) {
+            $campaign->{$field} = $campaign->{$field}
+                ? Carbon::parse($campaign->{$field})->toISOString() : null;
+        }
+    }
+
+    private function advertisersForUser()
+    {
+        $user = Auth::user();
+
+        return Advertiser::whereNotNull('network_id')->where('status', 'A')
+            ->whereHas('user', fn ($q) => $q->where('status', 'A'))
+            ->when(! $user->is_super_admin, function ($q) use ($user) {
+                if ($user->is_network) {
+                    $q->where('network_id', $user->networkId() ?? 0);
+                } else {
+                    $q->where('user_id', $user->id);
+                }
+            });
+    }
+
     private function safeJson($value)
     {
         if (! $value) {
             return null;
+        }
+        if (is_array($value)) {
+            return $value;
         }
         $decoded = json_decode($value, true);
         if (json_last_error() === JSON_ERROR_NONE) {

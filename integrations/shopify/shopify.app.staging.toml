@@ -1,0 +1,27 @@
+# Shared staging app under DM Consultants Limited. Client ID is public; the secret belongs in deployment environment variables.
+client_id = "cab55899e76c13e771c831afb04178c2"
+name = "DM Hub Promotions"
+application_url = "https://affiliates-bnd.dmhub.cloud"
+embedded = false
+
+[access_scopes]
+scopes = "read_orders,write_discounts,read_products,write_app_proxy"
+
+[auth]
+redirect_urls = ["https://affiliates-bnd.dmhub.cloud/integrations/shopify/callback"]
+
+[app_proxy]
+url = "https://affiliates-bnd.dmhub.cloud/api/integrations/shopify/proxy"
+subpath = "dmhub"
+prefix = "apps"
+
+[webhooks]
+api_version = "2026-10"
+
+[[webhooks.subscriptions]]
+topics = ["orders/paid", "orders/cancelled", "refunds/create", "app/uninstalled"]
+uri = "/api/integrations/shopify/webhooks"
+
+[[webhooks.subscriptions]]
+compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
+uri = "/api/integrations/shopify/webhooks"

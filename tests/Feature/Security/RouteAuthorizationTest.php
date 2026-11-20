@@ -6,6 +6,7 @@ use App\Http\Middleware\EnsureSuperAdmin;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 function middlewareFor(string $routeName): array
 {
@@ -28,7 +29,11 @@ function runMiddleware(string $class, User $user): int
     $request = Request::create('/x');
     $request->setUserResolver(fn () => $user);
 
-    return app($class)->handle($request, fn () => response('ok'))->getStatusCode();
+    try {
+        return app($class)->handle($request, fn () => response('ok'))->getStatusCode();
+    } catch (HttpExceptionInterface $e) {
+        return $e->getStatusCode();
+    }
 }
 
 dataset('network owner routes', [
@@ -37,9 +42,9 @@ dataset('network owner routes', [
     'applications.index', 'applications.show', 'applications.approve', 'applications.reject',
     'networks.pool.advertisers', 'networks.pool.publishers', 'networks.pool.advertisers.approve',
     'networks.pool.publishers.approve', 'networks.pool.advertisers.reject', 'networks.pool.publishers.reject',
-    'advertisers.index', 'advertisers.store', 'advertisers.show', 'advertisers.update', 'advertisers.change.status',
+    'advertisers.index', 'advertisers.store', 'advertisers.update', 'advertisers.change.status',
     'advertisers.deactivate', 'advertisers.activate',
-    'publishers.index', 'publishers.store', 'publishers.show', 'publishers.update', 'publishers.change.status',
+    'publishers.index', 'publishers.store', 'publishers.update', 'publishers.change.status',
     'publishers.deactivate', 'publishers.activate',
     'networks.settings.index', 'networks.settings.update', 'networks.invoices.index', 'networks.invoices.store',
 ]);
@@ -66,48 +71,63 @@ dataset('super admin routes', [
 
 it('protects network owner routes with ensure.network', function (string $name) {
     expect(middlewareFor($name))->toContain('auth')->toContain('ensure.network');
+    expect(collect(middlewareFor($name))->contains(fn ($middleware) => str_starts_with($middleware, 'business.permission:')))->toBeTrue();
 })->with('network owner routes');
+
+// The advertiser workspace also admits owners; AdvertiserWorkspaceTest covers
+// role-specific permissions, tenant isolation, hidden tabs and partial requests.
+it('protects the shared advertiser workspace with campaign manager authentication', function () {
+    expect(middlewareFor('advertisers.show'))->toContain('auth')->toContain('ensure.campaign.manager');
+});
+
+// PublisherWorkspaceTest verifies category, active membership, ownership and tab grants.
+it('requires authentication for the shared publisher workspace', function () {
+    expect(middlewareFor('publishers.show'))->toContain('auth');
+    expect(middlewareFor('publisher.account'))->toContain('auth')->toContain('business.permission:access_publisher_dashboard');
+});
 
 it('protects platform routes with ensure.admin', function (string $name) {
     expect(middlewareFor($name))->toContain('auth')->toContain('ensure.admin');
+    expect(collect(middlewareFor($name))->contains(fn ($middleware) => str_starts_with($middleware, 'business.permission:')))->toBeTrue();
 })->with('super admin routes');
 
 it('protects campaign, offer and creative routes with ensure.campaign.manager', function (string $name) {
     expect(middlewareFor($name))->toContain('auth')->toContain('ensure.campaign.manager');
+    expect(collect(middlewareFor($name))->contains(fn ($middleware) => str_starts_with($middleware, 'business.permission:')))->toBeTrue();
 })->with('campaign manager routes');
 
 it('ensure.campaign.manager rejects publishers and admits the rest', function (string $flag, int $status) {
     expect(runMiddleware(EnsureCampaignManager::class, userWith([$flag => true])))->toBe($status);
-})->with([['is_publisher', 302], ['is_advertiser', 200], ['is_network', 200], ['is_super_admin', 200]]);
+})->with([['is_publisher', 302], ['is_advertiser', 200], ['is_network', 403], ['is_super_admin', 200]]);
 
 it('ensure.network rejects publishers and advertisers', function (string $flag) {
     expect(runMiddleware(EnsureNetworkOwner::class, userWith([$flag => true])))->toBe(302);
 })->with(['is_publisher', 'is_advertiser']);
 
-it('ensure.network admits network owners and super admins', function (string $flag) {
-    expect(runMiddleware(EnsureNetworkOwner::class, userWith([$flag => true])))->toBe(200);
-})->with(['is_network', 'is_super_admin']);
+it('ensure.network requires membership for network owners and admits super admins', function (string $flag, int $status) {
+    expect(runMiddleware(EnsureNetworkOwner::class, userWith([$flag => true])))->toBe($status);
+})->with([['is_network', 403], ['is_super_admin', 200]]);
 
 it('ensure.admin rejects everyone but super admins', function (string $flag, int $status) {
     expect(runMiddleware(EnsureSuperAdmin::class, userWith([$flag => true])))->toBe($status);
 })->with([['is_publisher', 302], ['is_advertiser', 302], ['is_network', 302], ['is_super_admin', 200]]);
 
-it('fails closed on postbacks when no secret is configured', function () {
+it('fails closed on postbacks without an advertiser credential', function () {
     config(['services.postback.secret' => null]);
 
-    $this->postJson('/api/postback/lead', ['click_id' => 1])->assertStatus(503);
+    $this->postJson('/api/v1/events', ['click_id' => 1])->assertStatus(401);
 });
 
 it('rejects postbacks with a wrong or missing secret', function () {
     config(['services.postback.secret' => 'topsecret']);
 
-    $this->postJson('/api/postback/lead', ['click_id' => 1])->assertStatus(401);
-    $this->postJson('/api/postback/lead/status', ['secret' => 'nope'])->assertStatus(401);
-    $this->getJson('/api/postback/lead/info?lead_id=1')->assertStatus(401);
+    $this->postJson('/api/v1/events', ['click_id' => 1])->assertStatus(401);
+    $this->postJson('/api/postback/lead/status', [])->assertNotFound();
+    $this->postJson('/api/postback/lead/info', [])->assertNotFound();
 });
 
 it('does not expose publisher campaign assets by sequential id without auth', function () {
     $this->getJson('/api/v1/assets/campaign/1')->assertStatus(401);
-    $this->putJson('/api/v1/assets/campaign/1/settings', [])->assertStatus(401);
+    $this->putJson('/api/v1/assets/campaign/1/settings', [])->assertNotFound();
     $this->postJson('/api/v1/assets/campaign/1/regenerate-token')->assertStatus(401);
 });

@@ -1,66 +1,99 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Button } from '@/components/ui/button';
-import { ReusableModalHeader, ReusableTextarea } from '@/dev/core';
-import { cn } from '@/lib/utils';
+import {
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import advertiser from '@/routes/advertiser';
 import { TCampaignTermsTypes } from '@/types/schema_types';
 import { campaignTermsSchema } from '@/utils/form-schema';
-import { router, useForm } from '@inertiajs/react';
-import React from 'react'
+import { useForm } from '@inertiajs/react';
+import { FileText, Loader2 } from 'lucide-react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 
+type DialogSwitch = (options: { state: boolean }) => void;
+
 const CreateTerms = ({
-    handleDialogContextSwitch
+    handleDialogContextSwitch,
 }: {
-    handleDialogContextSwitch: any
+    handleDialogContextSwitch?: DialogSwitch;
 }) => {
     const { t } = useTranslation();
-    const { data, setData, errors, setError, processing } = useForm<TCampaignTermsTypes>({
-        description: '',
-    });
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
+    const { data, setData, errors, setError, processing, post } =
+        useForm<TCampaignTermsTypes>({ description: '' });
+    const close = () => handleDialogContextSwitch?.({ state: false });
+    const handleSubmit = (event: React.FormEvent) => {
+        event.preventDefault();
         const result = campaignTermsSchema.safeParse(data);
         if (!result.success) {
-            result.error.issues.forEach((err: any) => {
-                if (err.path && err.path.length > 0) {
-                    setError(err.path[0] as keyof TCampaignTermsTypes, err.message);
+            result.error.issues.forEach((issue) => {
+                if (issue.path?.length) {
+                    setError(
+                        issue.path[0] as keyof TCampaignTermsTypes,
+                        t(issue.message),
+                    );
                 }
             });
             return;
         }
-        router.post(advertiser.terms.create(), data);
-        handleDialogContextSwitch?.({ state: false })
-        router.get(advertiser.terms.url());
+        post(advertiser.terms.create.url(), {
+            preserveScroll: true,
+            onSuccess: close,
+        });
     };
     return (
-        <div className='w-full p-4'>
-            <ReusableModalHeader title={t("Add New Terms")} className="text-left text-primary" />
-            <form onSubmit={handleSubmit} className="w-full space-y-4">
-                <ReusableTextarea
-                    id="description"
-                    label={t("Description")}
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+            <DialogHeader icon={<FileText />} tone="brand">
+                <DialogTitle>{t('Create terms')}</DialogTitle>
+                <DialogDescription>
+                    {t(
+                        'Write one rule publishers must follow, for example “No adult sites”.',
+                    )}
+                </DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col gap-1.5">
+                <Label htmlFor="terms-description">{t('Terms')}</Label>
+                <Textarea
+                    id="terms-description"
+                    rows={4}
                     value={data.description}
-                    onChange={(value: string) => setData('description', value)}
-                    error={errors.description}
+                    onChange={(event) =>
+                        setData('description', event.target.value)
+                    }
+                    aria-invalid={!!errors.description}
+                    aria-describedby={
+                        errors.description
+                            ? 'terms-description-error'
+                            : undefined
+                    }
                     placeholder={t('e.g. No Adult sites')}
                 />
-                <div className="col-span-2 flex gap-4 justify-between mt-2">
-                    <Button
-                        type="button"
-                        className={cn('bg-destructive')}
-                        onClick={() =>
-                            handleDialogContextSwitch?.({ state: false })
-                        }>
-                        {t('Clear')}
-                    </Button>
-                    <Button type="submit" disabled={processing} className={cn('bg-primary')}>
-                        {processing ? `${t('Saving...')}` : `${t('Save')}`}
-                    </Button>
-                </div>
-            </form>
-        </div>
-    )
-}
+                {errors.description && (
+                    <p
+                        id="terms-description-error"
+                        className="text-[13px] font-semibold text-danger-ink"
+                    >
+                        {errors.description}
+                    </p>
+                )}
+            </div>
+            <DialogFooter>
+                <Button type="button" variant="secondary" onClick={close}>
+                    {t('Cancel')}
+                </Button>
+                <Button type="submit" disabled={processing}>
+                    {processing && (
+                        <Loader2 className="animate-spin" aria-hidden="true" />
+                    )}
+                    {t('Save terms')}
+                </Button>
+            </DialogFooter>
+        </form>
+    );
+};
 
-export default CreateTerms
+export default CreateTerms;

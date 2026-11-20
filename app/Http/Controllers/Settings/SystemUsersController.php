@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Models\UserRoles;
 use Exception;
 use Illuminate\Http\Request;
 use Spatie\Permission\Models\Role;
@@ -13,14 +12,25 @@ class SystemUsersController extends Controller
 {
     public function index(Request $request)
     {
+        $status = in_array($request->query('status'), ['active', 'inactive'], true) ? $request->query('status') : 'all';
         $users = User::query()
-            ->select(['id', 'first_name', 'last_name', 'email', 'title', 'status'])
+            ->select(['id', 'first_name', 'last_name', 'email', 'title', 'status', 'is_super_admin', 'is_network', 'is_advertiser', 'is_publisher'])
+            ->with('roles:id,name')
+            ->when($status === 'active', fn ($q) => $q->where('status', 'A'))
+            ->when($status === 'inactive', fn ($q) => $q->where('status', '!=', 'A'))
             ->orderBy('id')
-            ->paginate(10);
-        $roles = Role::all();
+            ->paginate(10)
+            ->withQueryString();
+        $roles = Role::orderBy('id')->get(['id', 'name']);
 
         return inertia('system_managment/system_users', [
             'users' => $users,
+            'status' => $status,
+            'statusCounts' => [
+                'all' => User::count(),
+                'active' => User::where('status', 'A')->count(),
+                'inactive' => User::where('status', '!=', 'A')->count(),
+            ],
             'roles' => $roles,
         ]);
     }
@@ -53,10 +63,7 @@ class SystemUsersController extends Controller
             $request->validate([
                 'role_id' => ['required', 'exists:roles,id'],
             ]);
-            UserRoles::firstOrCreate([
-                'user_id' => $user->id,
-                'role_id' => $request->role_id,
-            ]);
+            $user->assignRoleById((int) $request->role_id);
 
             return redirect()->route('system.settings.users')->with('success', 'User assigned role successfully.');
         } catch (Exception $e) {

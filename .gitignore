@@ -27,4 +27,13 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
-/docs
+/.impeccable
+
+/playwright-report
+/test-results
+/release-evidence
+/.release-fixture.json
+
+/.env.shopify
+
+/integrations/shopify/.shopify/

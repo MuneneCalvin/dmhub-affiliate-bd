@@ -1,6 +1,6 @@
 @import 'tailwindcss';
 
-@import "tw-animate-css";
+@import 'tw-animate-css';
 
 @source '../views';
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
@@ -9,13 +9,19 @@
 
 @theme {
     --font-sans:
-        'Instrument Sans', ui-sans-serif, system-ui, sans-serif,
+        'Plus Jakarta Sans', 'Inter', ui-sans-serif, system-ui, sans-serif,
         'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
         'Noto Color Emoji';
+    --font-mono:
+        'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        monospace;
 
     --radius-lg: var(--radius);
     --radius-md: calc(var(--radius) - 2px);
     --radius-sm: calc(var(--radius) - 4px);
+    --radius-control: 12px;
+    --radius-card: 18px;
+    --radius-hero: 22px;
 
     --color-background: var(--background);
     --color-foreground: var(--foreground);
@@ -59,85 +65,624 @@
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-ring: var(--sidebar-ring);
+    --color-sidebar-text: var(--sidebar-text);
+    --color-sidebar-label: var(--sidebar-label);
+
+    /* Neutrals (docs/redesign/tokens.md) */
+    --color-canvas: var(--canvas);
+    --color-surface: var(--surface);
+    --color-surface-muted: var(--surface-muted);
+    --color-surface-tint: var(--surface-tint);
+    --color-ink: var(--ink);
+    --color-ink-muted: var(--ink-muted);
+    --color-border-strong: var(--border-strong);
+    --color-focus-halo: var(--focus-halo);
+
+    /* Domains: bg-finance-soft, text-finance-ink, bg-brand … */
+    --color-brand: var(--brand-base);
+    --color-brand-base: var(--brand-base);
+    --color-brand-soft: var(--brand-soft);
+    --color-brand-ink: var(--brand-ink);
+    --color-brand-nav: var(--brand-nav);
+    --color-brand-hover: var(--brand-hover);
+    --color-partners: var(--partners-base);
+    --color-partners-base: var(--partners-base);
+    --color-partners-soft: var(--partners-soft);
+    --color-partners-ink: var(--partners-ink);
+    --color-partners-nav: var(--partners-nav);
+    --color-finance: var(--finance-base);
+    --color-finance-base: var(--finance-base);
+    --color-finance-soft: var(--finance-soft);
+    --color-finance-ink: var(--finance-ink);
+    --color-finance-nav: var(--finance-nav);
+    --color-admin: var(--admin-base);
+    --color-admin-base: var(--admin-base);
+    --color-admin-soft: var(--admin-soft);
+    --color-admin-ink: var(--admin-ink);
+    --color-admin-nav: var(--admin-nav);
+    --color-analytics: var(--analytics-base);
+    --color-analytics-base: var(--analytics-base);
+    --color-analytics-soft: var(--analytics-soft);
+    --color-analytics-ink: var(--analytics-ink);
+    --color-analytics-nav: var(--analytics-nav);
+
+    /* Status tones: bg-success-soft text-success-ink bg-success-dot … */
+    --color-success-soft: var(--success-soft);
+    --color-success-ink: var(--success-ink);
+    --color-success-dot: var(--success-dot);
+    --color-warning-soft: var(--warning-soft);
+    --color-warning-ink: var(--warning-ink);
+    --color-warning-dot: var(--warning-dot);
+    --color-danger-soft: var(--danger-soft);
+    --color-danger-ink: var(--danger-ink);
+    --color-danger-dot: var(--danger-dot);
+    --color-info-soft: var(--info-soft);
+    --color-info-ink: var(--info-ink);
+    --color-info-dot: var(--info-dot);
+    --color-neutral-soft: var(--neutral-soft);
+    --color-neutral-ink: var(--neutral-ink);
+    --color-neutral-dot: var(--neutral-dot);
+    /* Solid fills that carry white text (initials, solid cards): ≥4.5:1. */
+    --color-brand-strong: var(--brand-strong);
+    --color-partners-strong: var(--partners-strong);
+    --color-finance-strong: var(--finance-strong);
+    --color-admin-strong: var(--admin-strong);
+    --color-analytics-strong: var(--analytics-strong);
+    --color-success-strong: var(--success-strong);
+    --color-warning-strong: var(--warning-strong);
+    --color-danger-strong: var(--danger-strong);
+    --color-info-strong: var(--info-strong);
+    --color-neutral-strong: var(--neutral-strong);
+    --color-invalid-fill: var(--invalid-fill);
+
+    /* Elevation: shadow-card, shadow-primary, shadow-overlay */
+    --shadow-card: var(--elevation-card);
+    --shadow-primary: var(--elevation-primary);
+    --shadow-overlay: var(--elevation-overlay);
 }
 
+/*
+ * DM Hub vibrant design tokens. Values come from docs/redesign/tokens.md.
+ * The shadcn variable names (--background, --primary, …) are mapped onto the
+ * new palette so every existing component picks it up.
+ */
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --destructive-foreground: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.87 0 0);
-    --chart-1: oklch(0.646 0.222 41.116);
-    --chart-2: oklch(0.6 0.118 184.704);
-    --chart-3: oklch(0.398 0.07 227.392);
-    --chart-4: oklch(0.828 0.189 84.429);
-    --chart-5: oklch(0.769 0.188 70.08);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.97 0.01 60);
-    --sidebar-foreground: oklch(0.25 0 0);
-    --sidebar-primary: oklch(0.60 0.20 35);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.92 0.03 50);
-    --sidebar-accent-foreground: oklch(0.50 0.15 35);
-    --sidebar-border: oklch(0.90 0.02 60);
-    --sidebar-ring: oklch(0.60 0.20 35);
-}
+    /* Neutrals */
+    --canvas: #f6f5ff;
+    --surface: #ffffff;
+    --surface-muted: #fbfaff;
+    --surface-tint: #f1effb;
+    --border: #e8e5f7;
+    --border-strong: #e1ddf3;
+    --ink: #16133a;
+    --ink-muted: #6a6690;
+    --sidebar: #17133b;
+    --sidebar-text: #c9c5ea;
+    --sidebar-label: #8f8abf;
+    --focus-halo: #e6e0ff;
+    --invalid-fill: #fff7f8;
 
+    /* Domains */
+    --brand-base: #5b3df5;
+    --brand-soft: #efebff;
+    --brand-ink: #4527d9;
+    --brand-nav: #a594ff;
+    --brand-hover: #4527d9;
+    --partners-base: #0ea597;
+    --partners-soft: #ddf6f2;
+    --partners-ink: #0a7870;
+    --partners-nav: #3dd6c6;
+    --finance-base: #f2711c;
+    --finance-soft: #ffeedf;
+    --finance-ink: #b54a0a;
+    --finance-nav: #ff9a52;
+    --admin-base: #e23d84;
+    --admin-soft: #fde7f1;
+    --admin-ink: #b8236a;
+    --admin-nav: #ff6fae;
+    --analytics-base: #1e7fd8;
+    --analytics-soft: #e3f0fd;
+    --analytics-ink: #1667b5;
+    --analytics-nav: #6cb8ff;
+
+    /* Status tones */
+    --success-soft: #dff6e7;
+    --success-ink: #127a3b;
+    --success-dot: #16a34a;
+    --warning-soft: #fef3d6;
+    --warning-ink: #9a5203;
+    --warning-dot: #f59e0b;
+    --danger-soft: #fde6e9;
+    --danger-ink: #b42136;
+    --danger-dot: #dc2f45;
+    --info-soft: #e3f0fd;
+    --info-ink: #1667b5;
+    --info-dot: #1e7fd8;
+    --neutral-soft: #efedf7;
+    --neutral-ink: #4f4b70;
+    --neutral-dot: #8e8aae;
+    /* White-text-safe solid fills (same in both themes). */
+    --brand-strong: #5b3df5;
+    --partners-strong: #0a7870;
+    --finance-strong: #b54a0a;
+    --admin-strong: #b8236a;
+    --analytics-strong: #1667b5;
+    --success-strong: #127a3b;
+    --warning-strong: #9a5203;
+    --danger-strong: #b42136;
+    --info-strong: #1667b5;
+    --neutral-strong: #4f4b70;
+
+    /* Elevation */
+    --elevation-card:
+        0 1px 2px rgba(23, 19, 59, 0.04),
+        0 10px 28px -16px rgba(23, 19, 59, 0.18);
+    --elevation-primary: 0 8px 18px -8px rgba(91, 61, 245, 0.7);
+    --elevation-overlay:
+        0 2px 6px rgba(23, 19, 59, 0.06),
+        0 24px 60px -20px rgba(23, 19, 59, 0.35);
+
+    /* shadcn mapping */
+    --background: var(--canvas);
+    --foreground: var(--ink);
+    --card: var(--surface);
+    --card-foreground: var(--ink);
+    --popover: var(--surface);
+    --popover-foreground: var(--ink);
+    --primary: var(--brand-base);
+    --primary-foreground: #ffffff;
+    --secondary: var(--surface-tint);
+    --secondary-foreground: var(--ink);
+    --muted: var(--surface-muted);
+    --muted-foreground: var(--ink-muted);
+    --accent: var(--brand-soft);
+    --accent-foreground: var(--brand-ink);
+    --destructive: var(--danger-ink);
+    --destructive-foreground: #ffffff;
+    --input: var(--border-strong);
+    --ring: var(--brand-base);
+    --chart-1: var(--brand-base);
+    --chart-2: var(--partners-base);
+    --chart-3: var(--finance-base);
+    --chart-4: var(--admin-base);
+    --chart-5: var(--analytics-base);
+    --radius: 12px;
+    --sidebar-foreground: var(--sidebar-text);
+    --sidebar-primary: var(--brand-base);
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: rgba(255, 255, 255, 0.08);
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: rgba(255, 255, 255, 0.08);
+    --sidebar-ring: var(--brand-nav);
+    --tone-ink: var(--brand-ink);
+}
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.145 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.145 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.985 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.396 0.141 25.723);
-    --destructive-foreground: oklch(0.637 0.237 25.331);
-    --border: oklch(0.269 0 0);
-    --input: oklch(0.269 0 0);
-    --ring: oklch(0.439 0 0);
-    --chart-1: oklch(0.488 0.243 264.376);
-    --chart-2: oklch(0.696 0.17 162.48);
-    --chart-3: oklch(0.769 0.188 70.08);
-    --chart-4: oklch(0.627 0.265 303.9);
-    --chart-5: oklch(0.645 0.246 16.439);
-    --sidebar: oklch(0.145 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.985 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(0.269 0 0);
-    --sidebar-ring: oklch(0.439 0 0);
-}
+    /* Neutrals */
+    --canvas: #0f0c24;
+    --surface: #1b1740;
+    --surface-muted: #221d4d;
+    --surface-tint: #2a2458;
+    --border: #2f2963;
+    --border-strong: #3b3473;
+    --ink: #eeebff;
+    --ink-muted: #a9a4d6;
+    --sidebar: #0b0920;
+    --sidebar-text: #c9c5ea;
+    --sidebar-label: #8f8abf;
+    --focus-halo: color-mix(in oklab, #7a63ff 40%, #1b1740);
+    --invalid-fill: color-mix(in oklab, #ff7a8a 10%, #221d4d);
 
+    /* Domains: base lifted, soft mixed into surface, ink = nav */
+    --brand-base: #6c52ff;
+    --brand-soft: color-mix(in oklab, #6c52ff 18%, #1b1740);
+    --brand-ink: #a594ff;
+    --brand-nav: #a594ff;
+    --brand-hover: #7d67ff;
+    --partners-base: #14c2b2;
+    --partners-soft: color-mix(in oklab, #14c2b2 18%, #1b1740);
+    --partners-ink: #3dd6c6;
+    --partners-nav: #3dd6c6;
+    --finance-base: #f58c47;
+    --finance-soft: color-mix(in oklab, #f58c47 18%, #1b1740);
+    --finance-ink: #ff9a52;
+    --finance-nav: #ff9a52;
+    --admin-base: #ea67a0;
+    --admin-soft: color-mix(in oklab, #ea67a0 18%, #1b1740);
+    --admin-ink: #ff6fae;
+    --admin-nav: #ff6fae;
+    --analytics-base: #4a9ae6;
+    --analytics-soft: color-mix(in oklab, #4a9ae6 18%, #1b1740);
+    --analytics-ink: #6cb8ff;
+    --analytics-nav: #6cb8ff;
+
+    /* Status tones */
+    --success-soft: color-mix(in oklab, #16a34a 22%, #1b1740);
+    --success-ink: #6ee59a;
+    --success-dot: #34d06e;
+    --warning-soft: color-mix(in oklab, #f59e0b 20%, #1b1740);
+    --warning-ink: #fcc75a;
+    --warning-dot: #f7ae2e;
+    --danger-soft: color-mix(in oklab, #dc2f45 24%, #1b1740);
+    --danger-ink: #ff8f9d;
+    --danger-dot: #f0566b;
+    --info-soft: color-mix(in oklab, #1e7fd8 22%, #1b1740);
+    --info-ink: #6cb8ff;
+    --info-dot: #4a9ae6;
+    --neutral-soft: #2a2458;
+    --neutral-ink: #c4c0e4;
+    --neutral-dot: #8e8aae;
+    /* White-text-safe solid fills (same in both themes). */
+    --brand-strong: #5b3df5;
+    --partners-strong: #0a7870;
+    --finance-strong: #b54a0a;
+    --admin-strong: #b8236a;
+    --analytics-strong: #1667b5;
+    --success-strong: #127a3b;
+    --warning-strong: #9a5203;
+    --danger-strong: #b42136;
+    --info-strong: #1667b5;
+    --neutral-strong: #4f4b70;
+
+    /* Elevation */
+    --elevation-card:
+        0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 28px -16px rgba(0, 0, 0, 0.6);
+    --elevation-primary: 0 8px 18px -8px rgba(108, 82, 255, 0.6);
+    --elevation-overlay:
+        0 2px 6px rgba(0, 0, 0, 0.3), 0 24px 60px -20px rgba(0, 0, 0, 0.7);
+
+    /* shadcn mapping */
+    --background: var(--canvas);
+    --foreground: var(--ink);
+    --card: var(--surface);
+    --card-foreground: var(--ink);
+    --popover: var(--surface);
+    --popover-foreground: var(--ink);
+    --primary: var(--brand-base);
+    --primary-foreground: #ffffff;
+    --secondary: var(--surface-tint);
+    --secondary-foreground: var(--ink);
+    --muted: var(--surface-muted);
+    --muted-foreground: var(--ink-muted);
+    --accent: var(--brand-soft);
+    --accent-foreground: var(--brand-ink);
+    --destructive: #dc2f45;
+    --destructive-foreground: #ffffff;
+    --input: var(--border-strong);
+    --ring: var(--brand-nav);
+    --chart-1: var(--brand-base);
+    --chart-2: var(--partners-base);
+    --chart-3: var(--finance-base);
+    --chart-4: var(--admin-base);
+    --chart-5: var(--analytics-base);
+    --sidebar-foreground: var(--sidebar-text);
+    --sidebar-primary: var(--brand-base);
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: rgba(255, 255, 255, 0.07);
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: rgba(255, 255, 255, 0.07);
+    --sidebar-ring: var(--brand-nav);
+    --tone-ink: var(--brand-ink);
+}
 @layer base {
     * {
         @apply border-border;
     }
-
+    html {
+        color-scheme: light;
+    }
+    html.dark {
+        color-scheme: dark;
+    }
     body {
         @apply bg-background text-foreground;
+        font-size: 0.875rem;
+        font-weight: 500;
+        line-height: 1.5;
+    }
+    button,
+    input,
+    textarea,
+    select {
+        font: inherit;
+    }
+    button:not(:disabled),
+    [role='button']:not([aria-disabled='true']) {
+        cursor: pointer;
+    }
+    input,
+    textarea {
+        caret-color: var(--primary);
+    }
+    ::selection {
+        background: var(--accent);
+        color: var(--accent-foreground);
+    }
+    :focus-visible {
+        outline: 2px solid var(--ring);
+        outline-offset: 2px;
+        box-shadow: 0 0 0 6px var(--focus-halo);
+    }
+    h1,
+    h2,
+    h3 {
+        text-wrap: balance;
+    }
+    .tabular-nums,
+    [data-numeric] {
+        font-variant-numeric: tabular-nums;
+    }
+}
+.workspace-main {
+    min-width: 0;
+    background: var(--background);
+}
+.workspace-main .workspace-page {
+    width: 100%;
+    max-width: 1680px;
+    margin-inline: auto;
+    padding: 32px 36px 48px;
+    gap: 28px;
+}
+
+.workspace-main section > h2 {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+}
+.page-heading {
+    padding-bottom: 24px;
+    border-bottom: 0;
+}
+.page-heading-actions {
+    max-width: 100%;
+}
+.page-heading-actions > div {
+    flex-wrap: wrap;
+}
+.page-heading-actions [data-slot='button'] p {
+    font-size: inherit;
+    line-height: inherit;
+}
+
+[data-slot='card'] {
+    min-width: 0;
+}
+.workflow-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+.workflow-task {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 20px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--card);
+    transition:
+        border-color 0.15s,
+        background 0.15s;
+}
+.workflow-task:hover {
+    border-color: var(--primary);
+    background: var(--accent);
+}
+.workflow-task a::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+}
+.workflow-task:focus-within {
+    outline: 2px solid var(--ring);
+    outline-offset: 3px;
+}
+.workflow-task h2 {
+    font-size: 13px;
+    font-weight: 600;
+}
+.workflow-task p {
+    margin-top: 3px;
+    font-size: 12px;
+    color: var(--muted-foreground);
+}
+.stat-card [data-slot='card-title'] {
+    font-size: 12px;
+}
+.stat-card [data-slot='card-content'] {
+    overflow-wrap: anywhere;
+}
+.overview-section {
+    padding: 24px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--card);
+}
+.directory {
+    min-width: 0;
+}
+.directory-table {
+    border-bottom: 1px solid var(--border);
+    overflow: hidden;
+    background: var(--card);
+}
+.campaigns-directory .directory-table {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+}
+.directory-filter {
+    padding: 14px 12px;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    white-space: nowrap;
+    color: var(--muted-foreground);
+    font-size: 14px;
+    font-weight: 500;
+}
+.directory-filter:hover {
+    background: var(--muted);
+}
+.directory-filter.is-selected {
+    color: var(--foreground);
+    background: transparent;
+    border-color: var(--primary);
+}
+.directory-empty {
+    display: flex;
+    min-height: 250px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 36px 24px;
+    text-align: center;
+    background: var(--card);
+    border: 1px dashed var(--input);
+    border-radius: 10px;
+}
+.identity-tile {
+    display: flex;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--tone-ink);
+    background: var(--accent);
+}
+.tone-0,
+.tone-1,
+.tone-2,
+.tone-3 {
+    background: var(--accent);
+}
+@media (max-width: 1100px) {
+    .workflow-actions {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    .workflow-task {
+        padding: 12px 16px;
+    }
+}
+@media (max-width: 767px) {
+    .workspace-main .workspace-page {
+        padding: 24px 16px 32px;
+        gap: 24px;
+    }
+
+    .page-heading-actions {
+        width: 100%;
+    }
+    .page-heading-actions > div {
+        gap: 8px;
+    }
+    .page-heading {
+        padding-bottom: 20px;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Compact operational metrics share a panel, with no nested card treatment. */
+.operational-stats {
+    gap: 0;
+}
+.operational-stats > [data-slot='card'] {
+    justify-content: center;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+.operational-stats > [data-slot='card']:nth-child(even) {
+    border-left: 1px solid var(--border);
+}
+.operational-stats > [data-slot='card']:nth-child(n + 3) {
+    border-top: 1px solid var(--border);
+}
+.workspace-main table:not([data-slot]) th {
+    padding: 12px 16px;
+    background: transparent;
+    color: var(--muted-foreground);
+    font-size: 13px;
+    font-weight: 600;
+}
+.workspace-main table:not([data-slot]) td {
+    padding: 14px 16px;
+    font-size: 13px;
+}
+
+.budget-stats {
+    gap: 0;
+}
+.budget-stats > [data-slot='card'] {
+    justify-content: center;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+.budget-stats > [data-slot='card'] + [data-slot='card'] {
+    border-top: 1px solid var(--border);
+}
+
+.directory-table [data-slot='table-head'] {
+    height: 56px;
+    padding-inline: 16px;
+}
+.directory-table [data-slot='table-cell'] {
+    padding: 18px 16px;
+    font-size: 14px;
+}
+.directory-table [data-slot='table-cell']:first-child button {
+    font-size: 15px;
+}
+.directory-table [data-slot='table-cell']:first-child {
+    min-width: 260px;
+}
+.directory-table [data-slot='table-cell'] {
+    font-variant-numeric: tabular-nums;
+}
+.directory-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    border-bottom: 1px solid var(--border);
+}
+.directory-filters {
+    display: flex;
+    min-width: 0;
+    gap: 16px;
+    overflow-x: auto;
+}
+.directory-search {
+    margin-bottom: 10px;
+}
+
+@media (max-width: 767px) {
+    .directory-toolbar {
+        flex-direction: column-reverse;
+        align-items: stretch;
+        gap: 8px;
+    }
+    .directory-search {
+        margin-bottom: 0;
+    }
+    .directory-filters {
+        gap: 8px;
+    }
+    .directory-filter {
+        min-height: 44px;
     }
 }

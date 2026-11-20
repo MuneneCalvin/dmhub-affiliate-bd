@@ -1,107 +1,94 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { Button } from '@/components/ui/button'
-import { CustomDialogComponent, ReusablePageTitle, useConfirmationDialog } from '@/dev/core'
-import { useCustomDialogContextFactory, useDebounce } from '@/hooks'
-import AppLayout from '@/layouts/app-layout'
-import { BreadcrumbItem, SingleActionsHandler, TAdvertiser, TFilterOptions, TPaginationFilters } from '@/types'
-import { Head, router, usePage } from '@inertiajs/react'
-import { Plus } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
-import CreateAdvertiser from './modals/create'
-import { useReducer } from 'react'
-import advertisers, { show } from '@/routes/advertisers'
-import { CustomBaseTable, SearchTools } from '@/dev/table'
-import { ActionColumn, AdvertisersColumns } from '@/dev/columns/columns'
-import EditAdvertiser from './modals/edit'
-import { FILTEROPTIONS, ReusableReducer } from '@/utils/constants'
-import { ChangeNetworkModal } from './modals/change-network'
+import { PageHeader } from '@/components/app';
+import { useConfirmationDialog } from '@/components/app/confirm-dialog';
+import { FormDialog } from '@/components/app/form-dialog';
+import {
+    MutedCell,
+    ResourceDirectory,
+} from '@/components/app/resource-directory';
+import { PartnerDiscoveryDialog } from '@/components/partner-discovery-dialog';
+import { Button } from '@/components/ui/button';
+import { useCustomDialogContextFactory } from '@/hooks';
+import {
+    useDirectoryQuery,
+    type LaravelPage,
+} from '@/hooks/use-directory-query';
+import AppLayout from '@/layouts/app-layout';
+import { useDate } from '@/lib/format';
+import advertisers, { show } from '@/routes/advertisers';
+import type { SharedData, TAdvertiser } from '@/types';
+import { Head, router, usePage } from '@inertiajs/react';
+import {
+    ArrowLeftRight,
+    Ban,
+    Building2,
+    CheckCircle2,
+    LayoutGrid,
+    Megaphone,
+    Pencil,
+    Plus,
+    Power,
+} from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { ChangeNetworkModal } from './modals/change-network';
+import CreateAdvertiser from './modals/create';
+import EditAdvertiser from './modals/edit';
 
-const Advertisers_page = () => {
+type AdvertiserRow = TAdvertiser & {
+    id: number;
+    user_id: number;
+    business_name: string;
+    email: string;
+    status: string;
+    industry?: string | null;
+    networkName?: string | null;
+    network_id?: number | null;
+    netId?: number | null;
+    currencyCode?: string;
+    campaigns_count?: number;
+    created_at: string;
+};
+
+type Props = SharedData & {
+    advrts: LaravelPage<AdvertiserRow>;
+    status: string;
+    statusCounts: { all: number; active: number; inactive: number };
+};
+
+export default function AdvertisersPage() {
     const { t } = useTranslation();
-    const { advrts: initialAdvrts } = usePage<{ advrts: any }>().props;
+    const {
+        advrts,
+        status,
+        statusCounts,
+        auth: { user },
+    } = usePage<Props>().props;
+    const formatDate = useDate();
+    const query = useDirectoryQuery();
     const { confirm, ConfirmDialog } = useConfirmationDialog();
-
-    const [PageFilter, optionsDispatcher] = useReducer(
-        ReusableReducer<TPaginationFilters & TFilterOptions>,
-        { ...FILTEROPTIONS, page: 1, pageSize: 25 }
-    );
-    const optionsDispatcherDebounce = useDebounce({
-        debounceCallback: optionsDispatcher,
-    });
-
-
-    const breadcrumbs: BreadcrumbItem[] = [
-        {
-            title: t('Advertisers'),
-            href: advertisers.index.url(),
-        }
-    ];
     const { handleDialogContextSwitch, dialogContent, dialogOpen } =
-        useCustomDialogContextFactory<{
-            advertisers?: TAdvertiser,
-        }>();
+        useCustomDialogContextFactory<{ advertisers?: TAdvertiser }>();
+    const isSuperAdmin = Boolean(user?.is_super_admin);
 
-    const ActionsHandlerMapping: SingleActionsHandler<TAdvertiser>[] = [
-        {
-            label: t('View'),
-            onSelect: (data: TAdvertiser) => {
-                router.visit(show.url(data?.user_id))
-            }
-        },
-        {
-            label: t('Edit'),
-            onSelect: (data: TAdvertiser) => {
-                handleDialogContextSwitch({
-                    Component: EditAdvertiser,
-                    componentProps: { data },
-                });
-            },
-        },
-        {
-            label: t('Change Network'),
-            onSelect: (data: TAdvertiser) => {
-                console.log('Selected Advertiser for Network Change:', data); // Debug log
-                handleDialogContextSwitch({
-                    Component: ChangeNetworkModal,
-                    componentProps: {
-                        entityId: data?.id,
-                        currentNetworkId: data?.network_id ?? data?.netId,
-                        data: data,
-                    },
-                });
-            },
-        },
-        {
-            label: t('Deactivate'),
-            onSelect: (data: any) => {
-                confirm({
-                    title: t('Deactivate Advertiser'),
-                    description: `${t('Are you sure you want to deactivate')} ${data?.business_name}?`,
-                    confirmLabel: t('Deactivate'),
-                    cancelLabel: t('Cancel'),
-                    variant: 'destructive',
-                    onConfirm: () => {
-                        router.post(advertisers.deactivate.url(data?.id), {}, {
-                            preserveScroll: true,
-                        });
-                    },
-                });
-            },
-        },
-    ];
     return (
         <AppLayout>
-            <Head title={t("Advertisers")} />
-            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
-                <ReusablePageTitle
-                    title={t("Advertisers")}
-                    description={t("Manage Advertisers here")}
-                    breadcrumbs={breadcrumbs}
-                    children={
-                        <div className="flex items-center gap-4">
+            <Head title={t('Advertisers')} />
+            <div className="workspace-page flex flex-col gap-6">
+                <PageHeader
+                    title={t('Advertisers')}
+                    description={t('Brands running campaigns in your network.')}
+                    breadcrumbs={[
+                        { title: t('Partners'), href: advertisers.index.url() },
+                        {
+                            title: t('Advertisers'),
+                            href: advertisers.index.url(),
+                        },
+                    ]}
+                    icon={<Building2 />}
+                    tone="partners"
+                    actions={
+                        <>
+                            <PartnerDiscoveryDialog kind="advertisers" />
                             <Button
-                                className="rounded-xl px-4 py-2 cursor-pointer bg-gray-800 dark:bg-gray-200 dark:text-gray-800"
                                 onClick={() =>
                                     handleDialogContextSwitch({
                                         Component: CreateAdvertiser,
@@ -109,53 +96,168 @@ const Advertisers_page = () => {
                                             handleDialogContextSwitch,
                                         },
                                     })
-                                }>
-                                <Plus size="medium" />
-                                <p className="font-medium leading-6 text-lg">
-                                    {t('Add Advertisers')}
-                                </p>
+                                }
+                            >
+                                <Plus />
+                                {t('Add advertiser')}
                             </Button>
-                        </div>
-                    } />
-                <div className='w-full'>
-                    <CustomBaseTable
-                        {...{
-                            onPageChange: (page) =>
-                                optionsDispatcher({
-                                    payload: { page },
-                                    type: 'page',
+                        </>
+                    }
+                />
+                <ResourceDirectory<AdvertiserRow>
+                    label={t('Advertiser list')}
+                    tone="partners"
+                    rows={advrts?.data ?? []}
+                    rowKey={(row) => row.id}
+                    nameHeader={t('Advertiser')}
+                    name={(row) => row.business_name}
+                    subtitle={(row) => row.email}
+                    status={(row) =>
+                        row.status === 'A' ? 'active' : 'inactive'
+                    }
+                    statusTiles={[
+                        {
+                            value: 'all',
+                            label: t('All advertisers'),
+                            count: statusCounts?.all,
+                            tone: 'brand',
+                            icon: <LayoutGrid />,
+                        },
+                        {
+                            value: 'active',
+                            label: t('Active'),
+                            count: statusCounts?.active,
+                            tone: 'success',
+                            icon: <CheckCircle2 />,
+                        },
+                        {
+                            value: 'inactive',
+                            label: t('Inactive'),
+                            count: statusCounts?.inactive,
+                            tone: 'neutral',
+                            icon: <Ban />,
+                        },
+                    ]}
+                    statusValue={status ?? 'all'}
+                    onStatusChange={query.setStatus}
+                    columns={[
+                        {
+                            id: 'campaigns',
+                            header: t('Campaigns'),
+                            cell: (row) => (
+                                <span className="inline-flex items-center gap-1.5 tabular-nums">
+                                    <Megaphone
+                                        className="size-3.5 text-brand"
+                                        aria-hidden="true"
+                                    />
+                                    {row.campaigns_count ?? 0}
+                                </span>
+                            ),
+                        },
+                        {
+                            id: 'industry',
+                            header: t('Industry'),
+                            cell: (row) => row.industry || '—',
+                        },
+                        ...(isSuperAdmin
+                            ? [
+                                  {
+                                      id: 'network',
+                                      header: t('Network'),
+                                      cell: (row: AdvertiserRow) =>
+                                          row.networkName || '—',
+                                  },
+                              ]
+                            : []),
+                        {
+                            id: 'currency',
+                            header: t('Currency'),
+                            cell: (row) => row.currencyCode ?? '—',
+                        },
+                        {
+                            id: 'joined',
+                            header: t('Joined'),
+                            cell: (row) => (
+                                <MutedCell>
+                                    {formatDate(row.created_at)}
+                                </MutedCell>
+                            ),
+                        },
+                    ]}
+                    href={(row) => show.url(row.user_id)}
+                    actions={() => [
+                        {
+                            label: t('Edit'),
+                            icon: <Pencil />,
+                            onSelect: (row) =>
+                                handleDialogContextSwitch({
+                                    Component: EditAdvertiser,
+                                    componentProps: { data: row },
                                 }),
-                            OtherToolsProps: {
-                                onChange: (data: any) =>
-                                    optionsDispatcherDebounce({
-                                        payload: { term: data },
-                                        type: 'term',
-                                    }),
-                                placeholder: t('Search'),
-                                includeFilter: true,
-                            },
-                            columns: [
-                                ...AdvertisersColumns,
-                                ActionColumn({ ActionsHandlerMapping }),
-                            ],
-                            OtherTools: SearchTools,
-                            data: initialAdvrts?.data ?? [],
-                            pageCount: initialAdvrts?.last_page ?? 1,
-                            title: t('Advertisers'),
-                            showPagination: true,
-                            setPageSize: (pageSize) =>
-                                optionsDispatcher({
-                                    payload: { pageSize },
-                                    type: 'pageSize',
+                        },
+                        {
+                            label: t('Change network'),
+                            icon: <ArrowLeftRight />,
+                            tone: 'partners',
+                            // The route is limited to platform administrators.
+                            hidden: () => !isSuperAdmin,
+                            onSelect: (row) =>
+                                handleDialogContextSwitch({
+                                    Component: ChangeNetworkModal,
+                                    componentProps: {
+                                        entityId: row.id,
+                                        currentNetworkId:
+                                            row.network_id ?? row.netId,
+                                        data: row,
+                                    },
                                 }),
-                            pageSize: initialAdvrts?.per_page,
-                            page: initialAdvrts?.current_page,
-                        }}
-                    />
-                </div>
-                <CustomDialogComponent
+                        },
+                        {
+                            label: t('Activate'),
+                            icon: <Power />,
+                            tone: 'success',
+                            hidden: (row) => row.status === 'A',
+                            onSelect: (row) =>
+                                router.post(
+                                    advertisers.activate.url(row.id),
+                                    {},
+                                    { preserveScroll: true },
+                                ),
+                        },
+                        {
+                            label: t('Deactivate'),
+                            icon: <Ban />,
+                            destructive: true,
+                            hidden: (row) => row.status !== 'A',
+                            onSelect: (row) =>
+                                confirm({
+                                    title: t('Deactivate advertiser'),
+                                    description: t(
+                                        'Are you sure you want to deactivate {{name}}?',
+                                        { name: row.business_name },
+                                    ),
+                                    confirmLabel: t('Deactivate'),
+                                    cancelLabel: t('Cancel'),
+                                    variant: 'destructive',
+                                    onConfirm: () =>
+                                        router.post(
+                                            advertisers.deactivate.url(row.id),
+                                            {},
+                                            { preserveScroll: true },
+                                        ),
+                                }),
+                        },
+                    ]}
+                    pagination={query.pagination(advrts)}
+                    emptyTitle={t('No advertisers yet')}
+                    emptyDescription={t(
+                        'Add an advertiser or discover one in the partner pool.',
+                    )}
+                />
+                <FormDialog
                     {...{ handleDialogContextSwitch, dialogOpen }}
-                    className='sm:max-w-[700px]'>
+                    className="sm:max-w-[700px]"
+                >
                     {dialogContent?.Component && (
                         <dialogContent.Component
                             {...{
@@ -164,11 +266,9 @@ const Advertisers_page = () => {
                             }}
                         />
                     )}
-                </CustomDialogComponent>
-
+                </FormDialog>
                 <ConfirmDialog />
             </div>
         </AppLayout>
-    )
+    );
 }
-export default Advertisers_page;

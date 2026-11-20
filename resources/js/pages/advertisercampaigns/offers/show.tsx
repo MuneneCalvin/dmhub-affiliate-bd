@@ -1,247 +1,422 @@
+import { DetailList, PageHeader, SectionCard } from '@/components/app';
+import { ConfirmDialog } from '@/components/app/confirm-dialog';
+import { CommissionPill, offerStatusKey } from '@/components/campaigns';
+import { OfferIntegration } from '@/components/offer-integration';
+import {
+    OfferMaterials,
+    type MaterialsPage,
+} from '@/components/offer-materials';
+import { formatCommission } from '@/components/partner-money';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import { StatusBadge } from '@/dev/statusBadge';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AppLayout from '@/layouts/app-layout';
+import { useMoney } from '@/lib/format';
 import advertiser from '@/routes/advertiser';
-import { BreadcrumbItem, TOffers } from '@/types';
+import type { SharedData, TOffers } from '@/types';
 import { OFFER_BONUSES, OFFER_TERMS, TRAFFIC_SOURCES } from '@/utils/enums';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Edit, Trash2, Power, PowerOff, Info, DollarSign, Settings, Gift, CheckCircle, XCircle, FileText } from 'lucide-react';
+import {
+    Ban,
+    CheckCircle,
+    FileText,
+    Gift,
+    Image,
+    Info,
+    Link2,
+    Pencil,
+    Power,
+    PowerOff,
+    Settings,
+    Tag,
+    Trash2,
+    Wallet,
+} from 'lucide-react';
+import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ReusablePageTitle, InfoCardSkeleton, InfoRow, ConfirmationDialog } from '@/dev/core';
-import { useState } from 'react';
 
-const OfferShowPage = () => {
+type Props = SharedData & {
+    offer: TOffers & {
+        id: number;
+        campaign?: { id: number; name: string } | null;
+    };
+    hasPublishers: boolean;
+    materials: MaterialsPage;
+};
+
+function Chips({
+    values,
+    options,
+    variant,
+    empty,
+}: {
+    values?: string[];
+    options: { value: string; label: string }[];
+    variant: 'success' | 'danger' | 'info' | 'neutral';
+    empty: string;
+}) {
     const { t } = useTranslation();
-    const { offer, hasPublishers } = usePage<{ offer: TOffers; hasPublishers: boolean }>().props;
+    if (!values?.length) {
+        return <p className="text-sm text-ink-muted">{empty}</p>;
+    }
+    return (
+        <ul className="flex flex-wrap gap-2">
+            {values.map((value) => (
+                <li key={value}>
+                    <Badge variant={variant}>
+                        {t(
+                            options.find((option) => option.value === value)
+                                ?.label ?? value,
+                        )}
+                    </Badge>
+                </li>
+            ))}
+        </ul>
+    );
+}
+
+export default function OfferShowPage() {
+    const { t } = useTranslation();
+    const { auth, offer, hasPublishers, materials } = usePage<Props>().props;
+    const url = usePage().url;
+    const can = (permission: string) =>
+        Boolean(
+            auth.user.is_super_admin || auth.permissions?.includes(permission),
+        );
+    const currency = offer.currency ?? 'EUR';
+    const money = useMoney(currency);
+    const requestedTab = new URLSearchParams(url.split('?')[1]).get('tab');
+    const activeTab = ['materials', 'integration'].includes(requestedTab ?? '')
+        ? requestedTab!
+        : 'details';
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const hours = (value: number | null) =>
+        value == null ? '—' : t('{{count}} hours', { count: Number(value) });
+    const bonuses =
+        typeof offer.bonus === 'object' && offer.bonus?.bonuses
+            ? offer.bonus.bonuses
+            : [];
 
-    const breadcrumbs: BreadcrumbItem[] = [
-        { title: t('Campaigns'), href: advertiser.campaign.index.url() },
-        { title: t('Campaign'), href: advertiser.campaign.show.url(offer?.campaign_id) },
-        { title: offer?.name, href: '' },
-    ];
-
-    const getLabelFromValue = (value: string, options: { value: string; label: string }[]) => {
-        return options.find(opt => opt.value === value)?.label ?? value;
-    };
-
-    const handleActivate = () => {
-        router.patch(advertiser.offers.activate.url(Number(offer?.id)));
-    };
-
-    const handleDeactivate = () => {
-        router.patch(advertiser.offers.deactivate.url(Number(offer?.id)));
-    };
-
-    const handleDelete = () => {
-        router.delete(advertiser.offers.delete.url(Number(offer?.id)));
-    };
+    const actions: ReactNode = can('manage_offers') ? (
+        <>
+            <Button variant="secondary" asChild>
+                <Link href={advertiser.offers.edit.url(offer.id)}>
+                    <Pencil />
+                    {t('Edit')}
+                </Link>
+            </Button>
+            {offer.offer_status === 'A' ? (
+                <Button
+                    variant="soft"
+                    className="bg-warning-soft text-warning-ink hover:bg-warning-soft/80"
+                    onClick={() =>
+                        router.patch(advertiser.offers.deactivate.url(offer.id))
+                    }
+                >
+                    <PowerOff />
+                    {t('Deactivate')}
+                </Button>
+            ) : (
+                <Button
+                    variant="success"
+                    onClick={() =>
+                        router.patch(advertiser.offers.activate.url(offer.id))
+                    }
+                >
+                    <Power />
+                    {t('Activate')}
+                </Button>
+            )}
+            <Button
+                variant="destructive"
+                disabled={hasPublishers}
+                onClick={() => setDeleteDialogOpen(true)}
+            >
+                <Trash2 />
+                {t('Delete')}
+            </Button>
+        </>
+    ) : undefined;
 
     return (
         <AppLayout>
-            <Head title={offer?.name} />
-            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
-                <ReusablePageTitle
-                    title={offer?.name}
-                    description={t('View and manage this offer')}
-                    breadcrumbs={breadcrumbs}
-                    children={
-                        <div className="flex gap-2 justify-end">
-                            <Link href={advertiser.offers.edit.url(Number(offer?.id))}>
-                                <Button variant="outline" className="gap-2">
-                                    <Edit className="h-4 w-4" />
-                                    {t('Edit')}
-                                </Button>
-                            </Link>
-
-                            {offer?.offer_status === 'A' ? (
-                                <Button variant="outline" className="gap-2" onClick={handleDeactivate}>
-                                    <PowerOff className="h-4 w-4" />
-                                    {t('Deactivate')}
-                                </Button>
-                            ) : (
-                                <Button variant="outline" className="gap-2" onClick={handleActivate}>
-                                    <Power className="h-4 w-4" />
-                                    {t('Activate')}
-                                </Button>
-                            )}
-                            <Button
-                                variant="destructive"
-                                className="gap-2"
-                                disabled={hasPublishers}
-                                onClick={() => setDeleteDialogOpen(true)}>
-                                <Trash2 className="h-4 w-4" />
-                                {t('Delete')}
-                            </Button>
-                            <ConfirmationDialog
-                                open={deleteDialogOpen}
-                                onOpenChange={setDeleteDialogOpen}
-                                title={t("Delete Offer")}
-                                description={t("Are you sure you want to delete this offer? This action cannot be undone.")}
-                                confirmLabel={t("Delete")}
-                                cancelLabel={t("Cancel")}
-                                variant="destructive"
-                                onConfirm={handleDelete}
+            <Head title={offer.name} />
+            <div className="workspace-page flex flex-col gap-6">
+                <PageHeader
+                    title={offer.name}
+                    description={
+                        <span className="inline-flex flex-wrap items-center gap-2">
+                            <StatusBadge
+                                status={offerStatusKey(offer.offer_status)}
                             />
-                        </div>
-                    } />
+                            {offer.campaign?.name}
+                        </span>
+                    }
+                    breadcrumbs={[
+                        {
+                            title: t('Campaigns'),
+                            href: advertiser.campaign.index.url(),
+                        },
+                        {
+                            title: offer.campaign?.name ?? t('Campaign'),
+                            href: `${advertiser.campaign.show.url(offer.campaign_id)}?tab=offers`,
+                        },
+                        {
+                            title: offer.name,
+                            href: advertiser.offers.show.url(offer.id),
+                        },
+                    ]}
+                    icon={<Tag />}
+                    tone="brand"
+                    actions={actions}
+                />
                 {hasPublishers && (
-                    <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg">
-                        {t('This offer has active publishers and cannot be deleted. You can deactivate it instead.')}
-                    </div>
+                    <Alert variant="warning" role="note">
+                        <Info />
+                        <AlertDescription>
+                            {t(
+                                'This offer has active publishers and cannot be deleted. You can deactivate it instead.',
+                            )}
+                        </AlertDescription>
+                    </Alert>
                 )}
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <InfoCardSkeleton
-                        title={t("Basic Information")}
-                        description={t("Core offer details")}
-                        icon={<Info className="h-5 w-5" />}
-                        children={
-                            <>
-                                <InfoRow label={t("Status")} value={<StatusBadge status={offer?.offer_status} />} />
-                                <Separator />
-                                <InfoRow label={t("Name")} value={offer?.name} />
-                                <Separator />
-                                <InfoRow label={t("Description")} value={offer?.description ?? '-'} />
-                                <Separator />
-                                <InfoRow label={t("Minimum Payout")} value={`$${offer?.minimum_payout ?? '0.00'}`} icon={DollarSign} />
-                            </>
-                        } />
-
-                    <InfoCardSkeleton
-                        title={t("Commission Settings")}
-                        description={t("Commission structure for this offer")}
-                        icon={<DollarSign className="h-5 w-5" />}
-                        children={
-                            <>
-                                {offer?.commissions && offer?.commissions.length > 0 ? (
-                                    offer?.commissions.map((comm, idx) => (
-                                        <div key={comm.id}>
-                                            <InfoRow
-                                                label={comm.commission_type?.nice_name ?? `${t('Commission')} ${idx + 1}`}
-                                                value={comm?.commission_value}
-                                            />
-                                            {idx < offer?.commissions!.length - 1 && <Separator />}
-                                        </div>
-                                    ))
+                <Tabs
+                    value={activeTab}
+                    onValueChange={(tab) =>
+                        router.get(
+                            advertiser.offers.show.url(offer.id),
+                            { tab },
+                            { preserveScroll: true, preserveState: true },
+                        )
+                    }
+                    className="gap-6"
+                >
+                    <TabsList aria-label={t('Offer sections')}>
+                        <TabsTrigger
+                            value="details"
+                            icon={<Info className="text-brand" />}
+                        >
+                            {t('Offer details')}
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="materials"
+                            icon={<Image className="text-admin" />}
+                            count={materials.total}
+                        >
+                            {t('Promotional materials')}
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="integration"
+                            icon={<Link2 className="text-analytics" />}
+                        >
+                            {t('Integration')}
+                        </TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="details">
+                        <div className="grid gap-[18px] lg:grid-cols-2">
+                            <SectionCard
+                                title={t('Basic information')}
+                                icon={<Info />}
+                                tone="brand"
+                            >
+                                <DetailList
+                                    rows={[
+                                        {
+                                            label: t('Status'),
+                                            value: (
+                                                <StatusBadge
+                                                    status={offerStatusKey(
+                                                        offer.offer_status,
+                                                    )}
+                                                />
+                                            ),
+                                        },
+                                        { label: t('Name'), value: offer.name },
+                                        {
+                                            label: t('Description'),
+                                            value: offer.description,
+                                        },
+                                        {
+                                            label: t('Minimum payout'),
+                                            value: money(
+                                                Number(
+                                                    offer.minimum_payout ?? 0,
+                                                ),
+                                            ),
+                                        },
+                                    ]}
+                                />
+                            </SectionCard>
+                            <SectionCard
+                                title={t('Commissions')}
+                                icon={<Wallet />}
+                                tone="finance"
+                            >
+                                {offer.commissions?.length ? (
+                                    <DetailList
+                                        rows={offer.commissions.map(
+                                            (commission, index) => ({
+                                                key: String(commission.id),
+                                                label:
+                                                    commission.commission_type
+                                                        ?.nice_name ??
+                                                    `${t('Commission')} ${index + 1}`,
+                                                value: (
+                                                    <span className="inline-flex items-center gap-2 font-bold tabular-nums">
+                                                        {commission
+                                                            .commission_type
+                                                            ?.name && (
+                                                            <CommissionPill
+                                                                type={
+                                                                    commission
+                                                                        .commission_type
+                                                                        .name
+                                                                }
+                                                            />
+                                                        )}
+                                                        {formatCommission(
+                                                            commission.commission_value,
+                                                            commission
+                                                                .commission_type
+                                                                ?.name,
+                                                            currency,
+                                                        )}
+                                                    </span>
+                                                ),
+                                            }),
+                                        )}
+                                    />
                                 ) : (
-                                    <span className="text-muted-foreground text-sm">{t('No commissions configured')}</span>
+                                    <p className="text-sm text-ink-muted">
+                                        {t('No commissions configured')}
+                                    </p>
                                 )}
-                            </>
-                        } />
-
-                    <InfoCardSkeleton
-                        title={t("Tracking Settings")}
-                        description={t("Conversion and cookie settings")}
-                        icon={<Settings className="h-5 w-5" />}
-                        children={
-                            <>
-                                <InfoRow label={t("Conversion Window")} value={`${offer?.conversion_window_hours ?? '-'} ${t('hours')}`} />
-                                <Separator />
-                                <InfoRow label={t("Cookie Lifetime")} value={`${offer?.click_cookie_lifetime_hours ?? '-'} ${t('hours')}`} />
-                                <Separator />
-                                <InfoRow label={t("Preview URL")} value={offer?.preview_url ?? '-'} />
-                                <Separator />
-                                <InfoRow label={t("Tracking URL Template")} value={offer?.tracking_url_template ?? '-'} />
-                            </>
-                        } />
-
-                    <InfoCardSkeleton
-                        title={t("Bonus Types")}
-                        description={t("Available bonuses for publishers")}
-                        icon={<Gift className="h-5 w-5" />}
-                        children={
-                            <>
-                                {typeof offer?.bonus === 'object' && offer?.bonus?.bonuses && offer?.bonus.bonuses.length > 0 ? (
-                                    <div className="flex flex-wrap gap-2">
-                                        {offer?.bonus.bonuses.map((bonus: string) => (
-                                            <span
-                                                key={bonus}
-                                                className="px-2 py-1 bg-green-100 text-green-800 text-sm rounded-full">
-                                                {getLabelFromValue(bonus, OFFER_BONUSES)}
-                                            </span>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <span className="text-muted-foreground text-sm">{t('No bonuses configured')}</span>
-                                )}
-                            </>
-                        } />
-
-                    <InfoCardSkeleton
-                        title={t("Allowed Traffic Sources")}
-                        description={t("Permitted traffic types")}
-                        icon={<CheckCircle className="h-5 w-5" />}
-                        children={
-                            <>
-                                {offer?.allowed_traffic_sources?.sources && offer?.allowed_traffic_sources.sources.length > 0 ? (
-                                    <div className="flex flex-wrap gap-2">
-                                        {offer?.allowed_traffic_sources.sources.map((source) => (
-                                            <span
-                                                key={source}
-                                                className="px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded-full"
-                                            >
-                                                {getLabelFromValue(source, TRAFFIC_SOURCES)}
-                                            </span>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <span className="text-muted-foreground text-sm">{t('All traffic sources allowed')}</span>
-                                )}
-                            </>
-                        } />
-
-                    <InfoCardSkeleton
-                        title={t("Prohibited Traffic Sources")}
-                        description={t("Restricted traffic types")}
-                        icon={<XCircle className="h-5 w-5" />}
-                        children={
-                            <>
-                                {offer?.prohibited_traffic_sources?.sources && offer?.prohibited_traffic_sources.sources.length > 0 ? (
-                                    <div className="flex flex-wrap gap-2">
-                                        {offer?.prohibited_traffic_sources.sources.map((source) => (
-                                            <span
-                                                key={source}
-                                                className="px-2 py-1 bg-red-100 text-red-800 text-sm rounded-full"
-                                            >
-                                                {getLabelFromValue(source, TRAFFIC_SOURCES)}
-                                            </span>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <span className="text-muted-foreground text-sm">{t('No prohibited traffic sources')}</span>
-                                )}
-                            </>
-                        } />
-
-                    <InfoCardSkeleton
-                        title={t("Terms & Conditions")}
-                        description={t("Offer requirements and restrictions")}
-                        icon={<FileText className="h-5 w-5" />}
-                        className="md:col-span-2"
-                        children={
-                            <>
-                                {offer?.terms?.terms && offer?.terms.terms.length > 0 ? (
-                                    <div className="flex flex-wrap gap-2">
-                                        {offer?.terms.terms.map((term) => (
-                                            <span
-                                                key={term}
-                                                className="px-2 py-1 bg-gray-100 text-gray-800 text-sm rounded-full"
-                                            >
-                                                {getLabelFromValue(term, OFFER_TERMS)}
-                                            </span>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <span className="text-muted-foreground text-sm">{t('No specific terms configured')}</span>
-                                )}
-                            </>
-                        } />
-                </div>
+                            </SectionCard>
+                            <SectionCard
+                                title={t('Tracking settings')}
+                                icon={<Settings />}
+                                tone="analytics"
+                            >
+                                <DetailList
+                                    rows={[
+                                        {
+                                            label: t('Conversion window'),
+                                            value: hours(
+                                                offer.conversion_window_hours,
+                                            ),
+                                        },
+                                        {
+                                            label: t('Cookie lifetime'),
+                                            value: hours(
+                                                offer.click_cookie_lifetime_hours,
+                                            ),
+                                        },
+                                        {
+                                            label: t('Landing page URL'),
+                                            value: offer.preview_url ? (
+                                                <span className="break-all">
+                                                    {offer.preview_url}
+                                                </span>
+                                            ) : null,
+                                        },
+                                        {
+                                            label: t('Tracking URL template'),
+                                            value: offer.tracking_url_template ? (
+                                                <code className="font-mono text-xs break-all">
+                                                    {
+                                                        offer.tracking_url_template
+                                                    }
+                                                </code>
+                                            ) : null,
+                                        },
+                                    ]}
+                                />
+                            </SectionCard>
+                            <SectionCard
+                                title={t('Bonuses')}
+                                icon={<Gift />}
+                                tone="admin"
+                            >
+                                <Chips
+                                    values={bonuses}
+                                    options={OFFER_BONUSES}
+                                    variant="success"
+                                    empty={t('No bonuses configured')}
+                                />
+                            </SectionCard>
+                            <SectionCard
+                                title={t('Allowed traffic sources')}
+                                icon={<CheckCircle />}
+                                tone="success"
+                            >
+                                <Chips
+                                    values={
+                                        offer.allowed_traffic_sources?.sources
+                                    }
+                                    options={TRAFFIC_SOURCES}
+                                    variant="info"
+                                    empty={t('All traffic sources allowed')}
+                                />
+                            </SectionCard>
+                            <SectionCard
+                                title={t('Prohibited traffic sources')}
+                                icon={<Ban />}
+                                tone="danger"
+                            >
+                                <Chips
+                                    values={
+                                        offer.prohibited_traffic_sources
+                                            ?.sources
+                                    }
+                                    options={TRAFFIC_SOURCES}
+                                    variant="danger"
+                                    empty={t('No prohibited traffic sources')}
+                                />
+                            </SectionCard>
+                            <SectionCard
+                                title={t('Terms & conditions')}
+                                icon={<FileText />}
+                                tone="neutral"
+                                className="lg:col-span-2"
+                            >
+                                <Chips
+                                    values={offer.terms?.terms}
+                                    options={OFFER_TERMS}
+                                    variant="neutral"
+                                    empty={t('No specific terms configured')}
+                                />
+                            </SectionCard>
+                        </div>
+                    </TabsContent>
+                    <TabsContent value="materials">
+                        <OfferMaterials
+                            offerId={offer.id}
+                            materials={materials}
+                            canUpload={can('upload_creatives')}
+                            canManage={can('manage_creatives')}
+                        />
+                    </TabsContent>
+                    <TabsContent value="integration">
+                        <OfferIntegration offer={offer} />
+                    </TabsContent>
+                </Tabs>
             </div>
+            <ConfirmDialog
+                open={deleteDialogOpen}
+                onOpenChange={setDeleteDialogOpen}
+                title={t('Delete offer')}
+                description={t(
+                    'Are you sure you want to delete this offer? This action cannot be undone.',
+                )}
+                confirmLabel={t('Delete')}
+                cancelLabel={t('Cancel')}
+                variant="destructive"
+                onConfirm={() =>
+                    router.delete(advertiser.offers.delete.url(offer.id))
+                }
+            />
         </AppLayout>
     );
-};
-
-export default OfferShowPage;
+}

@@ -1,53 +1,55 @@
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Spinner } from '@/components/ui/spinner';
-import { useLanguage } from '@/context/language-context';
 import AuthLayout from '@/layouts/auth-layout';
 import { store } from '@/routes/password/confirm';
 import { Form, Head } from '@inertiajs/react';
+import { useTranslation } from 'react-i18next';
 
 export default function ConfirmPassword() {
-    const {__} = useLanguage()
+    const { t } = useTranslation();
 
     return (
         <AuthLayout
-            title={__('Confirm your Password')}
-            description={__(
+            title={t('Confirm your password')}
+            description={t(
                 'This is a secure area of the application. Please confirm your password before continuing.',
             )}
         >
-            <Head title={__('Confirm password')} />
+            <Head title={t('Confirm password')} />
 
-            <Form {...store.form()} resetOnSuccess={['password']}>
+            <Form
+                {...store.form()}
+                resetOnSuccess={['password']}
+                className="flex flex-col gap-[18px]"
+            >
                 {({ processing, errors }) => (
-                    <div className="space-y-6">
-                        <div className="grid gap-2">
-                            <Label htmlFor="password">{__('Password')} </Label>
-                            <Input
+                    <>
+                        <div className="grid gap-1.5">
+                            <Label htmlFor="password">{t('Password')}</Label>
+                            <PasswordInput
                                 id="password"
-                                type="password"
                                 name="password"
-                                placeholder="Password"
                                 autoComplete="current-password"
                                 autoFocus
+                                aria-invalid={
+                                    errors.password ? true : undefined
+                                }
                             />
-
                             <InputError message={errors.password} />
                         </div>
 
-                        <div className="flex items-center">
-                            <Button
-                                className="w-full"
-                                disabled={processing}
-                                data-test="confirm-password-button"
-                            >
-                                {processing && <Spinner />}
-                                {__('Confirm password')}
-                            </Button>
-                        </div>
-                    </div>
+                        <Button
+                            className="w-full"
+                            disabled={processing}
+                            data-test="confirm-password-button"
+                        >
+                            {processing && <Spinner />}
+                            {t('Confirm password')}
+                        </Button>
+                    </>
                 )}
             </Form>
         </AuthLayout>

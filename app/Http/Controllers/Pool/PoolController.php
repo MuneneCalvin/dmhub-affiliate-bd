@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Pool;
 
 use App\Http\Controllers\Controller;
 use App\Models\Advertiser;
-use App\Models\Publisher;
 use App\Models\Network;
+use App\Models\Publisher;
 use App\Models\UserNetworks;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -36,11 +36,13 @@ class PoolController extends Controller
 
     public function advertisers(Request $request)
     {
+        $request->validate(['term' => 'nullable|string|max:200']);
+
         $query = $this->claimable(Advertiser::query())->where('is_verified', false)
             ->with('user:id,first_name,last_name,email');
 
-        if ($request->has('term') && $request->term) {
-            $term = $request->term;
+        if ($request->filled('term')) {
+            $term = trim($request->input('term'));
             $query->where(function ($outer) use ($term) {
                 $outer->whereHas('user', function ($q) use ($term) {
                     $q->where('first_name', 'like', "%{$term}%")
@@ -50,32 +52,54 @@ class PoolController extends Controller
             });
         }
 
+        if ($request->wantsJson()) {
+            return response()->json(['suggestions' => $query->orderBy('id')->limit(8)->get()->map(fn ($partner) => [
+                'id' => $partner->id,
+                'name' => $partner->business_name ?: trim(($partner->user?->first_name ?? '').' '.($partner->user?->last_name ?? '')) ?: $partner->user?->email,
+                'description' => $partner->user?->email,
+                'href' => route('networks.pool.advertisers.show', $partner->id),
+            ])]);
+        }
+
         $advertisers = $query->paginate(25);
 
         return inertia('pool/advertisers', [
-            'advertisers' => $advertisers
+            'advertisers' => $advertisers,
         ]);
     }
 
     public function publishers(Request $request)
     {
+        $request->validate(['term' => 'nullable|string|max:200']);
+
         $query = $this->claimable(Publisher::query())->where('is_verified', false)
             ->with('user:id,first_name,last_name,email');
 
-        if ($request->has('term') && $request->term) {
-            $term = $request->term;
+        if ($request->filled('term')) {
+            $term = trim($request->input('term'));
             $query->where(function ($outer) use ($term) {
                 $outer->whereHas('user', function ($q) use ($term) {
                     $q->where('first_name', 'like', "%{$term}%")
                         ->orWhere('last_name', 'like', "%{$term}%")
                         ->orWhere('email', 'like', "%{$term}%");
-                })->orWhere('website_url', 'like', "%{$term}%");
+                })->orWhere('website_url', 'like', "%{$term}%")
+                    ->orWhere('business_name', 'like', "%{$term}%");
             });
         }
 
+        if ($request->wantsJson()) {
+            return response()->json(['suggestions' => $query->orderBy('id')->limit(8)->get()->map(fn ($partner) => [
+                'id' => $partner->id,
+                'name' => $partner->business_name ?: trim(($partner->user?->first_name ?? '').' '.($partner->user?->last_name ?? '')) ?: $partner->user?->email,
+                'description' => $partner->website_url ?: $partner->user?->email,
+                'href' => route('networks.pool.publishers.show', $partner->id),
+            ])]);
+        }
+
         $publishers = $query->paginate(25);
+
         return inertia('pool/publishers', [
-            'publishers' => $publishers
+            'publishers' => $publishers,
         ]);
     }
 
@@ -83,12 +107,12 @@ class PoolController extends Controller
     {
         $user = Auth::user();
         // $network = Network::where('owner_email', $user->email)->first();
-         $userNetwork = UserNetworks::where('user_id', $user->id)->first();
-        if (!$userNetwork) {
+        $userNetwork = UserNetworks::where('user_id', $user->id)->first();
+        if (! $userNetwork) {
             return redirect()->back()->with('error', 'You must be a network owner to approve publishers.');
         }
         $network = Network::find($userNetwork->network_id);
-        if (!$network) {
+        if (! $network) {
             return back()->with('error', 'You must be a network owner to approve advertisers.');
         }
         $advertiser = $this->claimable(Advertiser::query())->findOrFail($id);
@@ -103,6 +127,7 @@ class PoolController extends Controller
                 'status' => 'A',
             ]);
         });
+
         return back()->with('success', 'Advertiser approved and assigned to your network.');
     }
 
@@ -123,11 +148,11 @@ class PoolController extends Controller
     {
         $user = Auth::user();
         $userNetwork = UserNetworks::where('user_id', $user->id)->first();
-        if (!$userNetwork) {
+        if (! $userNetwork) {
             return redirect()->back()->with('error', 'You must be a network owner to approve publishers.');
         }
         $network = Network::find($userNetwork->network_id);
-        if (!$network) {
+        if (! $network) {
             return back()->with('error', 'You must be a network owner to approve publishers.');
         }
 
@@ -142,6 +167,7 @@ class PoolController extends Controller
                 'status' => 'A',
             ]);
         });
+
         return back()->with('success', 'Publisher approved and assigned to your network.');
     }
 
@@ -154,6 +180,7 @@ class PoolController extends Controller
         $publisher->user()->update([
             'status' => 'R',
         ]);
+
         return back()->with('success', 'Publisher rejected.');
     }
 
@@ -162,7 +189,7 @@ class PoolController extends Controller
         $advertiser = $this->claimable(Advertiser::with('user'))->findOrFail($id);
 
         return inertia('pool/advertiser-show', [
-            'advertiser' => $advertiser
+            'advertiser' => $advertiser,
         ]);
     }
 
@@ -171,7 +198,7 @@ class PoolController extends Controller
         $publisher = $this->claimable(Publisher::with('user'))->findOrFail($id);
 
         return inertia('pool/publisher-show', [
-            'publisher' => $publisher
+            'publisher' => $publisher,
         ]);
     }
 }

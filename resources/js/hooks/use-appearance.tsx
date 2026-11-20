@@ -53,12 +53,16 @@ export function useAppearance() {
 
     useEffect(() => {
         const savedAppearance =
-            (localStorage.getItem('appearance') as Appearance | null) || 'light';
+            (localStorage.getItem('appearance') as Appearance | null) ||
+            'light';
 
         updateAppearance(savedAppearance);
 
         return () =>
-            mediaQuery()?.removeEventListener('change', handleSystemThemeChange);
+            mediaQuery()?.removeEventListener(
+                'change',
+                handleSystemThemeChange,
+            );
     }, [updateAppearance]);
 
     return { appearance, updateAppearance } as const;
