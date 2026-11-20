@@ -1,23 +1,33 @@
+import { PageHeader } from '@/components/app';
+import { useConfirmationDialog } from '@/components/app/confirm-dialog';
+import {
+    MutedCell,
+    ResourceDirectory,
+} from '@/components/app/resource-directory';
+import { Button } from '@/components/ui/button';
+import {
+    useDirectoryQuery,
+    type LaravelPage,
+} from '@/hooks/use-directory-query';
+import AppLayout from '@/layouts/app-layout';
+import { useDate } from '@/lib/format';
+import advertiser from '@/routes/advertiser';
+import leadRoutes from '@/routes/leads';
+import type { SharedData } from '@/types';
 import { Head, router, usePage } from '@inertiajs/react';
-import { Download, Search, Trash2 } from 'lucide-react';
-import { FormEvent, useState } from 'react';
+import {
+    BadgeCheck,
+    CheckCircle2,
+    Download,
+    Inbox,
+    PhoneCall,
+    Sparkles,
+    Trash2,
+    XCircle,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
-import AppLayout from '@/layouts/app-layout';
-import leadRoutes from '@/routes/leads';
-import { type BreadcrumbItem } from '@/types';
-
-interface LeadRow {
+type LeadRow = {
     id: number;
     first_name: string | null;
     last_name: string | null;
@@ -29,233 +39,208 @@ interface LeadRow {
     created_at: string;
     campaign?: { id: number; name: string } | null;
     offer?: { id: number; name: string } | null;
-}
+};
 
-interface LeadsPageProps {
-    leads: {
-        data: LeadRow[];
-        links: { url: string | null; label: string; active: boolean }[];
-        total: number;
-    };
-    filters: { status: string | null; search: string };
-    statuses: string[];
-    [key: string]: unknown;
-}
+type StatusCounts = Record<
+    'all' | 'new' | 'contacted' | 'qualified' | 'converted' | 'lost',
+    number
+>;
+
+type Props = SharedData & {
+    leads: LaravelPage<LeadRow>;
+    status: string;
+    statusCounts: StatusCounts;
+};
 
 export default function LeadsIndex() {
     const { t } = useTranslation();
-    const { leads, filters, statuses } = usePage<LeadsPageProps>().props;
-    const [search, setSearch] = useState(filters.search ?? '');
+    const { leads, status, statusCounts } = usePage<Props>().props;
+    const formatDate = useDate();
+    const query = useDirectoryQuery();
+    const { confirm, ConfirmDialog } = useConfirmationDialog();
 
-    const breadcrumbs: BreadcrumbItem[] = [
-        { title: t('Leads'), href: leadRoutes.index.url() },
-    ];
-
-    const applyFilters = (next: { status?: string | null; search?: string }) =>
-        router.get(
-            leadRoutes.index.url(),
-            {
-                status: next.status ?? filters.status ?? undefined,
-                search: (next.search ?? search) || undefined,
-            },
-            { preserveState: true, replace: true },
-        );
-
-    const onSearch = (event: FormEvent) => {
-        event.preventDefault();
-        applyFilters({ search });
-    };
-
-    const updateStatus = (lead: LeadRow, status: string) =>
+    const setStatus = (row: LeadRow, next: string) =>
         router.patch(
-            leadRoutes.update.url(lead.id),
-            { status },
+            leadRoutes.update.url(row.id),
+            { status: next },
             { preserveScroll: true },
         );
 
-    const remove = (lead: LeadRow) => {
-        if (
-            window.confirm(
-                t(
-                    'Delete this contact? The submission and its commission stay on record.',
-                ),
-            )
-        ) {
-            router.delete(leadRoutes.destroy.url(lead.id), {
-                preserveScroll: true,
-            });
-        }
-    };
+    const fullName = (row: LeadRow) =>
+        [row.first_name, row.last_name].filter(Boolean).join(' ') || row.email;
 
     const exportUrl = leadRoutes.export.url({
-        query: filters.status ? { status: filters.status } : undefined,
+        query: status && status !== 'all' ? { status } : undefined,
     });
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <AppLayout>
             <Head title={t('Leads')} />
-            <div className="space-y-4 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                        <h1 className="text-xl font-semibold">{t('Leads')}</h1>
-                        <p className="text-sm text-muted-foreground">
-                            {t(
-                                'Contact details reported with confirmed submissions.',
-                            )}
-                        </p>
-                    </div>
-                    <Button asChild variant="outline">
-                        <a href={exportUrl}>
-                            <Download className="mr-2 h-4 w-4" />
-                            {t('Export')}
-                        </a>
-                    </Button>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                    <form onSubmit={onSearch} className="flex gap-2">
-                        <Input
-                            value={search}
-                            onChange={(event) => setSearch(event.target.value)}
-                            placeholder={t('Search name, email or company')}
-                            className="w-72"
-                            aria-label={t('Search leads')}
-                        />
-                        <Button type="submit" variant="secondary">
-                            <Search className="mr-2 h-4 w-4" />
-                            {t('Search')}
+            <div className="workspace-page flex flex-col gap-6">
+                <PageHeader
+                    title={t('Leads')}
+                    description={t(
+                        'Contact details reported with confirmed submissions.',
+                    )}
+                    breadcrumbs={[
+                        {
+                            title: t('Campaigns'),
+                            href: advertiser.campaign.index.url(),
+                        },
+                        { title: t('Leads'), href: leadRoutes.index.url() },
+                    ]}
+                    icon={<Inbox />}
+                    tone="brand"
+                    actions={
+                        <Button asChild variant="secondary">
+                            <a href={exportUrl}>
+                                <Download />
+                                {t('Export')}
+                            </a>
                         </Button>
-                    </form>
-                    <select
-                        value={filters.status ?? ''}
-                        onChange={(event) =>
-                            router.get(
-                                leadRoutes.index.url(),
-                                {
-                                    status: event.target.value || undefined,
-                                    search: search || undefined,
-                                },
-                                { preserveState: true, replace: true },
-                            )
-                        }
-                        className="h-9 rounded-md border bg-background px-2 text-sm"
-                        aria-label={t('Filter by status')}
-                    >
-                        <option value="">{t('All statuses')}</option>
-                        {statuses.map((status) => (
-                            <option key={status} value={status}>
-                                {t(status)}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-
-                <div className="rounded-md border">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>{t('Contact')}</TableHead>
-                                <TableHead>{t('Company')}</TableHead>
-                                <TableHead>{t('Campaign')}</TableHead>
-                                <TableHead>{t('Status')}</TableHead>
-                                <TableHead>{t('Received')}</TableHead>
-                                <TableHead className="w-12" />
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {leads.data.length === 0 && (
-                                <TableRow>
-                                    <TableCell
-                                        colSpan={6}
-                                        className="py-8 text-center text-muted-foreground"
-                                    >
-                                        {t('No leads yet.')}
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                            {leads.data.map((lead) => (
-                                <TableRow key={lead.id}>
-                                    <TableCell>
-                                        <div className="font-medium">
-                                            {[lead.first_name, lead.last_name]
-                                                .filter(Boolean)
-                                                .join(' ') || lead.email}
-                                        </div>
-                                        <div className="text-xs text-muted-foreground">
-                                            {lead.email}
-                                            {lead.phone
-                                                ? ` · ${lead.phone}`
-                                                : ''}
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>{lead.company ?? '—'}</TableCell>
-                                    <TableCell>
-                                        {lead.campaign?.name ?? '—'}
-                                    </TableCell>
-                                    <TableCell>
-                                        <select
-                                            value={lead.status}
-                                            onChange={(event) =>
-                                                updateStatus(
-                                                    lead,
-                                                    event.target.value,
-                                                )
-                                            }
-                                            className="h-8 rounded-md border bg-background px-2 text-sm"
-                                            aria-label={t('Lead status')}
-                                        >
-                                            {statuses.map((status) => (
-                                                <option
-                                                    key={status}
-                                                    value={status}
-                                                >
-                                                    {t(status)}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </TableCell>
-                                    <TableCell>
-                                        {new Date(
-                                            lead.created_at,
-                                        ).toLocaleDateString()}
-                                    </TableCell>
-                                    <TableCell>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => remove(lead)}
-                                            aria-label={t('Delete lead')}
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </div>
-
-                {leads.links.length > 3 && (
-                    <div className="flex flex-wrap gap-1">
-                        {leads.links.map((link, index) => (
-                            <Button
-                                key={index}
-                                variant={link.active ? 'default' : 'outline'}
-                                size="sm"
-                                disabled={!link.url}
-                                onClick={() =>
-                                    link.url &&
-                                    router.get(
-                                        link.url,
-                                        {},
-                                        { preserveScroll: true },
-                                    )
-                                }
-                                dangerouslySetInnerHTML={{ __html: link.label }}
-                            />
-                        ))}
-                    </div>
-                )}
+                    }
+                />
+                <ResourceDirectory<LeadRow>
+                    label={t('Lead list')}
+                    tone="brand"
+                    rows={leads?.data ?? []}
+                    rowKey={(row) => row.id}
+                    nameHeader={t('Contact')}
+                    name={fullName}
+                    subtitle={(row) =>
+                        row.phone ? `${row.email} · ${row.phone}` : row.email
+                    }
+                    status={(row) => row.status}
+                    statusTiles={[
+                        {
+                            value: 'all',
+                            label: t('All leads'),
+                            count: statusCounts?.all,
+                            tone: 'brand',
+                            icon: <Inbox />,
+                        },
+                        {
+                            value: 'new',
+                            label: t('New'),
+                            count: statusCounts?.new,
+                            tone: 'brand',
+                            icon: <Sparkles />,
+                        },
+                        {
+                            value: 'contacted',
+                            label: t('Contacted'),
+                            count: statusCounts?.contacted,
+                            tone: 'info',
+                            icon: <PhoneCall />,
+                        },
+                        {
+                            value: 'qualified',
+                            label: t('Qualified'),
+                            count: statusCounts?.qualified,
+                            tone: 'warning',
+                            icon: <BadgeCheck />,
+                        },
+                        {
+                            value: 'converted',
+                            label: t('Converted'),
+                            count: statusCounts?.converted,
+                            tone: 'success',
+                            icon: <CheckCircle2 />,
+                        },
+                        {
+                            value: 'lost',
+                            label: t('Lost'),
+                            count: statusCounts?.lost,
+                            tone: 'neutral',
+                            icon: <XCircle />,
+                        },
+                    ]}
+                    statusValue={status ?? 'all'}
+                    onStatusChange={query.setStatus}
+                    columns={[
+                        {
+                            id: 'company',
+                            header: t('Company'),
+                            cell: (row) => row.company || '—',
+                        },
+                        {
+                            id: 'campaign',
+                            header: t('Campaign'),
+                            cell: (row) => row.campaign?.name || '—',
+                        },
+                        {
+                            id: 'received',
+                            header: t('Received'),
+                            cell: (row) => (
+                                <MutedCell>
+                                    {formatDate(row.created_at)}
+                                </MutedCell>
+                            ),
+                        },
+                    ]}
+                    actions={() => [
+                        {
+                            label: t('Mark as new'),
+                            icon: <Sparkles />,
+                            hidden: (row) => row.status === 'new',
+                            onSelect: (row) => setStatus(row, 'new'),
+                        },
+                        {
+                            label: t('Mark as contacted'),
+                            icon: <PhoneCall />,
+                            tone: 'info',
+                            hidden: (row) => row.status === 'contacted',
+                            onSelect: (row) => setStatus(row, 'contacted'),
+                        },
+                        {
+                            label: t('Mark as qualified'),
+                            icon: <BadgeCheck />,
+                            tone: 'warning',
+                            hidden: (row) => row.status === 'qualified',
+                            onSelect: (row) => setStatus(row, 'qualified'),
+                        },
+                        {
+                            label: t('Mark as converted'),
+                            icon: <CheckCircle2 />,
+                            tone: 'success',
+                            hidden: (row) => row.status === 'converted',
+                            onSelect: (row) => setStatus(row, 'converted'),
+                        },
+                        {
+                            label: t('Mark as lost'),
+                            icon: <XCircle />,
+                            hidden: (row) => row.status === 'lost',
+                            onSelect: (row) => setStatus(row, 'lost'),
+                        },
+                        {
+                            label: t('Delete'),
+                            icon: <Trash2 />,
+                            destructive: true,
+                            onSelect: (row) =>
+                                confirm({
+                                    title: t('Delete lead'),
+                                    description: t(
+                                        'Delete {{name}}? The submission and its commission stay on record.',
+                                        { name: fullName(row) },
+                                    ),
+                                    confirmLabel: t('Delete'),
+                                    cancelLabel: t('Cancel'),
+                                    variant: 'destructive',
+                                    onConfirm: () =>
+                                        router.delete(
+                                            leadRoutes.destroy.url(row.id),
+                                            { preserveScroll: true },
+                                        ),
+                                }),
+                        },
+                    ]}
+                    pagination={query.pagination(leads)}
+                    emptyTitle={t('No leads yet')}
+                    emptyDescription={t(
+                        'Leads appear here when an advertiser reports a submission with its contact details.',
+                    )}
+                />
+                <ConfirmDialog />
             </div>
         </AppLayout>
     );

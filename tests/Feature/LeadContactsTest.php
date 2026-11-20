@@ -179,3 +179,19 @@ it('exports international phone numbers unchanged but neutralises spreadsheet fo
         ->and($row[6])->toStartWith("'@")              // city
         ->and($row[7])->toStartWith("'-2");            // country
 });
+
+it('sends status counts for the status tiles, limited to the viewer\'s own contacts', function () {
+    $mine = conversionFixture();
+    leadFor($mine, 'one@example.nl');
+    leadFor($mine, 'two@example.nl')->update(['status' => 'qualified']);
+    leadFor(conversionFixture(), 'theirs@example.nl');
+    $user = leadUser('advertiser', $mine);
+
+    $this->actingAs($user)->get(route('leads.index'))->assertOk()
+        ->assertInertia(fn ($page) => $page->where('status', 'all')
+            ->where('statusCounts', ['all' => 2, 'new' => 1, 'contacted' => 0, 'qualified' => 1, 'converted' => 0, 'lost' => 0]));
+
+    $this->actingAs($user)->get(route('leads.index', ['status' => 'qualified']))->assertOk()
+        ->assertInertia(fn ($page) => $page->where('status', 'qualified')->has('leads.data', 1)->where('leads.data.0.email', 'two@example.nl')
+            ->where('statusCounts.all', 2));
+});

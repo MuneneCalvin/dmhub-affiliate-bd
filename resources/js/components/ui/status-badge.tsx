@@ -53,6 +53,11 @@ export const STATUS_MAP: Record<string, StatusEntry> = {
     archived: { tone: 'neutral', label: 'Archived' },
     inactive: { tone: 'neutral', label: 'Inactive' },
     expired: { tone: 'neutral', label: 'Expired' },
+    // leads
+    contacted: { tone: 'info', label: 'Contacted' },
+    qualified: { tone: 'warning', label: 'Qualified' },
+    converted: { tone: 'success', label: 'Converted' },
+    lost: { tone: 'neutral', label: 'Lost' },
     // brand
     not_applied: { tone: 'brand', label: 'Not applied' },
     new: { tone: 'brand', label: 'New' },
