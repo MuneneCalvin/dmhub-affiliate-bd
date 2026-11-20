@@ -23,7 +23,7 @@ export default function LandingFooter({
     // );
 
     const currentYear = new Date().getFullYear();
-    const defaultCopyright = `© ${currentYear} DM Hub. All rights reserved.`;
+    const defaultCopyright = `© ${currentYear} Brand New Day. All rights reserved.`;
 
     return (
         <footer

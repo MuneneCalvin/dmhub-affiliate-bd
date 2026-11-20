@@ -28,7 +28,7 @@ export function AppSidebarHeader() {
                     aria-hidden="true"
                 />
                 <span className="truncate text-sm font-semibold">
-                    {networkBranding?.network_name || name || 'DM Hub'}
+                    {networkBranding?.network_name || name || 'Brand New Day'}
                 </span>
                 <span className="hidden text-muted-foreground sm:inline">
                     /

@@ -15,7 +15,7 @@ export default function AppLogoIcon({
     const logoSrc = networkBranding?.sidebar_logo_url || '/logo.png';
     const altText = networkBranding?.network_name
         ? `${networkBranding.network_name} Logo`
-        : 'DM Hub';
+        : 'Brand New Day';
 
     const sizeClasses = {
         sm: 'h-6 w-6',

@@ -95,7 +95,7 @@ export function AppHeader() {
             (a, b) => normalize(b.href).length - normalize(a.href).length,
         )[0]?.href;
     const role = auth.user.is_advertiser ? 'Advertiser' : 'Publisher';
-    const brand = networkBranding?.network_name || 'DMHub';
+    const brand = networkBranding?.network_name || 'Brand New Day';
     const links = (mobile = false) =>
         items.map((item) => (
             <Link

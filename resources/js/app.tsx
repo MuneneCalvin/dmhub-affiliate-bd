@@ -9,7 +9,7 @@ import { Toaster } from 'sonner';
 import { initializeTheme } from './hooks/use-appearance';
 import i18n from './i18n/index';
 
-const appName = import.meta.env.VITE_APP_NAME || 'DM Hub';
+const appName = import.meta.env.VITE_APP_NAME || 'Brand New Day';
 
 const queryClient = new QueryClient({
     defaultOptions: {

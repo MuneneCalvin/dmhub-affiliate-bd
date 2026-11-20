@@ -22,7 +22,7 @@
                 background-color: #0e1625;
             }
         </style>
-        <title inertia>{{ config('app.name', 'DM Hub') }}</title>
+        <title inertia>{{ config('app.name', 'Brand New Day') }}</title>
 
         @php
             $faviconUrl = $page['props']['networkBranding']['favicon_url'] ?? '/favicon.png';

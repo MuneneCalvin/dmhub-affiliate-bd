@@ -321,14 +321,14 @@ export function AppSidebar() {
                         href={dashboard()}
                         prefetch
                         className="flex min-w-0 items-center gap-3"
-                        aria-label={networkBranding?.network_name || 'DM Hub'}
+                        aria-label={networkBranding?.network_name || 'Brand New Day'}
                     >
                         <div className="flex size-9 shrink-0 items-center justify-center">
                             <AppLogoIcon size="md" />
                         </div>
                         <div className="min-w-0 group-data-[collapsible=icon]:hidden">
                             <span className="block truncate text-base font-semibold tracking-tight text-foreground">
-                                {networkBranding?.network_name || 'DM Hub'}
+                                {networkBranding?.network_name || 'Brand New Day'}
                             </span>
                             <span className="block text-[11px] text-sidebar-foreground/70">
                                 {t('Affiliate Platform')}
