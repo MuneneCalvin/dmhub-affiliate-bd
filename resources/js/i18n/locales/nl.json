@@ -2072,5 +2072,22 @@
     "Credit limit": "Kredietlimiet",
     "Required maximum unpaid commissions across this advertiser’s campaigns. Zero prevents borrowing; assign a positive limit to run without prepaid funds. Deposits and reversals restore credit. Network prepayment requirements take precedence.": "Verplicht maximum voor onbetaalde commissies over alle campagnes van deze adverteerder. Nul voorkomt lenen; stel een positieve limiet in om zonder vooruitbetaling te draaien. Stortingen en terugboekingen herstellen krediet. Vooruitbetalingseisen van het netwerk hebben voorrang.",
     "Traffic paused: advertiser credit limit reached": "Verkeer gepauzeerd: kredietlimiet adverteerder bereikt",
-    "The advertiser must reduce the outstanding balance or ask the network to increase the credit limit.": "De adverteerder moet het openstaande saldo verlagen of het netwerk vragen de kredietlimiet te verhogen."
+    "The advertiser must reduce the outstanding balance or ask the network to increase the credit limit.": "De adverteerder moet het openstaande saldo verlagen of het netwerk vragen de kredietlimiet te verhogen.",
+    "Contact details reported with confirmed submissions.": "Contactgegevens die met bevestigde aanmeldingen zijn doorgegeven.",
+    "Search name, email or company": "Zoek op naam, e-mail of bedrijf",
+    "Search leads": "Leads zoeken",
+    "Filter by status": "Filter op status",
+    "All statuses": "Alle statussen",
+    "Received": "Ontvangen",
+    "No leads yet.": "Nog geen leads.",
+    "Lead status": "Leadstatus",
+    "Delete lead": "Lead verwijderen",
+    "Delete this contact? The submission and its commission stay on record.": "Dit contact verwijderen? De aanmelding en de commissie blijven bewaard.",
+    "Lead updated.": "Lead bijgewerkt.",
+    "Lead deleted.": "Lead verwijderd.",
+    "new": "nieuw",
+    "contacted": "benaderd",
+    "qualified": "gekwalificeerd",
+    "converted": "geconverteerd",
+    "lost": "verloren"
 }

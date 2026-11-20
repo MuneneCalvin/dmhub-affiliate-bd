@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\API\ConversionEventController;
+use App\Http\Controllers\API\LeadSubmissionController;
 use App\Http\Controllers\API\PublisherAssetsController;
 use App\Http\Controllers\API\ReferralController;
 use App\Http\Controllers\Integrations\ShopifyPromotionController;
@@ -15,6 +16,7 @@ Route::get('/user', function (Request $request) {
 
 Route::prefix('v1')->group(function () {
     Route::post('/events', [ConversionEventController::class, 'store'])->middleware(['throttle:120,1,conversion-events', 'postback.credential'])->name('api.events.store');
+    Route::post('/leads', [LeadSubmissionController::class, 'store'])->middleware(['throttle:120,1,lead-submissions', 'postback.credential'])->name('api.leads.store');
     Route::get('/referrals/{referral}', [ReferralController::class, 'show'])->whereUuid('referral')->middleware('throttle:60,1,referrals')->name('api.referrals.show');
 
     // Publisher Assets API (public - for retrieving embed codes)

@@ -9,6 +9,7 @@ use App\Http\Controllers\Campaigns\CampaignSettingsController;
 use App\Http\Controllers\Campaigns\CampaignTrackingController;
 use App\Http\Controllers\Creatives\CreativesController;
 use App\Http\Controllers\Integrations\ShopifyPromotionController;
+use App\Http\Controllers\Leads\LeadContactController;
 use App\Http\Controllers\Offers\OffersController;
 use App\Http\Controllers\Partners\PartnerCardController;
 use App\Http\Controllers\Promotions\CustomerPromotionController;
@@ -74,6 +75,12 @@ Route::middleware(['auth', 'ensure.campaign.manager'])->group(function () {
     Route::delete('advertiser/offers/{offer}/delete', [OffersController::class, 'destroy'])->middleware('business.permission:manage_offers')->name('advertiser.offers.delete');
     Route::patch('advertiser/offers/{offer}/activate', [OffersController::class, 'activate'])->middleware('business.permission:manage_offers')->name('advertiser.offers.activate');
     Route::patch('advertiser/offers/{offer}/deactivate', [OffersController::class, 'deactivate'])->middleware('business.permission:manage_offers')->name('advertiser.offers.deactivate');
+
+    // leads: contact details reported with confirmed submissions (never publishers)
+    Route::get('leads', [LeadContactController::class, 'index'])->middleware('business.permission:manage_leads')->name('leads.index');
+    Route::get('leads/export', [LeadContactController::class, 'export'])->middleware('business.permission:manage_leads')->name('leads.export');
+    Route::patch('leads/{lead}', [LeadContactController::class, 'update'])->whereNumber('lead')->middleware('business.permission:manage_leads')->name('leads.update');
+    Route::delete('leads/{lead}', [LeadContactController::class, 'destroy'])->whereNumber('lead')->middleware('business.permission:manage_leads')->name('leads.destroy');
 
     // commission
     Route::post('advertiser/commissions/create', [OffersController::class, 'createCommission'])->middleware('business.permission:manage_offers')->name('advertiser.commissions.create');

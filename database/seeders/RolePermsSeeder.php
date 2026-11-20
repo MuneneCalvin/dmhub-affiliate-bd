@@ -87,6 +87,7 @@ class RolePermsSeeder extends Seeder
             ['name' => 'create_campaigns', 'guard_name' => 'web'],
             ['name' => 'manage_campaigns', 'guard_name' => 'web'],
             ['name' => 'view_campaigns', 'guard_name' => 'web'],
+            ['name' => 'manage_leads', 'guard_name' => 'web'],
             ['name' => 'set_campaign_budgets', 'guard_name' => 'web'],
             ['name' => 'generate_tracking_links', 'guard_name' => 'web'],
             // Creatives
@@ -207,6 +208,7 @@ class RolePermsSeeder extends Seeder
                 'view_conversions',
                 // Network campaign directory (tenant-scoped, read-only).
                 'view_campaigns',
+                'manage_leads',
                 // Promotional materials within the network's campaigns.
                 'upload_creatives',
                 'manage_creatives',
@@ -249,6 +251,7 @@ class RolePermsSeeder extends Seeder
                 'create_campaigns',
                 'manage_campaigns',
                 'view_campaigns',
+                'manage_leads',
                 'set_campaign_budgets',
                 'generate_tracking_links',
                 // Creatives

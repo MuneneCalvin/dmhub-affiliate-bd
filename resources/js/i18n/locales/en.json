@@ -2072,5 +2072,22 @@
     "Credit limit": "Credit limit",
     "Required maximum unpaid commissions across this advertiser’s campaigns. Zero prevents borrowing; assign a positive limit to run without prepaid funds. Deposits and reversals restore credit. Network prepayment requirements take precedence.": "Required maximum unpaid commissions across this advertiser’s campaigns. Zero prevents borrowing; assign a positive limit to run without prepaid funds. Deposits and reversals restore credit. Network prepayment requirements take precedence.",
     "Traffic paused: advertiser credit limit reached": "Traffic paused: advertiser credit limit reached",
-    "The advertiser must reduce the outstanding balance or ask the network to increase the credit limit.": "The advertiser must reduce the outstanding balance or ask the network to increase the credit limit."
+    "The advertiser must reduce the outstanding balance or ask the network to increase the credit limit.": "The advertiser must reduce the outstanding balance or ask the network to increase the credit limit.",
+    "Contact details reported with confirmed submissions.": "Contact details reported with confirmed submissions.",
+    "Search name, email or company": "Search name, email or company",
+    "Search leads": "Search leads",
+    "Filter by status": "Filter by status",
+    "All statuses": "All statuses",
+    "Received": "Received",
+    "No leads yet.": "No leads yet.",
+    "Lead status": "Lead status",
+    "Delete lead": "Delete lead",
+    "Delete this contact? The submission and its commission stay on record.": "Delete this contact? The submission and its commission stay on record.",
+    "Lead updated.": "Lead updated.",
+    "Lead deleted.": "Lead deleted.",
+    "new": "new",
+    "contacted": "contacted",
+    "qualified": "qualified",
+    "converted": "converted",
+    "lost": "lost"
 }

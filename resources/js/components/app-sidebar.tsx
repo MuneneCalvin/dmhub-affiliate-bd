@@ -21,6 +21,7 @@ import {
     Bolt,
     BookOpenCheck,
     FileText,
+    Inbox,
     KeyRound,
     LayoutGrid,
     Megaphone,
@@ -104,6 +105,13 @@ const mainNavItems: NavItem[] = [
         children: [],
     },
 
+    {
+        title: 'Leads',
+        href: '/leads',
+        icon: Inbox,
+        permissions: ['manage_leads'],
+        children: [],
+    },
     {
         title: 'Financial review',
         href: '/finance',
@@ -236,7 +244,7 @@ export function AppSidebar() {
         {
             title: 'Campaigns',
             icon: Megaphone,
-            names: ['My Campaigns', 'Creatives', 'Embed Scripts'],
+            names: ['My Campaigns', 'Leads', 'Creatives', 'Embed Scripts'],
         },
         {
             title: 'Partners',
@@ -321,14 +329,17 @@ export function AppSidebar() {
                         href={dashboard()}
                         prefetch
                         className="flex min-w-0 items-center gap-3"
-                        aria-label={networkBranding?.network_name || 'Brand New Day'}
+                        aria-label={
+                            networkBranding?.network_name || 'Brand New Day'
+                        }
                     >
                         <div className="flex size-9 shrink-0 items-center justify-center">
                             <AppLogoIcon size="md" />
                         </div>
                         <div className="min-w-0 group-data-[collapsible=icon]:hidden">
                             <span className="block truncate text-base font-semibold tracking-tight text-foreground">
-                                {networkBranding?.network_name || 'Brand New Day'}
+                                {networkBranding?.network_name ||
+                                    'Brand New Day'}
                             </span>
                             <span className="block text-[11px] text-sidebar-foreground/70">
                                 {t('Affiliate Platform')}
