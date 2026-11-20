@@ -16,11 +16,11 @@ import {
 import { dashboard } from '@/routes';
 import { type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, Link2 } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-/** Brand mark: the tenant's sidebar logo when set, otherwise the Brand New Day logo. */
+/** Brand mark: the tenant's sidebar logo when set, otherwise the plain brand icon (as on the sign-in page). */
 function SidebarBrand() {
     const { networkBranding } = usePage<SharedData>().props;
     const { t } = useTranslation();
@@ -32,11 +32,19 @@ function SidebarBrand() {
             className="flex min-h-11 min-w-0 items-center gap-3 rounded-[12px] px-1.5 py-1"
         >
             <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-[12px] bg-brand shadow-primary">
-                <img
-                    src={networkBranding?.sidebar_logo_url || '/logo.png'}
-                    alt=""
-                    className="size-full object-contain p-1.5"
-                />
+                {networkBranding?.sidebar_logo_url ? (
+                    <img
+                        src={networkBranding.sidebar_logo_url}
+                        alt=""
+                        className="size-full object-contain p-1.5"
+                    />
+                ) : (
+                    <Link2
+                        className="size-5 text-white"
+                        strokeWidth={2.4}
+                        aria-hidden="true"
+                    />
+                )}
             </span>
             <span className="flex min-w-0 flex-col leading-tight group-data-[collapsible=icon]:sr-only">
                 <strong className="truncate text-[17px] font-extrabold tracking-[-0.01em] text-white">
