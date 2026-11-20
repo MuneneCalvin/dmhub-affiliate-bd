@@ -140,7 +140,7 @@ class SimplePdf
         $objects[1] = '<< /Type /Catalog /Pages 2 0 R >>';
         $objects[3] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>';
         $objects[4] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>';
-        $objects[5] = '<< /Title ('.self::encode($this->title).') /Producer (DM Hub) >>';
+        $objects[5] = '<< /Title ('.self::encode($this->title).') /Producer (Brand New Day) >>';
 
         $kids = [];
         $next = 6;

@@ -1,6 +1,6 @@
 # Campaigns, connected
 
-Set up your campaign, choose what counts as a conversion, and connect your website to DM Hub. These guides are for advertisers, publishers and the developers implementing their integrations.
+Set up your campaign, choose what counts as a conversion, and connect your website to Brand New Day. These guides are for advertisers, publishers and the developers implementing their integrations.
 
 ## Choose your campaign
 
@@ -15,8 +15,8 @@ Start with [campaign setup](campaign-setup.md). Campaign goals are implemented t
 
 ## Connect your platform
 
-- [Shopify](shopify.md): enter your store details in DM Hub and authorize the Shopify connection.
-- [WooCommerce](woocommerce.md): enter your store details in DM Hub and activate the plugin connection.
+- [Shopify](shopify.md): enter your store details in Brand New Day and authorize the Shopify connection.
+- [WooCommerce](woocommerce.md): enter your store details in Brand New Day and activate the plugin connection.
 - [WordPress](wordpress.md): connect an accepted form submission or publish affiliate links.
 - [Custom website](custom-website.md): persist referrals in your application and send events from your backend.
 
@@ -25,16 +25,16 @@ Start with [campaign setup](campaign-setup.md). Campaign goals are implemented t
 ## How tracking works
 
 1. A visitor follows an approved publisher's tracking link.
-2. DM Hub records a click and redirects to the offer's destination with `referral_id` and `click_id`.
+2. Brand New Day records a click and redirects to the offer's destination with `referral_id` and `click_id`.
 3. Your website preserves that referral through the form or checkout.
 4. Your backend verifies the business outcome and sends a confirmed event.
-5. DM Hub creates a conversion and a **pending** commission. Financial approval and payout happen separately.
+5. Brand New Day creates a conversion and a **pending** commission. Financial approval and payout happen separately.
 
 Loading a script, viewing a thank-you page, recording an impression or filling in a form without a successful save does not create a commission.
 
 ## Before you copy an example
 
-Replace `https://affiliate.example.com` with your DM Hub base URL. Replace example IDs, tokens, currency, timestamps and amounts with actual values from your integration. Examples use EUR only for illustration; event, campaign and advertiser currencies must match.
+Replace `https://affiliate.example.com` with your Brand New Day base URL. Replace example IDs, tokens, currency, timestamps and amounts with actual values from your integration. Examples use EUR only for illustration; event, campaign and advertiser currencies must match.
 
 A publisher script token is public attribution information. An advertiser postback credential is secret and belongs only on your server. No guide requires putting the advertiser credential in a theme, browser script or public page.
 

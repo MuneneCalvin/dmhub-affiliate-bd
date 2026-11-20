@@ -264,7 +264,7 @@ export default function CreativeForm() {
                 <PageHeader
                     title={title}
                     description={t(
-                        'Prepare campaign content. DM Hub takes care of the tracking.',
+                        'Prepare campaign content. Brand New Day takes care of the tracking.',
                     )}
                     breadcrumbs={
                         fromLibrary

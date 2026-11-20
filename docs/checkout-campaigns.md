@@ -6,11 +6,11 @@ Attribute an order to a publisher and confirm a purchase only after your merchan
 
 Complete [campaign setup](campaign-setup.md). Choose CPS or RevShare for a percentage of the reported sale amount, or Flat for a fixed purchase reward. Set a positive rate on the approved publisher assignment.
 
-Agree on the commission basis: for example, merchandise after discounts, excluding shipping and taxes. DM Hub uses the amount your backend reports; it does not calculate the store's tax, discounts or exchange rates. Event, campaign and advertiser currencies must match.
+Agree on the commission basis: for example, merchandise after discounts, excluding shipping and taxes. Brand New Day uses the amount your backend reports; it does not calculate the store's tax, discounts or exchange rates. Event, campaign and advertiser currencies must match.
 
 ## Connected Shopify and WooCommerce stores
 
-For checkout campaigns with customer discounts, follow the [customer promotions guide](customer-promotions.md). Enter your store details in DM Hub, complete the connection and publish your promotion. The app or plugin handles referral capture and paid-order reporting for those promotions; you do not need to build the manual event integration below.
+For checkout campaigns with customer discounts, follow the [customer promotions guide](customer-promotions.md). Enter your store details in Brand New Day, complete the connection and publish your promotion. The app or plugin handles referral capture and paid-order reporting for those promotions; you do not need to build the manual event integration below.
 
 The following steps are for a custom integration or purchase attribution without customer discounts.
 
@@ -25,7 +25,7 @@ Do not rely on a thank-you page query string or a payment provider returning the
 
 ## 3. Confirm payment server-side
 
-Use a verified payment callback, paid-order webhook or an internal payment-complete event. Verify the sender, store identity and order's paid state before building a DM Hub event. Never send the advertiser credential to the browser.
+Use a verified payment callback, paid-order webhook or an internal payment-complete event. Verify the sender, store identity and order's paid state before building a Brand New Day event. Never send the advertiser credential to the browser.
 
 ```json
 {

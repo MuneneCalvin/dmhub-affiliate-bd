@@ -4,13 +4,13 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="{{ $description }}">
-    <title>{{ $title }} · DM Hub guides</title>
+    <title>{{ $title }} · {{ config('app.name') }} guides</title>
     <link rel="stylesheet" href="{{ asset('css/documentation.css') }}">
 </head>
 <body>
     <a class="skip-link" href="#content">Skip to content</a>
     <header class="docs-header">
-        <a class="brand" href="{{ route('public.docs.index') }}"><span class="brand-mark">dm</span> DM Hub <span class="brand-label">/ Guides</span></a>
+        <a class="brand" href="{{ route('public.docs.index') }}"><span class="brand-mark">{{ \Illuminate\Support\Str::lower(collect(explode(' ', config('app.name')))->map(fn ($word) => \Illuminate\Support\Str::substr($word, 0, 1))->take(3)->implode('')) }}</span> {{ config('app.name') }} <span class="brand-label">/ Guides</span></a>
         <a class="account-link" href="{{ route('home') }}">Open platform <span aria-hidden="true">↗</span></a>
     </header>
     <div class="docs-layout">
@@ -27,7 +27,7 @@
             <p class="nav-note">Share these guides with your developer. No account required.</p>
         </nav>
         <main id="content" tabindex="-1">
-            <div class="page-tools"><span>DM HUB DOCUMENTATION</span><a href="{{ $downloadUrl }}" download>Download Markdown <span aria-hidden="true">↓</span></a></div>
+            <div class="page-tools"><span>{{ \Illuminate\Support\Str::upper(config('app.name')) }} DOCUMENTATION</span><a href="{{ $downloadUrl }}" download>Download Markdown <span aria-hidden="true">↓</span></a></div>
             <article class="prose">{!! $html !!}</article>
             <footer class="docs-footer">Need to check a request? <a href="{{ route('public.docs.show', 'api-reference') }}">API & troubleshooting →</a></footer>
         </main>

@@ -1,13 +1,13 @@
 # Customer discounts & plugins
 
-Customer promotions are available in DM Hub Affiliate by default. An authorized campaign manager can connect a store and configure customer savings separately from publisher commissions. Discounts apply only after you configure and publish a promotion.
+Customer promotions are available in Brand New Day by default. An authorized campaign manager can connect a store and configure customer savings separately from publisher commissions. Discounts apply only after you configure and publish a promotion.
 
-## Connect your store in DM Hub
+## Connect your store in Brand New Day
 
 1. Open your campaign and select **Offers**.
 2. In **Customer promotions & stores**, select **Manage stores**.
 3. Under **Connected stores**, enter a store name, select **Shopify** or **WooCommerce**, and enter the store domain without `https://` or a path.
-4. Select **Add store**, then complete the platform steps below. The store currency must match the campaign currency shown in DM Hub.
+4. Select **Add store**, then complete the platform steps below. The store currency must match the campaign currency shown in Brand New Day.
 5. Confirm the store status is **connected** before publishing a promotion.
 
 Store connections belong to your advertiser account and network. Only users with permission to manage offers can add or disconnect stores and manage promotions. If these controls are missing, ask your account administrator for access.
@@ -16,13 +16,13 @@ Store connections belong to your advertiser account and network. Only users with
 
 Use the domain from your WordPress site address, including `www` if present.
 
-1. Add the WooCommerce store in DM Hub as described above.
+1. Add the WooCommerce store in Brand New Day as described above.
 2. [Download the WooCommerce plugin ZIP](/docs/integrations/woocommerce/download). In WordPress, open **Plugins → Add New → Upload Plugin**, upload the ZIP and activate it.
 3. Enable coupons in WooCommerce settings. The plugin requires WooCommerce 8.8 or later.
-4. In **WooCommerce → DM Hub**, enter the **Integration API URL** and **Connection key** displayed in DM Hub, then connect.
+4. In **WooCommerce → DM Hub**, enter the **Integration API URL** and **Connection key** displayed in Brand New Day, then connect.
 5. Return to the campaign's **Offers** tab and confirm the store is connected.
 
-The connection key is shown only once. Keep it private. If you lose it, select **Rotate connection key** in DM Hub and reconnect the plugin using the replacement key. Rotating a key invalidates the previous key.
+The connection key is shown only once. Keep it private. If you lose it, select **Rotate connection key** in Brand New Day and reconnect the plugin using the replacement key. Rotating a key invalidates the previous key.
 
 See the [WooCommerce guide](woocommerce.md) for connection troubleshooting and checkout checks.
 
@@ -30,13 +30,13 @@ See the [WooCommerce guide](woocommerce.md) for connection troubleshooting and c
 
 Use your store's canonical domain, such as `your-store.myshopify.com`, even if shoppers use a custom domain.
 
-1. Add the Shopify store in DM Hub as described above.
+1. Add the Shopify store in Brand New Day as described above.
 2. Select **Connect Shopify** next to the store and approve access in Shopify using an account allowed to install apps.
-3. After returning to DM Hub, confirm the store is connected.
+3. After returning to Brand New Day, confirm the store is connected.
 4. In your Shopify theme editor, enable the **DM Hub customer offers** app embed and save the theme.
-5. Configure and publish the promotion in DM Hub, then test a publisher link through checkout.
+5. Configure and publish the promotion in Brand New Day, then test a publisher link through checkout.
 
-If DM Hub says Shopify connection is unavailable, contact your DM Hub administrator. Your administrator prepares the shared Shopify app; merchants connect their own stores from DM Hub.
+If Brand New Day says Shopify connection is unavailable, contact your Brand New Day administrator. Your administrator prepares the shared Shopify app; merchants connect their own stores from Brand New Day.
 
 See the [Shopify guide](shopify.md) for supported discount rules and checkout checks.
 
@@ -58,7 +58,7 @@ Shopify supports percentage/fixed amounts, all products or selected products/col
 
 Pausing a promotion stops new discounts from being issued. Discounts already issued keep their original expiry. Dismissing a storefront message does not remove a discount.
 
-Select **Disconnect** next to a store to revoke its DM Hub connection. Previously created Shopify codes remain subject to their original Shopify expiry and usage rules. To reconnect Shopify, select **Connect Shopify** again. To reconnect WooCommerce, rotate its connection key and reconnect the plugin.
+Select **Disconnect** next to a store to revoke its Brand New Day connection. Previously created Shopify codes remain subject to their original Shopify expiry and usage rules. To reconnect Shopify, select **Connect Shopify** again. To reconnect WooCommerce, rotate its connection key and reconnect the plugin.
 
 ## Review orders and refunds
 
@@ -70,7 +70,7 @@ Orders that cannot be confirmed appear for review. Resolve funding or eligibilit
 
 - Follow a fresh publisher link and confirm the intended message and discount appear.
 - Test eligible and excluded products, minimum values, competing coupons and expired offers.
-- Complete a paid order and check the store totals and commission basis in DM Hub.
+- Complete a paid order and check the store totals and commission basis in Brand New Day.
 - Test your enabled checkout and express-payment options, mobile layouts and cached pages.
 - Check an unpaid order, refund and cancellation, and confirm the review workflow.
 

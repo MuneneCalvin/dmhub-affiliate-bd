@@ -1,12 +1,12 @@
 # API & troubleshooting
 
-Use this reference for the current DM Hub conversion contract. All examples use a placeholder base URL; send production requests over HTTPS and request JSON responses.
+Use this reference for the current Brand New Day conversion contract. All examples use a placeholder base URL; send production requests over HTTPS and request JSON responses.
 
 ## Credentials
 
-For a custom website integration, ask your DM Hub administrator for an advertiser-scoped credential. It is displayed once when issued; keep it in your website backend's secret store. Credentials are valid for 1–365 days. To rotate one, request a replacement, switch your integration to it, then ask your administrator to revoke the old credential.
+For a custom website integration, ask your Brand New Day administrator for an advertiser-scoped credential. It is displayed once when issued; keep it in your website backend's secret store. Credentials are valid for 1–365 days. To rotate one, request a replacement, switch your integration to it, then ask your administrator to revoke the old credential.
 
-For the built-in Shopify or WooCommerce customer promotion connection, follow the [store connection guide](customer-promotions.md) instead. Shopify uses authorization through Shopify; WooCommerce uses the connection key displayed in DM Hub.
+For the built-in Shopify or WooCommerce customer promotion connection, follow the [store connection guide](customer-promotions.md) instead. Shopify uses authorization through Shopify; WooCommerce uses the connection key displayed in Brand New Day.
 
 Send `Authorization: Bearer ADVERTISER_CREDENTIAL`. Body/query credentials and a global shared secret are not accepted. Postback requests must have no query parameters. Credentials authorize only the issuing advertiser's resources.
 

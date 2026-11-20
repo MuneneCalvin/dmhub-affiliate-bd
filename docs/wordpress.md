@@ -30,11 +30,11 @@ The SDK preserves the referral on arrival. Follow your site's consent policy bef
 
 Attach the SDK's `getReferral()` result to the request sent to your own website, or preserve a validated referral in a server session. Use your form plugin's server-side accepted-entry hook after validation and a successful save.
 
-Run the plugin's spam filter, check a honeypot and measure elapsed form time from a server-issued form timestamp. Send the metadata-only `submission` event from [form campaigns](form-campaigns.md), including `successful: true` and the three `spam_checks` signals. Keep the entry's opaque ID and acceptance timestamp stable. Do not send email addresses, names, message bodies or other form fields to DM Hub. Failed validation, spam and generic button clicks must never report successful submissions.
+Run the plugin's spam filter, check a honeypot and measure elapsed form time from a server-issued form timestamp. Send the metadata-only `submission` event from [form campaigns](form-campaigns.md), including `successful: true` and the three `spam_checks` signals. Keep the entry's opaque ID and acceptance timestamp stable. Do not send email addresses, names, message bodies or other form fields to Brand New Day. Failed validation, spam and generic button clicks must never report successful submissions.
 
 ## 4. Send confirmed events from PHP
 
-Put your DM Hub base URL and advertiser credential in server configuration as `DMHUB_BASE_URL` and `DMHUB_POSTBACK_CREDENTIAL`; never inject the secret into browser settings. Build and persist the event from your accepted entry before calling this transport helper.
+Put your Brand New Day base URL and advertiser credential in server configuration as `DMHUB_BASE_URL` and `DMHUB_POSTBACK_CREDENTIAL`; never inject the secret into browser settings. Build and persist the event from your accepted entry before calling this transport helper.
 
 ```php
 function dmhub_send_confirmed_event(array $persisted_payload) {
@@ -69,4 +69,4 @@ This helper does not install hooks, authenticate a browser endpoint or schedule 
 
 Follow a real publisher link, accept one synthetic entry, inspect the stored referral, and verify one conversion and pending commission. Resend the same event and verify a duplicate response. Test validation errors, spam rejection, a login form, cache/minification, unavailable browser storage and a missing referral.
 
-All form contents stay on your WordPress site. DM Hub rejects contact fields and arbitrary payloads.
+All form contents stay on your WordPress site. Brand New Day rejects contact fields and arbitrary payloads.
