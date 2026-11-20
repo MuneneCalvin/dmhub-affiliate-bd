@@ -14,11 +14,19 @@ class LeadContactController extends Controller
 {
     public function index(Request $request)
     {
-        $status = $request->query('status');
+        $status = in_array($request->query('status'), LeadContact::STATUSES, true) ? $request->query('status') : null;
         $search = trim((string) $request->query('search', ''));
+        $visible = LeadContact::visibleTo($request->user());
 
-        $leads = LeadContact::visibleTo($request->user())->with(['campaign:id,name', 'offer:id,name'])
-            ->when(in_array($status, LeadContact::STATUSES, true), fn ($query) => $query->where('status', $status))
+        // Tile counts cover everything the viewer may see, ignoring the active filter.
+        $perStatus = (clone $visible)->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status');
+        $statusCounts = ['all' => (int) $perStatus->sum()];
+        foreach (LeadContact::STATUSES as $name) {
+            $statusCounts[$name] = (int) ($perStatus[$name] ?? 0);
+        }
+
+        $leads = $visible->with(['campaign:id,name', 'offer:id,name'])
+            ->when($status, fn ($query) => $query->where('status', $status))
             ->when($search !== '', function ($query) use ($search) {
                 $like = '%'.addcslashes($search, '\\%_').'%';
                 $query->where(fn ($q) => $q->where('email', 'like', $like)->orWhere('first_name', 'like', $like)
@@ -28,8 +36,8 @@ class LeadContactController extends Controller
 
         return Inertia::render('leads/index', [
             'leads' => $leads,
-            'filters' => ['status' => $status, 'search' => $search],
-            'statuses' => LeadContact::STATUSES,
+            'status' => $status ?? 'all',
+            'statusCounts' => $statusCounts,
         ]);
     }
 
