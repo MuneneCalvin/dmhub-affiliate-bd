@@ -7,6 +7,8 @@ use App\Models\Clicks;
 use App\Models\Creative;
 use App\Models\Offer;
 use App\Models\PublisherCampaigns;
+use App\Support\ConversionEligibility;
+use App\Support\PublisherAttribution;
 use Illuminate\Http\Request;
 
 class TrackingController extends Controller
@@ -20,11 +22,16 @@ class TrackingController extends Controller
         $escaped = addcslashes($trackingId, '\\%_');
 
         return PublisherCampaigns::where(function ($q) use ($trackingId, $escaped) {
-            $q->where('tracking_link', 'LIKE', "%/t/{$escaped}")
+            $q->whereRaw("tracking_link LIKE ? ESCAPE '\\'", ["%/t/{$escaped}"])
                 ->orWhere('tracking_link', $trackingId);
         })
             ->where('status', 'A')
             ->first();
+    }
+
+    private function hasCustomerPromotion(PublisherCampaigns $assignment): bool
+    {
+        return $assignment->offer?->customerPromotion?->status === 'active';
     }
 
     public function track(Request $request, $trackingId)
@@ -33,6 +40,8 @@ class TrackingController extends Controller
         if (! $publisherCampaign) {
             abort(404, 'Invalid or expired tracking link');
         }
+        PublisherAttribution::assertActive($publisherCampaign, ! $this->hasCustomerPromotion($publisherCampaign));
+        $traffic = $this->traffic($request, $publisherCampaign);
         $offer = Offer::find($publisherCampaign->offer_id);
         if (! $offer) {
             abort(404, 'Offer not found');
@@ -45,7 +54,10 @@ class TrackingController extends Controller
         if ($creativeId) {
             $creative = Creative::where('id', $creativeId)
                 ->where('offer_id', $offer->id)
+                ->where('campaign_id', $publisherCampaign->campaign_id)
+                ->where('status', 'A')
                 ->first();
+            abort_unless($creative, 404, 'Creative not found');
         }
 
         $click = Clicks::create([
@@ -62,6 +74,7 @@ class TrackingController extends Controller
             'browser' => $this->detectBrowser($request->userAgent()),
             'operating_system' => $this->detectOS($request->userAgent()),
             'clicked_at' => now(),
+            ...$traffic,
         ]);
 
         $publisherCampaign->increment('total_clicks');
@@ -73,17 +86,12 @@ class TrackingController extends Controller
         }
 
         $destinationUrl = $offer->preview_url ?? $offer->tracking_url_template ?? '/';
-        if (strpos($destinationUrl, '?') !== false) {
-            $destinationUrl .= "&click_id={$click->id}";
-        } else {
-            $destinationUrl .= "?click_id={$click->id}";
-        }
-        if ($publisherCampaign->sub) {
-            $destinationUrl .= '&sub='.urlencode($publisherCampaign->sub);
-        }
-        if ($creative) {
-            $destinationUrl .= '&_dlf_code='.urlencode($creative->tracking_code);
-        }
+        $destinationUrl = $this->withTrackingParameters($destinationUrl, [
+            'click_id' => $click->id,
+            'referral_id' => $click->referral_id,
+            'sub' => $click->sub_id,
+            '_dlf_code' => $creative?->tracking_code,
+        ]);
 
         return redirect()->away($destinationUrl);
     }
@@ -96,6 +104,8 @@ class TrackingController extends Controller
             abort(404, 'Invalid or expired tracking link');
         }
 
+        PublisherAttribution::assertActive($publisherCampaign, ! $this->hasCustomerPromotion($publisherCampaign));
+        $traffic = $this->traffic($request, $publisherCampaign);
         $offer = Offer::find($publisherCampaign->offer_id);
         if (! $offer) {
             abort(404, 'Offer not found');
@@ -103,6 +113,8 @@ class TrackingController extends Controller
 
         $creative = Creative::where('id', $creativeId)
             ->where('offer_id', $offer->id)
+            ->where('campaign_id', $publisherCampaign->campaign_id)
+            ->where('status', 'A')
             ->first();
 
         if (! $creative) {
@@ -123,21 +135,19 @@ class TrackingController extends Controller
             'browser' => $this->detectBrowser($request->userAgent()),
             'operating_system' => $this->detectOS($request->userAgent()),
             'clicked_at' => now(),
+            ...$traffic,
         ]);
 
         $publisherCampaign->increment('total_clicks');
         $offer->increment('total_clicks');
         $creative->increment('clicks');
         $destinationUrl = $offer->preview_url ?? $offer->tracking_url_template ?? '/';
-        if (strpos($destinationUrl, '?') !== false) {
-            $destinationUrl .= "&click_id={$click->id}";
-        } else {
-            $destinationUrl .= "?click_id={$click->id}";
-        }
-        if ($publisherCampaign->sub) {
-            $destinationUrl .= '&sub='.urlencode($publisherCampaign->sub);
-        }
-        $destinationUrl .= '&_dlf_code='.urlencode($creative->tracking_code);
+        $destinationUrl = $this->withTrackingParameters($destinationUrl, [
+            'click_id' => $click->id,
+            'referral_id' => $click->referral_id,
+            'sub' => $click->sub_id,
+            '_dlf_code' => $creative->tracking_code,
+        ]);
 
         return redirect()->away($destinationUrl);
     }
@@ -157,36 +167,15 @@ class TrackingController extends Controller
             abort(404, 'Offer not found');
         }
 
-        $click = Clicks::create([
-            'publisher_id' => 5,
-            'network_id' => $offer->network_id ?? null,
-            'campaign_id' => $creative->campaign_id,
-            'offer_id' => $creative->offer_id,
-            'publisher_campaign_id' => null,
-            'creative_id' => $creative->id,
-            'ip_address' => $request->ip(),
-            'user_agent' => substr($request->userAgent() ?? '', 0, 255),
-            'referer' => substr($request->header('referer') ?? '', 0, 255),
-            'device_type' => $this->detectDeviceType($request->userAgent()),
-            'browser' => $this->detectBrowser($request->userAgent()),
-            'operating_system' => $this->detectOS($request->userAgent()),
-            'clicked_at' => now(),
-        ]);
+        $token = $request->query('pc');
+        abort_unless(is_string($token) && $token !== '', 422, 'Use a publisher-scoped creative link.');
+        $assignment = PublisherCampaigns::where('script_token', $token)->firstOrFail();
+        PublisherAttribution::assertActive($assignment, ! $this->hasCustomerPromotion($assignment));
+        PublisherAttribution::assertCreative($creative, $assignment);
+        $trackingId = $assignment->extractTrackingId();
+        abort_unless($trackingId, 422, 'Publisher tracking link is not configured.');
 
-        $offer->increment('total_clicks');
-        $creative->increment('clicks');
-
-        $destinationUrl = $creative->preview_url ?? $offer->preview_url ?? $offer->tracking_url_template ?? '/';
-        if (strpos($destinationUrl, '?') !== false) {
-            $destinationUrl .= "&click_id={$click->id}";
-        } else {
-            $destinationUrl .= "?click_id={$click->id}";
-        }
-
-        // Auto-Popup Trigger
-        $destinationUrl .= '&_dlf_code='.urlencode($creative->tracking_code);
-
-        return redirect()->away($destinationUrl);
+        return $this->trackCreative($request, $trackingId, $creative->id);
     }
 
     public function impression(Request $request, $trackingCode)
@@ -206,6 +195,27 @@ class TrackingController extends Controller
             ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
             ->header('Pragma', 'no-cache')
             ->header('Expires', '0');
+    }
+
+    private function withTrackingParameters(string $url, array $parameters): string
+    {
+        [$url, $fragment] = array_pad(explode('#', $url, 2), 2, null);
+        [$base, $query] = array_pad(explode('?', $url, 2), 2, '');
+        parse_str($query, $existing);
+        $query = http_build_query(array_merge($existing, array_filter($parameters, fn ($v) => $v !== null && $v !== '')));
+
+        return $base.'?'.$query.($fragment !== null ? '#'.$fragment : '');
+    }
+
+    private function traffic(Request $request, PublisherCampaigns $assignment): array
+    {
+        $data = $request->validate(['sub' => 'nullable|string|max:200', 'traffic_source' => 'nullable|string|max:100']);
+        $source = $data['traffic_source'] ?? null;
+        // Geo restrictions fail closed when a trusted country is unavailable.
+        // Never use an arbitrary caller-supplied country or forwarding header.
+        ConversionEligibility::assertTraffic($assignment, $source, $this->detectDeviceType($request->userAgent()), null);
+
+        return ['sub_id' => $data['sub'] ?? $assignment->sub, 'traffic_source' => $source];
     }
 
     private function detectDeviceType(?string $userAgent): string

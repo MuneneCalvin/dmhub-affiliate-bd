@@ -10,7 +10,7 @@ class SecurityHeaders
 {
     /**
      * Baseline browser hardening headers. X-Frame-Options and CSP are intentionally not set:
-     * publishers embed lead forms and scripts on their own sites.
+     * publishers embed referral scripts on their own sites.
      */
     public function handle(Request $request, Closure $next): Response
     {

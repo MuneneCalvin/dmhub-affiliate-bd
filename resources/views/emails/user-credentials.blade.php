@@ -5,16 +5,16 @@ Hello {{ $user->first_name }},
 
 Your account has been created successfully @if($networkName) for **{{ $networkName }}** @endif.
 
-Here are your login credentials:
+Choose your password using the secure setup link below.
 
 **Email:** {{ $user->email }}
-**Password:** {{ $password }}
 
-<x-mail::button :url="$loginUrl">
-Login Now
+
+<x-mail::button :url="$setupUrl">
+Set Up Password
 </x-mail::button>
 
-For security reasons, we recommend changing your password after your first login.
+This link expires in {{ $expiresInMinutes }} minutes and can be used once. After signing in, verify your email to access your workspace.
 
 Thanks,<br>
 {{ config('app.name') }}

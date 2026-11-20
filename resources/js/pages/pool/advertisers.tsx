@@ -1,17 +1,22 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { ActionColumn, PoolAdvertisersColumns } from '@/dev/columns/columns'
-import { CustomDialogComponent, ReusablePageTitle } from '@/dev/core'
-import { CustomBaseTable, SearchTools } from '@/dev/table'
-import { useCustomDialogContextFactory, useDebounce } from '@/hooks'
-import AppLayout from '@/layouts/app-layout'
-import { BreadcrumbItem, SingleActionsHandler, TFilterOptions, TPaginationFilters } from '@/types'
-import { FILTEROPTIONS, ReusableReducer } from '@/utils/constants'
-import { Head, router } from '@inertiajs/react'
-import { useReducer } from 'react'
-import { useTranslation } from 'react-i18next'
-import RejectModal from './modals/reject'
-import networks from '@/routes/networks'
+import { ActionColumn, PoolAdvertisersColumns } from '@/dev/columns/columns';
+import { CustomDialogComponent, ReusablePageTitle } from '@/dev/core';
+import { CustomBaseTable, SearchTools } from '@/dev/table';
+import { useCustomDialogContextFactory, useDebounce } from '@/hooks';
+import AppLayout from '@/layouts/app-layout';
+import networks from '@/routes/networks';
+import {
+    BreadcrumbItem,
+    SingleActionsHandler,
+    TFilterOptions,
+    TPaginationFilters,
+} from '@/types';
+import { FILTEROPTIONS, ReusableReducer } from '@/utils/constants';
+import { Head, router } from '@inertiajs/react';
+import { useReducer } from 'react';
+import { useTranslation } from 'react-i18next';
+import RejectModal from './modals/reject';
 
 const PoolAdvertisersPage = ({ advertisers }: any) => {
     const { t } = useTranslation();
@@ -23,13 +28,13 @@ const PoolAdvertisersPage = ({ advertisers }: any) => {
         },
         {
             title: t('Advertisers'),
-            href:networks.pool.advertisers.url(),
+            href: networks.pool.advertisers.url(),
         },
     ];
 
     const [PageFilter, optionsDispatcher] = useReducer(
         ReusableReducer<TPaginationFilters & TFilterOptions>,
-        { ...FILTEROPTIONS, page: 1, pageSize: 25 }
+        { ...FILTEROPTIONS, page: 1, pageSize: 25 },
     );
 
     const optionsDispatcherDebounce = useDebounce({
@@ -45,15 +50,16 @@ const PoolAdvertisersPage = ({ advertisers }: any) => {
     const ActionsHandlerMapping: SingleActionsHandler<any>[] = [
         {
             label: t('View Details'),
+            href: (data) => networks.pool.advertisers.show.url(data.id),
             onSelect: (data: any) => {
-                router.visit(networks.pool.advertisers.show(data?.id))
+                router.visit(networks.pool.advertisers.show(data?.id));
             },
         },
         {
             label: t('Approve'),
-            onSelect:(data: any) =>{
-                router.post(networks.pool.advertisers.approve(data?.id))
-            }
+            onSelect: (data: any) => {
+                router.post(networks.pool.advertisers.approve(data?.id));
+            },
         },
         {
             label: t('Reject'),
@@ -71,16 +77,19 @@ const PoolAdvertisersPage = ({ advertisers }: any) => {
 
     return (
         <AppLayout>
-            <Head title={t("Pool - Advertisers")} />
-            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
+            <Head title={t('Pool - Advertisers')} />
+            <div className="workspace-page flex h-full flex-1 flex-col gap-4">
                 <ReusablePageTitle
-                    title={t("Advertiser Pool")}
-                    description={t("Review and approve advertisers to add them to your network")}
+                    title={t('Advertiser Pool')}
+                    description={t(
+                        'Review and approve advertisers to add them to your network',
+                    )}
                     breadcrumbs={breadcrumbs}
                 />
 
-                <div className='w-full'>
+                <div className="w-full">
                     <CustomBaseTable
+                        presentation="cards"
                         {...{
                             onPageChange: (page) =>
                                 optionsDispatcher({
@@ -100,7 +109,7 @@ const PoolAdvertisersPage = ({ advertisers }: any) => {
                                 ...PoolAdvertisersColumns,
                                 ActionColumn({ ActionsHandlerMapping }),
                             ],
-                             OtherTools:SearchTools,
+                            OtherTools: SearchTools,
                             data: advertisers?.data ?? [],
                             pageCount: advertisers?.last_page ?? 1,
                             title: t('Advertisers'),
@@ -118,7 +127,8 @@ const PoolAdvertisersPage = ({ advertisers }: any) => {
 
                 <CustomDialogComponent
                     {...{ handleDialogContextSwitch, dialogOpen }}
-                    className='sm:max-w-[500px]'>
+                    className="sm:max-w-[500px]"
+                >
                     {dialogContent?.Component && (
                         <dialogContent.Component
                             {...{

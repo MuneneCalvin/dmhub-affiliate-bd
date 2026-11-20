@@ -1,11 +1,11 @@
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
+import { EditableOverview } from '@/components/editable-overview';
 import { send } from '@/routes/verification';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Transition } from '@headlessui/react';
 import { Form, Head, Link, usePage } from '@inertiajs/react';
 
 import DeleteUser from '@/components/delete-user';
-import HeadingSmall from '@/components/heading-small';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,12 +35,27 @@ export default function Profile({
             <Head title="Profile settings" />
 
             <SettingsLayout>
-                <div className="space-y-6">
-                    <HeadingSmall
-                        title="Profile information"
-                        description="Update your name and email address"
-                    />
-
+                <EditableOverview
+                    title="Profile information"
+                    description="Your personal details and account identity."
+                    summary={
+                        <div className="flex items-center gap-5">
+                            <div className="identity-tile tone-0">
+                                {String(auth.user.user_name)
+                                    .slice(0, 2)
+                                    .toUpperCase()}
+                            </div>
+                            <div>
+                                <p className="text-xl font-medium">
+                                    {String(auth.user.user_name)}
+                                </p>
+                                <p className="mt-1 text-muted-foreground">
+                                    {auth.user.email}
+                                </p>
+                            </div>
+                        </div>
+                    }
+                >
                     <Form
                         {...ProfileController.update.form()}
                         options={{
@@ -56,7 +71,9 @@ export default function Profile({
                                     <Input
                                         id="name"
                                         className="mt-1 block w-full"
-                                        defaultValue={String(auth?.user?.user_name)}
+                                        defaultValue={String(
+                                            auth?.user?.user_name,
+                                        )}
                                         name="name"
                                         required
                                         autoComplete="name"
@@ -139,7 +156,7 @@ export default function Profile({
                             </>
                         )}
                     </Form>
-                </div>
+                </EditableOverview>
 
                 <DeleteUser />
             </SettingsLayout>

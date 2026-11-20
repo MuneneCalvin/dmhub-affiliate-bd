@@ -56,8 +56,7 @@ class Campaign extends Model
 
     public function applications()
     {
-        return $this->hasMany(PublisherCampaigns::class, 'campaign_id')
-            ->whereNotIn('status', ['P', 'N', 'A']);
+        return $this->hasMany(PublisherCampaigns::class, 'campaign_id');
     }
 
     public function advertiser()

@@ -7,9 +7,9 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Toaster } from 'sonner';
 import { initializeTheme } from './hooks/use-appearance';
-import './i18n/index';
+import i18n from './i18n/index';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Brand New Day';
+const appName = import.meta.env.VITE_APP_NAME || 'DM Hub';
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -29,6 +29,14 @@ createInertiaApp({
             import.meta.glob('./pages/**/*.tsx'),
         ),
     setup({ el, App, props }) {
+        // Set the server locale before the first render to avoid a language flash.
+        const locale = props.initialPage.props.locale as
+            | { current?: string }
+            | undefined;
+        if (locale?.current) {
+            i18n.changeLanguage(locale.current);
+            document.documentElement.lang = locale.current;
+        }
         const root = createRoot(el);
         root.render(
             <StrictMode>
@@ -40,7 +48,7 @@ createInertiaApp({
         );
     },
     progress: {
-        color: '#4B5563',
+        color: '#305cde',
     },
 });
 

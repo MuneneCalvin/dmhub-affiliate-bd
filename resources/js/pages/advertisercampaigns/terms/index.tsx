@@ -50,7 +50,7 @@ const TermsIndexPage = () => {
     return (
         <AppLayout>
             <Head title={t('My Terms')} />
-            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
+            <div className="workspace-page flex h-full flex-1 flex-col gap-4">
                 <ReusablePageTitle
                     title={t('My Terms')}
                     description={t('Manage Your Campaigns Terms')}
@@ -74,7 +74,7 @@ const TermsIndexPage = () => {
                 />
 
                 <div className="w-full">
-                    <CustomBaseTable
+                    <CustomBaseTable presentation="cards"
                         onPageChange={(page) =>
                             optionsDispatcher({
                                 payload: { page },

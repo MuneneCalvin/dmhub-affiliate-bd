@@ -12,7 +12,9 @@ export function AppShell({ children, variant = 'header' }: AppShellProps) {
 
     if (variant === 'header') {
         return (
-            <div className="flex min-h-screen w-full flex-col bg-white dark:bg-[#0f1419]">{children}</div>
+            <div className="flex min-h-svh w-full flex-col bg-background">
+                {children}
+            </div>
         );
     }
 

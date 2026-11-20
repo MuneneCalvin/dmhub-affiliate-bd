@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Services\InvoiceService;
+use App\Support\ConversionMoney;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
@@ -13,6 +15,7 @@ class PublisherInvoice extends Model
     protected $table = 'publisher_invoices';
 
     protected $fillable = [
+        'paid_by', 'payment_evidence', 'ledger_backed',
         'invoice_number',
         'publisher_id',
         'network_id',
@@ -33,6 +36,7 @@ class PublisherInvoice extends Model
     ];
 
     protected $casts = [
+        'ledger_backed' => 'boolean',
         'amount' => 'decimal:2',
         'period_start' => 'date',
         'period_end' => 'date',
@@ -55,22 +59,18 @@ class PublisherInvoice extends Model
 
     public static function generateInvoiceNumber(): string
     {
-        $prefix = 'INV';
-        $year = date('Y');
-        $month = date('m');
+        return 'INV-'.Str::ulid();
+    }
 
-        $lastInvoice = self::where('invoice_number', 'like', "{$prefix}-{$year}{$month}-%")
-            ->orderBy('id', 'desc')
-            ->first();
-
-        if ($lastInvoice) {
-            $lastNumber = (int) Str::afterLast($lastInvoice->invoice_number, '-');
-            $newNumber = $lastNumber + 1;
-        } else {
-            $newNumber = 1;
+    public function attachLineAmounts(): self
+    {
+        $lines = collect($this->invoice_details['lines'] ?? [])->keyBy('earning_id');
+        foreach ($this->earnings as $earning) {
+            $line = $lines->get($earning->id);
+            $earning->setAttribute('invoice_amount', $line ? ConversionMoney::decimal($line['amount_minor']) : $earning->amount);
         }
 
-        return sprintf('%s-%s%s-%05d', $prefix, $year, $month, $newNumber);
+        return $this;
     }
 
     public function publisher()
@@ -110,36 +110,20 @@ class PublisherInvoice extends Model
 
     public function approve(int $userId): void
     {
-        $this->update([
-            'status' => 'approved',
-            'approved_by' => $userId,
-            'approved_at' => now(),
-        ]);
-
-        $this->earnings()->update(['status' => 'approved']);
+        app(InvoiceService::class)->approveInvoice($this, $userId);
+        $this->refresh();
     }
 
     public function reject(string $reason, int $userId): void
     {
-        $this->update([
-            'status' => 'rejected',
-            'rejection_reason' => $reason,
-            'approved_by' => $userId,
-            'approved_at' => now(),
-        ]);
-
-        $this->earnings()->update(['status' => 'rejected']);
+        app(InvoiceService::class)->rejectInvoice($this, $reason, $userId);
+        $this->refresh();
     }
 
-    public function markAsPaid(string $paymentReference = null): void
+    public function markAsPaid(?string $paymentReference = null, ?string $evidence = null, ?int $userId = null): void
     {
-        $this->update([
-            'status' => 'paid',
-            'paid_at' => now(),
-            'payment_reference' => $paymentReference,
-        ]);
-
-        $this->earnings()->update(['status' => 'paid']);
+        app(InvoiceService::class)->markAsPaid($this, $paymentReference, $evidence, $userId);
+        $this->refresh();
     }
 
     public function scopePending($query)

@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { ReusablePageTitle } from '@/dev/core';
 import { cn, isSameUrl, resolveUrl } from '@/lib/utils';
 import { edit as editAppearance } from '@/routes/appearance';
 import { edit } from '@/routes/profile';
@@ -8,7 +9,6 @@ import { edit as editPassword } from '@/routes/user-password';
 import { type NavItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
 import { type PropsWithChildren } from 'react';
-import { ReusablePageTitle } from '@/dev/core';
 import { useTranslation } from 'react-i18next';
 
 export default function SettingsLayout({ children }: PropsWithChildren) {
@@ -46,16 +46,16 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
     }
     const currentPath = window.location.pathname;
     return (
-        <div className="px-4 py-6">
-            <Head title={t("Settings")} />
-            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
+        <div className="workspace-page flex flex-col">
+            <Head title={t('Settings')} />
+            <div className="flex h-full flex-1 flex-col gap-6">
                 <ReusablePageTitle
-                    title={t("Settings")}
-                    description={t("Manage your profile and account settings")}
+                    title={t('Settings')}
+                    description={t('Manage your profile and account settings')}
                     breadcrumbs={[]}
                 />
-                <div className='w-full'>
-                    <div className="flex flex-col lg:flex-row lg:space-x-12">
+                <div className="w-full">
+                    <div className="flex flex-col gap-8 rounded-xl border bg-card p-5 md:p-8 lg:flex-row lg:gap-10">
                         <aside className="w-full max-w-xl lg:w-48">
                             <nav className="flex flex-col space-y-1 space-x-0">
                                 {sidebarNavItems.map((item, index) => (
@@ -65,10 +65,11 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
                                         variant="ghost"
                                         asChild
                                         className={cn('w-full justify-start', {
-                                            'bg-muted': isSameUrl(
-                                                currentPath,
-                                                item.href,
-                                            ),
+                                            'bg-accent text-accent-foreground':
+                                                isSameUrl(
+                                                    currentPath,
+                                                    item.href,
+                                                ),
                                         })}
                                     >
                                         <Link href={item.href}>

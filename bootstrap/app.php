@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\AuthenticatePostbackCredential;
 use App\Http\Middleware\CheckAdvertiserStatus;
 use App\Http\Middleware\EnsureAdvertiser;
 use App\Http\Middleware\EnsureCampaignManager;
@@ -10,9 +11,9 @@ use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RedirectByRole;
 use App\Http\Middleware\RedirectIfPublisher;
+use App\Http\Middleware\RequireBusinessPermission;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetLocale;
-use App\Http\Middleware\VerifyPostbackSecret;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -43,6 +44,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             // Status check
             'check.advertiser.status' => CheckAdvertiserStatus::class,
+            'business.permission' => RequireBusinessPermission::class,
 
             // Role-based redirects
             'redirect.by.role' => RedirectByRole::class,
@@ -55,10 +57,17 @@ return Application::configure(basePath: dirname(__DIR__))
             'ensure.campaign.manager' => EnsureCampaignManager::class,
             'ensure.publisher' => EnsurePublisher::class,
 
-            // Shared-secret check for external postbacks
-            'postback.secret' => VerifyPostbackSecret::class,
+            // Advertiser-scoped credentials for external postbacks
+            'postback.credential' => AuthenticatePostbackCredential::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->respond(function ($response, $exception, $request) {
+            if ($response->getStatusCode() === 403 && $request->isMethod('GET')
+                && ! $request->is('api/*') && ! $request->expectsJson() && $request->user()) {
+                return Inertia\Inertia::render('errors/forbidden')->toResponse($request)->setStatusCode(403);
+            }
+
+            return $response;
+        });
     })->create();

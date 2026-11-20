@@ -3,8 +3,9 @@
 namespace App\Http\Controllers\Network;
 
 use App\Http\Controllers\Controller;
+use App\Models\Network;
 use App\Models\NetworkInvoice;
-use App\Services\NetworkEarningsService;
+use App\Services\Finance\NetworkSettlementService;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -29,6 +30,7 @@ class NetworkInvoiceController extends Controller
                         'invoices' => [],
                         'is_super_admin' => $user->is_super_admin,
                         'is_network' => $user->is_network,
+                        'currencies' => config('finance.currencies'),
                     ]);
                 }
                 $query->where('network_id', $userNetwork->network_id);
@@ -40,6 +42,7 @@ class NetworkInvoiceController extends Controller
                 'invoices' => $invoices,
                 'is_super_admin' => $user->is_super_admin,
                 'is_network' => $user->is_network,
+                'currencies' => config('finance.currencies'),
             ]);
 
         } catch (Exception $e) {
@@ -49,92 +52,38 @@ class NetworkInvoiceController extends Controller
         }
     }
 
-    public function store(Request $request)
+    public function store(Request $request, NetworkSettlementService $settlements)
     {
-        try {
-            $user = Auth::user();
-            $userNetwork = DB::table('user_networks')
-                ->where('user_id', $user->id)
-                ->first();
-            if (! $userNetwork) {
-                return back()->with('error', 'Network not found.');
-            }
-            $networkId = $userNetwork->network_id;
-            $balance = DB::scalar('SELECT calculate_network_balance(?)', [$networkId]);
-            if ($balance <= 0) {
-                return back()->with('error', 'No balance available to generate invoice.');
-            }
-            $hasPending = NetworkInvoice::where('network_id', $networkId)
-                ->whereIn('status', ['pending', 'approved'])
-                ->exists();
+        $data = $request->validate(['currency' => 'required|string|size:3']);
+        $networkId = $request->user()->networkId();
+        abort_unless($networkId, 403, 'No network assigned.');
+        $invoice = $settlements->create(Network::findOrFail($networkId), $data['currency'], $request->user()->id);
 
-            if ($hasPending) {
-                return back()->with('error', 'There is already a pending or approved invoice.');
-            }
-            $lastInvoice = NetworkInvoice::where('network_id', $networkId)
-                ->orderBy('period_end', 'desc')
-                ->first();
-
-            $periodStart = $lastInvoice ? $lastInvoice->period_end->clone()->addDay() : now()->subMonth();
-            $periodEnd = now();
-            $invoice = NetworkInvoice::create([
-                'network_id' => $networkId,
-                'invoice_number' => NetworkInvoice::generateInvoiceNumber(),
-                'amount' => $balance,
-                'currency' => $user->currency ?? 'USD',
-                'period_start' => $periodStart,
-                'period_end' => $periodEnd,
-                'status' => 'pending',
-                'notes' => 'Automated generation from current balance.',
-            ]);
-
-            return back()->with('success', 'Invoice #'.$invoice->invoice_number.' generated successfully.');
-        } catch (Exception $e) {
-            report($e);
-
-            return back()->with('error', 'Failed to generate invoice.');
-        }
+        return back()->with('success', 'Invoice #'.$invoice->invoice_number.' reserved for review.');
     }
 
-    public function markAsPaid(Request $request, $id)
+    public function approve(Request $request, int $id, NetworkSettlementService $settlements)
     {
-        $validated = $request->validate([
-            'payment_reference' => 'nullable|string|max:255',
-            'payment_method' => 'nullable|string|max:100',
-        ]);
+        $settlements->transition(NetworkInvoice::findOrFail($id), 'approve', $request->user()->id);
 
-        try {
-            DB::beginTransaction();
-            $invoice = NetworkInvoice::lockForUpdate()->findOrFail($id);
-            if ($invoice->status === 'paid') {
-                DB::rollBack();
+        return back()->with('success', 'Network invoice approved.');
+    }
 
-                return back()->with('error', 'Invoice is already paid.');
-            }
-            $invoice->update([
-                'status' => 'paid',
-                'paid_at' => now(),
-                'payment_reference' => $validated['payment_reference'] ?? null,
-                'payment_method' => $validated['payment_method'] ?? null,
-            ]);
-            $earningService = new NetworkEarningsService;
-            $earningService->recordEarning([
-                'network_id' => $invoice->network_id,
-                'advertiser_id' => null,
-                'campaign_id' => null,
-                'amount_debited' => 0,
-                'amount_credited' => $invoice->amount,
-                'currency' => $invoice->currency,
-                'notes' => "Payout for Invoice #{$invoice->invoice_number}",
-            ]);
-            DB::commit();
+    public function reject(Request $request, int $id, NetworkSettlementService $settlements)
+    {
+        $data = $request->validate(['reason' => 'required|string|max:500']);
+        $settlements->transition(NetworkInvoice::findOrFail($id), 'reject', $request->user()->id, $data);
 
-            return back()->with('success', 'Invoice marked as paid and ledger updated.');
-        } catch (\Throwable $e) {
-            DB::rollBack();
-            report($e);
+        return back()->with('success', 'Network invoice cancelled and funds released.');
+    }
 
-            return back()->with('error', 'Failed to update invoice.');
-        }
+    public function markAsPaid(Request $request, int $id, NetworkSettlementService $settlements)
+    {
+        $data = $request->validate(['payment_reference' => 'required|string|max:120',
+            'payment_evidence' => 'required|string|max:1000', 'payment_method' => 'nullable|string|max:100']);
+        $settlements->transition(NetworkInvoice::findOrFail($id), 'pay', $request->user()->id,
+            ['reference' => $data['payment_reference'], 'evidence' => $data['payment_evidence'], 'method' => $data['payment_method'] ?? 'bank']);
+
+        return back()->with('success', 'Network payment recorded.');
     }
 }

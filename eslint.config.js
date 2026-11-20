@@ -30,7 +30,35 @@ export default [
         },
     },
     {
-        ignores: ['vendor', 'node_modules', 'public', 'bootstrap/ssr', 'tailwind.config.js'],
+        files: [
+            'scripts/**/*.{js,mjs}',
+            'tests/**/*.{js,mjs,ts}',
+            'playwright*.ts',
+        ],
+        languageOptions: {
+            globals: {
+                ...globals.node,
+            },
+        },
+    },
+    {
+        // Playwright fixtures call `use(...)`, which is not a React hook.
+        files: ['tests/browser/**/*.ts'],
+        rules: {
+            'react-hooks/rules-of-hooks': 'off',
+        },
+    },
+    {
+        ignores: [
+            'vendor',
+            'node_modules',
+            'public',
+            'bootstrap/ssr',
+            'tailwind.config.js',
+            'playwright-report',
+            'test-results',
+            'release-evidence',
+        ],
     },
     prettier, // Turn off all rules that might conflict with Prettier
 ];

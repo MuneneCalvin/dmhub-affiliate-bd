@@ -4,21 +4,22 @@ namespace App\Http\Controllers\Applications;
 
 use App\Http\Controllers\Controller;
 use App\Models\Offer;
-use App\Models\OfferCommission;
 use App\Models\PublisherCampaigns;
-use App\Models\UserNetworks;
+use App\Services\PartnerEnrollmentService;
+use App\Support\Tenancy;
 use Exception;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 class PublisherApplicationController extends Controller
 {
     public function index(Request $request)
     {
         $user = Auth::user();
-        $networkId = UserNetworks::where('user_id', $user->id)
-            ->value('network_id');
 
         $status = $request->input('status', 'P');
 
@@ -27,6 +28,7 @@ class PublisherApplicationController extends Controller
             ->join('users', 'users.id', '=', 'publishers.user_id')
             ->join('campaigns', 'campaigns.id', '=', 'publisher_campaigns.campaign_id')
             ->leftJoin('offers', 'offers.id', '=', 'publisher_campaigns.offer_id')
+            ->leftJoin('offers as requested_offers', 'requested_offers.id', '=', 'publisher_campaigns.requested_offer_id')
             ->select([
                 'publisher_campaigns.id',
                 'publisher_campaigns.status',
@@ -40,10 +42,10 @@ class PublisherApplicationController extends Controller
                 'users.email',
                 'campaigns.name as campaign_name',
                 'offers.name as offer_name',
+                'requested_offers.name as requested_offer_name',
             ])
-            ->when($user->is_network && $networkId, function ($q) use ($networkId) {
-                $q->where('publisher_campaigns.network_id', $networkId);
-            })
+            ->whereIn('publisher_campaigns.campaign_id', Tenancy::campaignIds($user))
+            ->when(! $user->is_super_admin, fn ($q) => $q->where('publisher_campaigns.network_id', $user->networkId()))
             ->when($status !== 'all', function ($q) use ($status) {
                 $q->where('publisher_campaigns.status', $status);
             })
@@ -60,7 +62,6 @@ class PublisherApplicationController extends Controller
     public function show($id)
     {
         $user = Auth::user();
-        $userNetwork = UserNetworks::where('user_id', $user->id)->first();
 
         $application = PublisherCampaigns::query()
             ->where('publisher_campaigns.id', $id)
@@ -68,6 +69,7 @@ class PublisherApplicationController extends Controller
             ->join('users', 'users.id', '=', 'publishers.user_id')
             ->join('campaigns', 'campaigns.id', '=', 'publisher_campaigns.campaign_id')
             ->leftJoin('offers', 'offers.id', '=', 'publisher_campaigns.offer_id')
+            ->leftJoin('offers as requested_offers', 'requested_offers.id', '=', 'publisher_campaigns.requested_offer_id')
             ->join('networks', 'networks.id', '=', 'publisher_campaigns.network_id')
             ->select([
                 'publisher_campaigns.*',
@@ -79,19 +81,20 @@ class PublisherApplicationController extends Controller
                 'campaigns.id as campaign_id',
                 'campaigns.name as campaign_name',
                 'campaigns.description as campaign_description',
+                'campaigns.currency',
                 'offers.name as offer_name',
-                'offers.commission_value_1',
-                'offers.commission_value_2',
+                'requested_offers.name as requested_offer_name',
+                'publisher_campaigns.commission_value as commission_value_1',
+                'publisher_campaigns.commission_type as commission_type_1',
                 'networks.network_name',
             ])
-            ->when($user->is_network && $userNetwork, function ($q) use ($userNetwork) {
-                $q->where('publisher_campaigns.network_id', $userNetwork->network_id);
-            })
+            ->whereIn('publisher_campaigns.campaign_id', Tenancy::campaignIds($user))
+            ->when(! $user->is_super_admin, fn ($q) => $q->where('publisher_campaigns.network_id', $user->networkId()))
             ->first();
         abort_if($application === null, 404);
         $campaignOffers = Offer::where('campaign_id', $application->campaign_id)
             ->where('offer_status', 'A')
-            ->select(['id', 'name', 'description', 'commission_value_1', 'commission_value_2'])
+            ->with('commissions.commissionType')
             ->get();
 
         return inertia('applications/show', [
@@ -108,39 +111,16 @@ class PublisherApplicationController extends Controller
             ]);
 
             $user = Auth::user();
-            $userNetwork = UserNetworks::where('user_id', $user->id)->first();
 
-            $application = PublisherCampaigns::findOrFail($id);
-            if ($user->is_network && $userNetwork) {
-                if ($application->network_id !== $userNetwork->network_id) {
-                    abort(403, 'Unauthorized');
-                }
-            }
-            $offer = Offer::where('id', $validated['offer_id'])
-                ->where('campaign_id', $application->campaign_id)
-                ->firstOrFail();
-            $trackingId = $this->generateTrackingId($application, $offer->id);
-            $trackingLink = url("/t/{$trackingId}");
-
-            // Get commission from offer_commissions table
-            $offerCommission = OfferCommission::where('offer_id', $offer->id)
-                ->with('commissionType')
-                ->first();
-
-            $commissionType = $offerCommission?->commissionType?->name;
-            $commissionValue = $offerCommission?->commission_value;
-
-            $application->update([
-                'status' => 'A',
-                'offer_id' => $offer->id,
-                'commission_type' => $commissionType,
-                'commission_value' => $commissionValue,
-                'approved_by' => $user->id,
-                'approved_at' => now(),
-                'tracking_link' => $trackingLink,
-            ]);
+            $application = PublisherCampaigns::whereIn('campaign_id', Tenancy::campaignIds($user))
+                ->when(! $user->is_super_admin, fn ($q) => $q->where('network_id', $user->networkId()))
+                ->findOrFail($id);
+            $application = app(PartnerEnrollmentService::class)->review($application, $user, (int) $validated['offer_id']);
+            $offer = $application->offer;
 
             return redirect()->route('applications.index')->with('success', "Application approved and assigned to offer: {$offer->name}");
+        } catch (HttpExceptionInterface|ModelNotFoundException|ValidationException $e) {
+            throw $e;
         } catch (Exception $e) {
             return redirect()->back()->with('error', "Failed to approve application: {$e->getMessage()}");
         }
@@ -150,22 +130,17 @@ class PublisherApplicationController extends Controller
     {
         try {
             $user = Auth::user();
-            $userNetwork = UserNetworks::where('user_id', $user->id)->first();
             $validated = $request->validate([
                 'rejection_reason' => 'required|string|max:500',
             ]);
-            $application = PublisherCampaigns::findOrFail($id);
-            if ($user->is_network && $userNetwork) {
-                if ($application->network_id !== $userNetwork->network_id) {
-                    abort(403, 'Unauthorized');
-                }
-            }
-            $application->update([
-                'status' => 'R',
-                'rejection_reason' => $validated['rejection_reason'],
-            ]);
+            $application = PublisherCampaigns::whereIn('campaign_id', Tenancy::campaignIds($user))
+                ->when(! $user->is_super_admin, fn ($q) => $q->where('network_id', $user->networkId()))
+                ->findOrFail($id);
+            app(PartnerEnrollmentService::class)->review($application, $user, null, $validated['rejection_reason']);
 
             return redirect()->route('applications.index')->with('success', 'Application rejected');
+        } catch (HttpExceptionInterface|ModelNotFoundException|ValidationException $e) {
+            throw $e;
         } catch (Exception $e) {
             return redirect()->back()->with('error', 'Failed to reject application: '.$e->getMessage());
         }

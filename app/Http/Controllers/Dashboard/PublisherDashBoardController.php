@@ -5,11 +5,9 @@ namespace App\Http\Controllers\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
 use App\Models\Publisher;
-use App\Models\PublisherCampaigns;
 use App\Models\User;
 use App\Notifications\PublisherApplicationReceived;
-use Exception;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
+use App\Services\PartnerEnrollmentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -24,28 +22,41 @@ class PublisherDashBoardController extends Controller
     private function openCampaigns(Publisher $publisher)
     {
         return Campaign::where('campaign_status', 'A')
-            ->where('network_id', $publisher->network_id ?? 0);
+            ->where('network_id', $publisher->network_id ?? 0)
+            ->where('end_date', '>=', now());
     }
 
-    public function index()
+    public function index(Request $request)
     {
         $publisher = Publisher::where('user_id', Auth::id())->firstOrFail();
-
-        $appliedCampaignIds = DB::table('publisher_campaigns')
-            ->where('publisher_id', $publisher->id)
-            ->whereIn('status', ['P', 'A'])
-            ->pluck('campaign_id')
-            ->toArray();
-
-        $campaigns = $this->openCampaigns($publisher)
-            ->whereNotIn('id', $appliedCampaignIds)
-            ->with('offers')
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $filters = $request->validate([
+            'campaign_status' => 'nullable|in:A,I', 'application_status' => 'nullable|in:P,A,R,I,none',
+            'start_date' => 'nullable|date', 'applied_start_date' => 'nullable|date',
+        ]);
+        $applications = DB::table('publisher_campaigns')->where('publisher_id', $publisher->id);
+        $query = Campaign::where('network_id', $publisher->network_id ?? 0)
+            ->where('campaign_status', $filters['campaign_status'] ?? 'A')
+            ->with(['offers' => fn ($q) => $q->where('offer_status', 'A')->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>=', now()))->with('commissions.commissionType')]);
+        if (($filters['application_status'] ?? null) === 'none') {
+            $query->whereNotIn('id', (clone $applications)->select('campaign_id'));
+        } elseif (! empty($filters['application_status'])) {
+            $query->whereIn('id', (clone $applications)->where('status', $filters['application_status'])->select('campaign_id'));
+        }
+        if (! empty($filters['start_date'])) {
+            $query->whereDate('start_date', '>=', $filters['start_date']);
+        }
+        if (! empty($filters['applied_start_date'])) {
+            $query->whereIn('id', (clone $applications)->whereDate('applied_at', '>=', $filters['applied_start_date'])->select('campaign_id'));
+        }
+        $campaigns = $query->latest()->paginate(12)->withQueryString();
+        $enrollments = $applications->whereIn('campaign_id', $campaigns->pluck('id'))->get()->keyBy('campaign_id');
+        $campaigns->getCollection()->each(function ($campaign) use ($enrollments) {
+            $enrollment = $enrollments->get($campaign->id);
+            $campaign->enrollment = $enrollment ? (array) $enrollment : null;
+        });
 
         return Inertia::render('publisher_dashboard/dashboard', [
-            'campaigns' => $campaigns,
-            'publisher_id' => $publisher->id,
+            'campaigns' => $campaigns, 'filters' => $filters, 'publisher_id' => $publisher->id,
         ]);
     }
 
@@ -53,69 +64,35 @@ class PublisherDashBoardController extends Controller
     {
         $publisher = Publisher::where('user_id', Auth::id())->firstOrFail();
         $campaign = $this->openCampaigns($publisher)->with(['offers' => function ($query) {
-            $query->where('offer_status', 'A');
+            $query->where('offer_status', 'A')->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>=', now()))->with('commissions.commissionType');
         }])->findOrFail($id);
+
+        $enrollment = app(PartnerEnrollmentService::class);
+        $campaign->offers->each(function ($offer) use ($campaign, $enrollment) {
+            $offer->enrollment_contract = $enrollment->contract($campaign, $offer);
+            $offer->terms_version = $enrollment->version($offer->enrollment_contract);
+        });
 
         return inertia('publisher_campaign_applications/index', [
             'campaign' => $campaign,
+            'enrollment' => $publisher->campaigns()->where('campaign_id', $campaign->id)->first(['id', 'status', 'requested_offer_id', 'applied_notes', 'terms_version', 'rejection_reason']),
         ]);
     }
 
     public function sendCampaignApplication(Request $request, $campaignId)
     {
-        try {
-            $validated = $request->validate([
-                'applied_notes' => ['required', 'string'],
-            ]);
+        $validated = $request->validate([
+            'applied_notes' => ['required', 'string', 'max:5000'],
+            'offer_id' => ['required', 'integer'],
+            'terms_accepted' => ['accepted'],
+            'terms_version' => ['required', 'string', 'size:64'],
+        ]);
+        $publisher = Publisher::where('user_id', Auth::id())->firstOrFail();
+        $application = app(PartnerEnrollmentService::class)->apply($publisher, (int) $campaignId, $validated);
+        $networkUsers = User::where('is_network', true)
+            ->whereHas('userNetworks', fn ($q) => $q->where('network_id', $application->network_id))->get();
+        Notification::send($networkUsers, new PublisherApplicationReceived($application));
 
-            $user = Auth::user();
-            $publisher = Publisher::where('user_id', $user->id)->firstOrFail();
-            $campaign = $this->openCampaigns($publisher)->findOrFail($campaignId);
-            $existingApplication = DB::table('publisher_campaigns')
-                ->where('publisher_id', $publisher->id)
-                ->where('campaign_id', $campaignId)
-                ->whereIn('status', ['P', 'A'])
-                ->exists();
-
-            if ($existingApplication) {
-                return redirect()
-                    ->back()
-                    ->with('error', 'You have already applied to this campaign');
-            }
-
-            $applicationId = DB::table('publisher_campaigns')->insertGetId([
-                'publisher_id' => $publisher->id,
-                'campaign_id' => $campaignId,
-                'offer_id' => null,
-                'network_id' => $campaign->network_id,
-                'status' => 'P',
-                'applied_notes' => $validated['applied_notes'],
-                'applied_at' => now(),
-                'tracking_link' => null,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-            $application = PublisherCampaigns::with('campaign')->find($applicationId);
-
-            $networkUsers = User::where('is_network', true)
-                ->whereHas('userNetworks', fn ($q) => $q->where('network_id', $campaign->network_id))
-                ->get();
-
-            Notification::send($networkUsers, new PublisherApplicationReceived($application));
-
-            return redirect()
-                ->route('publisher.dashboard')
-                ->with('success', 'Application submitted successfully. The network will review and assign you to an offer.');
-
-        } catch (ModelNotFoundException $e) {
-            throw $e;
-        } catch (Exception $e) {
-            report($e);
-
-            return redirect()
-                ->back()
-                ->with('error', 'An error occurred while applying to the campaign');
-        }
+        return redirect()->route('publisher.dashboard')->with('success', 'Application submitted for review.');
     }
 }

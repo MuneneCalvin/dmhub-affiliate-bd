@@ -29,10 +29,11 @@ class CreateNewUser implements CreatesNewUsers
                 'max:255',
                 Rule::unique(User::class),
             ],
+            'coc_number' => ['required', 'string'],
         ])->validate();
         $this->validateBusinessFields($input);
 
-        $password = Str::password(8);
+        $password = Str::random(64);
 
         return DB::transaction(function () use ($input, $password) {
             $user = new User([
@@ -44,6 +45,7 @@ class CreateNewUser implements CreatesNewUsers
                 'is_publisher' => $input['role_name'] === 'publisher',
                 'is_advertiser' => $input['role_name'] === 'advertiser',
                 'status' => 'P',
+                'locale' => app()->getLocale(),
             ]);
             $user->user_name = $user->generateUsername();
             $user->save();
@@ -54,6 +56,7 @@ class CreateNewUser implements CreatesNewUsers
                 Advertiser::create([
                     'user_id' => $user->id,
                     'business_name' => $input['business_name'],
+                    'status' => 'P',
                     'website_name' => $input['website_name'] ?? null,
                     'industry' => $input['industry'],
                     'coc_number' => $input['coc_number'],
@@ -70,7 +73,7 @@ class CreateNewUser implements CreatesNewUsers
                 ]);
             }
 
-            SendUserCredentialsJob::dispatch($user, $password);
+            SendUserCredentialsJob::dispatch($user)->afterCommit();
 
             return $user;
         });
@@ -78,13 +81,13 @@ class CreateNewUser implements CreatesNewUsers
 
     protected function validateBusinessFields(array $input): void
     {
-        $table = ($input['role_name'] ?? null) === 'publisher' ? 'publishers' : 'advertisers';
         $rules = [
             'business_name' => ['required', 'string', 'max:255'],
             'website_name' => ['nullable', 'string', 'url'],
             'industry' => ['required', 'string'],
-            'coc_number' => ['required', 'string', 'max:10', Rule::unique($table, 'coc_number')],
+            'coc_number' => ['required', 'string', 'max:10',
+                Rule::unique($input['role_name'] === 'advertiser' ? 'advertisers' : 'publishers', 'coc_number')],
         ];
-        Validator::make($input, $rules)->validate();
+        Validator::make($input, $rules, [], ['coc_number' => 'company number'])->validate();
     }
 }

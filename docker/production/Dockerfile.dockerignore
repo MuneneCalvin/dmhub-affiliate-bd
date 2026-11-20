@@ -16,3 +16,7 @@ public/hot
 public/storage
 tests
 *.md
+.release-fixture.json
+release-evidence
+playwright-report
+test-results

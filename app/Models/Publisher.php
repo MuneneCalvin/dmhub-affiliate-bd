@@ -10,11 +10,13 @@ class Publisher extends Model
     use HasFactory;
 
     protected $table = 'publishers';
+
     public $incrementing = true;
 
     protected $fillable = [
         'user_id',
         'network_id',
+        'business_name', 'industry',
         'website_url',
         'traffic_sources',
         'monthly_visitors',
@@ -30,7 +32,7 @@ class Publisher extends Model
         'conversion_rate',
         'account_health_score',
         'last_active_at',
-        'coc_number'
+        'coc_number',
     ];
 
     protected $casts = [
@@ -87,10 +89,5 @@ class Publisher extends Model
     public function campaigns()
     {
         return $this->hasMany(PublisherCampaigns::class, 'publisher_id');
-    }
-
-    public function leads()
-    {
-        return $this->hasMany(Lead::class, 'publisher_id');
     }
 }

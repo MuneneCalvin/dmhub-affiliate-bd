@@ -1,6 +1,6 @@
+import { cn } from '@/lib/utils';
 import type { DashboardPreviewProps } from '@/types/landing';
 import { PiggyBank, TrendingUp } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 export default function DashboardPreview({
     totalEarnings = '€12.847,50',
@@ -19,7 +19,7 @@ export default function DashboardPreview({
 }: DashboardPreviewProps) {
     return (
         <div className={cn('relative', className)}>
-            <div className="relative overflow-hidden rounded-3xl border border-gray-100 bg-linear-to-br from-gray-50 to-white p-2 shadow-2xl dark:border-gray-800 dark:from-gray-900 dark:to-gray-800">
+            <div className="relative overflow-hidden rounded-xl border border-gray-100 bg-muted p-2 dark:border-gray-800 dark:from-gray-900 dark:to-gray-800">
                 <div className="rounded-2xl bg-white p-6 dark:bg-gray-900">
                     <div className="mb-4 flex items-center justify-between">
                         <div>

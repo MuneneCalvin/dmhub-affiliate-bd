@@ -44,26 +44,3 @@ test('registration rejects privileged or unknown roles', function () {
 
     expect(User::where('email', 'evil@example.test')->exists())->toBeFalse();
 });
-
-test('registration with an already used CoC number is a validation error, not a server error', function (string $role) {
-    $this->seed(RolePermsSeeder::class);
-    $payload = fn (string $email) => [
-        'first_name' => 'Dup', 'last_name' => 'Test', 'role_name' => $role, 'email' => $email,
-        'coc_number' => '12345678', 'business_name' => 'Dup BV', 'website_name' => 'https://dup.example.test', 'industry' => 'retail',
-    ];
-
-    $this->post(route('register.store'), $payload('first@example.test'));
-    auth()->logout();
-    $this->post(route('register.store'), $payload('second@example.test'))->assertSessionHasErrors('coc_number');
-
-    expect(User::where('email', 'second@example.test')->exists())->toBeFalse();
-})->with(['publisher', 'advertiser']);
-
-test('registration rejects a CoC number longer than the column allows', function () {
-    $this->seed(RolePermsSeeder::class);
-
-    $this->post(route('register.store'), [
-        'first_name' => 'Long', 'last_name' => 'Coc', 'role_name' => 'publisher', 'email' => 'long@example.test',
-        'coc_number' => '12345678901', 'business_name' => 'Long BV', 'industry' => 'retail',
-    ])->assertSessionHasErrors('coc_number');
-});

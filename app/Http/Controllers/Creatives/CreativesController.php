@@ -5,9 +5,13 @@ namespace App\Http\Controllers\Creatives;
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
 use App\Models\Creative;
+use App\Models\Offer;
+use App\Support\MediaStorage;
 use Exception;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
@@ -24,31 +28,27 @@ class CreativesController extends Controller
 
     public function index(Request $request)
     {
-        $query = Creative::visibleTo($request->user())->with(['offer', 'campaign'])->where('status', 'A');
-
-        return inertia('creatives/index', [
-            'creatives' => $query->paginate(25),
-        ]);
+        return redirect()->route('advertiser.campaign.index');
     }
 
     public function create(Request $request)
     {
-        $query = Campaign::visibleTo($request->user())->with('offers');
-
-        $campaigns = $query->get();
-        $offers = $campaigns->flatMap->offers->unique('id')->values();
+        if (! $request->filled('offer_id')) {
+            return redirect()->route('advertiser.campaign.index')->with('info', 'Choose an offer to add promotional materials.');
+        }
+        $request->validate(['offer_id' => 'required|integer']);
+        $offer = Offer::visibleTo($request->user())->with('campaign')->findOrFail($request->integer('offer_id'));
 
         return inertia('creatives/create', [
-            'campaigns' => $campaigns,
-            'offers' => $offers,
+            'campaigns' => [$offer->campaign],
+            'offers' => [$offer],
+            'offer' => $offer,
         ]);
     }
 
     public function show(Request $request, $id)
     {
         $creative = Creative::visibleTo($request->user())->with(['offer', 'campaign'])->findOrFail($id);
-
-        $creative->lead_form_embed_code = $creative->getLeadFormEmbedCode();
 
         return inertia('creatives/show', [
             'creative' => $creative,
@@ -58,40 +58,17 @@ class CreativesController extends Controller
     public function store(Request $request)
     {
         try {
-            $validated = $request->validate([
-                'offer_id' => ['required', 'integer', 'exists:offers,id'],
-                'campaign_id' => ['required', 'integer', 'exists:campaigns,id'],
-                'name' => ['required', 'string', 'max:255'],
-                'type' => ['required', 'string', 'in:image,video,html'],
-                'width' => ['required'],
-                'height' => ['required'],
-                'file_url' => ['nullable'],
-                'preview_url' => ['nullable'],
-                'html_code' => ['nullable'],
-                'alt_text' => ['nullable', 'string', 'max:255'],
-            ]);
-            $this->assertOfferInVisibleCampaign($request->user(), $validated['campaign_id'], $validated['offer_id']);
-            Creative::create([
-                'offer_id' => $validated['offer_id'],
-                'campaign_id' => $validated['campaign_id'],
-                'name' => $validated['name'],
-                'type' => $validated['type'],
-                'width' => $validated['width'] ?? null,
-                'height' => $validated['height'] ?? null,
-                'file_url' => $validated['file_url'] ?? null,
-                'preview_url' => $validated['preview_url'] ?? null,
-                'html_code' => $validated['html_code'] ?? null,
-                'alt_text' => $validated['alt_text'] ?? null,
-                'status' => 'A',
-            ]);
+            $creative = $this->saveCreative($request);
 
-            return redirect()->route('advertiser.creatives.create')->with('success', 'Created successfully');
+            return ($request->boolean('workspace')
+                ? redirect()->route('advertiser.campaign.show', ['id' => $creative->campaign_id, 'tab' => 'offers', 'offer' => $creative->offer_id])
+                : redirect()->route('advertiser.offers.show', ['offer' => $creative->offer_id, 'tab' => 'materials']))->with('success', 'Created successfully');
         } catch (HttpExceptionInterface|ModelNotFoundException|ValidationException $e) {
             throw $e;
         } catch (Exception $e) {
             report($e);
 
-            return redirect()->route('advertiser.creatives.create')->with('error', 'An error occurred while saving the creative.');
+            return back()->with('error', 'An error occurred while saving the creative.');
         }
     }
 
@@ -101,15 +78,11 @@ class CreativesController extends Controller
 
         $creative = Creative::visibleTo($user)->with(['offer', 'campaign'])->findOrFail($id);
 
-        $query = Campaign::visibleTo($user)->with('offers');
-
-        $campaigns = $query->get();
-        $offers = $campaigns->flatMap->offers->unique('id')->values();
-
         return inertia('creatives/edit', [
             'creative' => $creative,
-            'campaigns' => $campaigns,
-            'offers' => $offers,
+            'campaigns' => [$creative->campaign],
+            'offers' => [$creative->offer],
+            'offer' => $creative->offer,
         ]);
     }
 
@@ -118,42 +91,91 @@ class CreativesController extends Controller
         try {
             $user = $request->user();
             $creative = Creative::visibleTo($user)->findOrFail($id);
-            $validated = $request->validate([
-                'offer_id' => ['required', 'integer', 'exists:offers,id'],
-                'campaign_id' => ['required', 'integer', 'exists:campaigns,id'],
-                'name' => ['required', 'string', 'max:255'],
-                'type' => ['required', 'string', 'in:image,video,html'],
-                'width' => ['required'],
-                'height' => ['required'],
-                'file_url' => ['nullable'],
-                'preview_url' => ['nullable'],
-                'html_code' => ['nullable'],
-                'alt_text' => ['nullable', 'string', 'max:255'],
-            ]);
-            $this->assertOfferInVisibleCampaign($user, $validated['campaign_id'], $validated['offer_id']);
-            $creative->update([
-                'offer_id' => $validated['offer_id'],
-                'campaign_id' => $validated['campaign_id'],
-                'name' => $validated['name'],
-                'type' => $validated['type'],
-                'width' => $validated['width'] ?? null,
-                'height' => $validated['height'] ?? null,
-                'file_url' => $validated['file_url'] ?? null,
-                'preview_url' => $validated['preview_url'] ?? null,
-                'html_code' => $validated['html_code'] ?? null,
-                'alt_text' => $validated['alt_text'] ?? null,
-            ]);
+            $this->saveCreative($request, $creative);
 
-            // Regenerate embed codes after update
-            $creative->generateEmbedCodes();
-
-            return redirect()->route('advertiser.creatives.index')->with('success', 'Updated successfully');
+            return ($request->boolean('workspace')
+                ? redirect()->route('advertiser.campaign.show', ['id' => $creative->campaign_id, 'tab' => 'offers', 'offer' => $creative->offer_id])
+                : redirect()->route('advertiser.offers.show', ['offer' => $creative->offer_id, 'tab' => 'materials']))->with('success', 'Updated successfully');
         } catch (HttpExceptionInterface|ModelNotFoundException|ValidationException $e) {
             throw $e;
         } catch (Exception $e) {
             report($e);
 
-            return redirect()->route('advertiser.creatives.edit', $id)->with('error', 'An error occurred while updating the creative.');
+            return back()->with('error', 'An error occurred while updating the creative.');
+        }
+    }
+
+    private function saveCreative(Request $request, ?Creative $creative = null): Creative
+    {
+        $type = $request->input('type');
+        $imageTypes = ['image', 'banner', 'email'];
+        $isImage = in_array($type, $imageTypes, true);
+        $sameAssetType = $creative && ($creative->type === $type || ($isImage && in_array($creative->type, $imageTypes, true)));
+        $needsAsset = ($isImage || $type === 'video') && ! ($sameAssetType && $creative->file_url);
+        $data = $request->validate([
+            'offer_id' => ['required', 'integer', 'exists:offers,id'],
+            'campaign_id' => ['required', 'integer', 'exists:campaigns,id'],
+            'name' => ['required', 'string', 'max:100'],
+            'type' => ['required', Rule::in(['image', 'banner', 'email', 'video', 'html', 'text'])],
+            'asset' => [Rule::requiredIf($needsAsset), 'nullable', $type === 'video' ? 'file' : 'image',
+                $type === 'video' ? 'mimes:mp4,webm' : 'mimes:jpg,jpeg,png,gif,webp',
+                $type === 'video' ? 'max:51200' : 'max:10240'],
+            'preview_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:10240'],
+            'width' => [Rule::requiredIf($type === 'video' && $request->hasFile('asset')), 'nullable', 'integer', 'between:1,100000'],
+            'height' => [Rule::requiredIf($type === 'video' && $request->hasFile('asset')), 'nullable', 'integer', 'between:1,100000'],
+            'html_code' => ['required_if:type,html', 'nullable', 'string', 'max:200000'],
+            'alt_text' => ['required_if:type,text', 'nullable', 'string', 'max:255'],
+        ]);
+        $this->assertOfferInVisibleCampaign($request->user(), $data['campaign_id'], $data['offer_id']);
+        abort_if($creative && ((int) $data['offer_id'] !== (int) $creative->offer_id
+            || (int) $data['campaign_id'] !== (int) $creative->campaign_id), 422, 'Promotional materials cannot be moved to another offer.');
+        $data['file_url'] = $sameAssetType ? $creative->file_url : '';
+        $data['preview_url'] = $sameAssetType ? $creative->preview_url : null;
+        $data['width'] = $sameAssetType ? $creative->width : null;
+        $data['height'] = $sameAssetType ? $creative->height : null;
+        $data['html_code'] = $type === 'html' ? $data['html_code'] : null;
+        $paths = [];
+
+        try {
+            if ($request->hasFile('asset') && $type !== 'text') {
+                $asset = $request->file('asset');
+                $path = MediaStorage::store($asset, 'creatives');
+                throw_unless($path, \RuntimeException::class, 'Could not store the creative asset.');
+                $paths[] = $path;
+                $data['file_url'] = MediaStorage::url($path);
+                if ($type === 'video') {
+                    $data['width'] = $request->integer('width');
+                    $data['height'] = $request->integer('height');
+                } else {
+                    [$data['width'], $data['height']] = getimagesize($asset->getRealPath());
+                }
+            }
+            if ($isImage) {
+                $data['preview_url'] = $data['file_url'];
+            } elseif ($type !== 'text' && $request->hasFile('preview_image')) {
+                $path = MediaStorage::store($request->file('preview_image'), 'creatives/previews');
+                throw_unless($path, \RuntimeException::class, 'Could not store the preview image.');
+                $paths[] = $path;
+                $data['preview_url'] = MediaStorage::url($path);
+            }
+            if ($type === 'text') {
+                $data['file_url'] = '';
+                $data['preview_url'] = $data['width'] = $data['height'] = null;
+            }
+            unset($data['asset'], $data['preview_image']);
+
+            return DB::transaction(function () use ($creative, $data) {
+                if (! $creative) {
+                    return Creative::create([...$data, 'status' => 'A']);
+                }
+                $creative->update($data);
+                $creative->generateEmbedCodes();
+
+                return $creative;
+            });
+        } catch (\Throwable $e) {
+            MediaStorage::delete($paths);
+            throw $e;
         }
     }
 
@@ -161,15 +183,16 @@ class CreativesController extends Controller
     {
         try {
             $creative = Creative::visibleTo($request->user())->findOrFail($id);
+            $offerId = $creative->offer_id;
             $creative->delete();
 
-            return redirect()->route('advertiser.creatives.index')->with('success', 'Deleted successfully');
+            return redirect()->route('advertiser.offers.show', ['offer' => $offerId, 'tab' => 'materials'])->with('success', 'Deleted successfully');
         } catch (HttpExceptionInterface|ModelNotFoundException|ValidationException $e) {
             throw $e;
         } catch (Exception $e) {
             report($e);
 
-            return redirect()->route('advertiser.creatives.index')->with('error', 'An error occurred while deleting the creative.');
+            return back()->with('error', 'An error occurred while deleting the creative.');
         }
     }
 }

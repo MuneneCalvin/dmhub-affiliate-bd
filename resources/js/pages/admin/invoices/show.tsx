@@ -1,5 +1,9 @@
+import FinanceErrorNotice from '@/components/finance-error-notice';
+import RecordPayment from '@/components/record-payment';
 import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
+import { InvoiceEarningsColumns } from '@/dev/columns/columns';
 import { InfoCardSkeleton, InfoRow, ReusablePageTitle } from '@/dev/core';
 import { StatusBadge } from '@/dev/statusBadge';
 import { CustomBaseTable } from '@/dev/table';
@@ -7,15 +11,23 @@ import AppLayout from '@/layouts/app-layout';
 import { AdminInvoiceDetail, BreadcrumbItem } from '@/types';
 import { formatCurrency } from '@/utils/utils';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
-import { DollarSign, Clock, CheckCircle, XCircle, FileText, User, Mail, Globe } from 'lucide-react';
+import {
+    CheckCircle,
+    Clock,
+    DollarSign,
+    FileText,
+    Globe,
+    Mail,
+    User,
+    XCircle,
+} from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Separator } from '@/components/ui/separator';
-import { InvoiceEarningsColumns } from '@/dev/columns/columns';
 
 const AdminInvoiceShow = () => {
     const { t } = useTranslation();
     const { invoice } = usePage<{ invoice: AdminInvoiceDetail }>().props;
+    const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
     const [showRejectForm, setShowRejectForm] = useState(false);
 
     const rejectForm = useForm({
@@ -30,7 +42,7 @@ const AdminInvoiceShow = () => {
         {
             title: invoice?.invoice_number,
             href: `/admin/invoices/${invoice?.id}`,
-        }
+        },
     ];
 
     const handleApprove = () => {
@@ -45,16 +57,21 @@ const AdminInvoiceShow = () => {
     };
 
     const handleMarkPaid = () => {
-        router.post(`/admin/invoices/${invoice?.id}/mark-paid`);
+        setPaymentUrl(`/admin/invoices/${invoice?.id}/mark-paid`);
     };
 
     return (
         <AppLayout>
-            <Head title={`${t("Invoice")} ${invoice?.invoice_number}`} />
-            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4">
+            <FinanceErrorNotice />
+            <RecordPayment
+                url={paymentUrl}
+                onClose={() => setPaymentUrl(null)}
+            />
+            <Head title={`${t('Invoice')} ${invoice?.invoice_number}`} />
+            <div className="workspace-page flex h-full flex-1 flex-col gap-6">
                 <ReusablePageTitle
-                    title={`${t("Invoice")} ${invoice?.invoice_number}`}
-                    description={t("Review and manage this invoice")}
+                    title={`${t('Invoice')} ${invoice?.invoice_number}`}
+                    description={t('Review and manage this invoice')}
                     breadcrumbs={breadcrumbs}
                     children={
                         <div className="flex items-center gap-2">
@@ -62,50 +79,74 @@ const AdminInvoiceShow = () => {
                                 <>
                                     <Button
                                         variant="default"
-                                        onClick={handleApprove}>
-                                        <CheckCircle className="h-4 w-4 mr-1" />
+                                        onClick={handleApprove}
+                                    >
+                                        <CheckCircle className="mr-1 h-4 w-4" />
                                         {t('Approve')}
                                     </Button>
                                     <Button
                                         variant="destructive"
-                                        onClick={() => setShowRejectForm(true)}>
-                                        <XCircle className="h-4 w-4 mr-1" />
+                                        onClick={() => setShowRejectForm(true)}
+                                    >
+                                        <XCircle className="mr-1 h-4 w-4" />
                                         {t('Reject')}
                                     </Button>
                                 </>
                             )}
                             {invoice?.status === 'approved' && (
-                                <Button
-                                    variant="default"
-                                    onClick={handleMarkPaid}>
-                                    <DollarSign className="h-4 w-4 mr-1" />
-                                    {t('Mark as Paid')}
-                                </Button>
+                                <>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => setShowRejectForm(true)}
+                                    >
+                                        {t('Cancel invoice')}
+                                    </Button>
+                                    <Button
+                                        variant="default"
+                                        onClick={handleMarkPaid}
+                                    >
+                                        <DollarSign className="mr-1 h-4 w-4" />
+                                        {t('Mark as Paid')}
+                                    </Button>
+                                </>
                             )}
                         </div>
-                    } />
+                    }
+                />
                 {showRejectForm && (
                     <InfoCardSkeleton
                         icon={<XCircle className="h-5 w-5 text-red-500" />}
                         title={t('Reject Invoice')}
                         description={t('Provide a reason for rejection')}
-                        className="border-red-200 bg-red-50 dark:bg-red-950 dark:border-red-800"
+                        className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950"
                     >
                         <form onSubmit={handleReject} className="space-y-4">
                             <Textarea
                                 placeholder={t('Enter rejection reason...')}
                                 value={rejectForm.data.reason}
-                                onChange={(e) => rejectForm.setData('reason', e.target.value)}
+                                onChange={(e) =>
+                                    rejectForm.setData('reason', e.target.value)
+                                }
                                 rows={3}
                             />
                             {rejectForm.errors.reason && (
-                                <p className="text-sm text-red-500">{rejectForm.errors.reason}</p>
+                                <p className="text-sm text-red-500">
+                                    {rejectForm.errors.reason}
+                                </p>
                             )}
                             <div className="flex gap-2">
-                                <Button type="submit" variant="destructive" disabled={rejectForm.processing}>
+                                <Button
+                                    type="submit"
+                                    variant="destructive"
+                                    disabled={rejectForm.processing}
+                                >
                                     {t('Confirm Rejection')}
                                 </Button>
-                                <Button type="button" variant="outline" onClick={() => setShowRejectForm(false)}>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setShowRejectForm(false)}
+                                >
                                     {t('Cancel')}
                                 </Button>
                             </div>
@@ -113,6 +154,15 @@ const AdminInvoiceShow = () => {
                     </InfoCardSkeleton>
                 )}
 
+                {!!invoice.invoice_details?.recovery_minor && (
+                    <p className="rounded-xl border bg-card p-4">
+                        {t('Prior refund recovery deducted')}:{' '}
+                        {formatCurrency(
+                            invoice.invoice_details.recovery_minor / 100,
+                            invoice.currency,
+                        )}
+                    </p>
+                )}
                 <div className="grid gap-6 lg:grid-cols-3">
                     <InfoCardSkeleton
                         icon={<FileText className="h-5 w-5" />}
@@ -120,24 +170,40 @@ const AdminInvoiceShow = () => {
                         description={`${t('Created on')} ${new Date(invoice?.created_at).toLocaleDateString()}`}
                         className="lg:col-span-2"
                     >
-                        <div className="flex items-center justify-between mb-4">
+                        <div className="mb-4 flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-muted-foreground">{t('Amount')}</p>
+                                <p className="text-sm text-muted-foreground">
+                                    {t('Amount')}
+                                </p>
                                 <p className="text-3xl font-bold text-green-600">
-                                    {formatCurrency(parseFloat(invoice?.amount), invoice?.currency || 'USD')}
+                                    {formatCurrency(
+                                        parseFloat(invoice?.amount),
+                                        invoice?.currency || 'USD',
+                                    )}
                                 </p>
                             </div>
-                            <StatusBadge status={invoice?.status} className="text-lg px-4 py-2" />
+                            <StatusBadge
+                                status={invoice?.status}
+                                className="px-4 py-2 text-lg"
+                            />
                         </div>
                         <Separator className="my-4" />
                         <div className="grid gap-4 md:grid-cols-2">
                             <div>
-                                <p className="text-sm text-muted-foreground">{t('Earnings Included')}</p>
-                                <p className="text-xl font-semibold">{invoice?.earnings?.length || 0}</p>
+                                <p className="text-sm text-muted-foreground">
+                                    {t('Earnings Included')}
+                                </p>
+                                <p className="text-xl font-semibold">
+                                    {invoice?.earnings?.length || 0}
+                                </p>
                             </div>
                             <div>
-                                <p className="text-sm text-muted-foreground">{t('Network')}</p>
-                                <p className="text-xl font-semibold">{invoice?.network?.network_name || 'N/A'}</p>
+                                <p className="text-sm text-muted-foreground">
+                                    {t('Network')}
+                                </p>
+                                <p className="text-xl font-semibold">
+                                    {invoice?.network?.network_name || 'N/A'}
+                                </p>
                             </div>
                         </div>
                     </InfoCardSkeleton>
@@ -169,14 +235,19 @@ const AdminInvoiceShow = () => {
                 <InfoCardSkeleton
                     icon={<Clock className="h-5 w-5" />}
                     title={t('Status Timeline')}
-                    description={t('Invoice processing history')}>
+                    description={t('Invoice processing history')}
+                >
                     <div className="flex flex-wrap gap-8">
                         <div className="flex items-center gap-3">
                             <CheckCircle className="h-5 w-5 text-green-500" />
                             <div>
                                 <p className="font-medium">{t('Requested')}</p>
                                 <p className="text-sm text-muted-foreground">
-                                    {invoice?.requested_at ? new Date(invoice?.requested_at).toLocaleString() : '-'}
+                                    {invoice?.requested_at
+                                        ? new Date(
+                                              invoice?.requested_at,
+                                          ).toLocaleString()
+                                        : '-'}
                                 </p>
                             </div>
                         </div>
@@ -185,13 +256,25 @@ const AdminInvoiceShow = () => {
                             <div className="flex items-center gap-3">
                                 <CheckCircle className="h-5 w-5 text-blue-500" />
                                 <div>
-                                    <p className="font-medium">{t('Approved')}</p>
+                                    <p className="font-medium">
+                                        {t('Approved')}
+                                    </p>
                                     <p className="text-sm text-muted-foreground">
-                                        {new Date(invoice?.approved_at).toLocaleString()}
+                                        {new Date(
+                                            invoice?.approved_at,
+                                        ).toLocaleString()}
                                     </p>
                                     {invoice?.approved_by_user && (
                                         <p className="text-xs text-muted-foreground">
-                                            {t('by')} {invoice?.approved_by_user?.first_name} {invoice?.approved_by_user?.last_name}
+                                            {t('by')}{' '}
+                                            {
+                                                invoice?.approved_by_user
+                                                    ?.first_name
+                                            }{' '}
+                                            {
+                                                invoice?.approved_by_user
+                                                    ?.last_name
+                                            }
                                         </p>
                                     )}
                                 </div>
@@ -204,11 +287,14 @@ const AdminInvoiceShow = () => {
                                 <div>
                                     <p className="font-medium">{t('Paid')}</p>
                                     <p className="text-sm text-muted-foreground">
-                                        {new Date(invoice?.paid_at).toLocaleString()}
+                                        {new Date(
+                                            invoice?.paid_at,
+                                        ).toLocaleString()}
                                     </p>
                                     {invoice?.payment_reference && (
                                         <p className="text-xs text-muted-foreground">
-                                            {t('Ref')}: {invoice?.payment_reference}
+                                            {t('Ref')}:{' '}
+                                            {invoice?.payment_reference}
                                         </p>
                                     )}
                                 </div>
@@ -219,9 +305,13 @@ const AdminInvoiceShow = () => {
                             <div className="flex items-center gap-3">
                                 <XCircle className="h-5 w-5 text-red-500" />
                                 <div>
-                                    <p className="font-medium">{t('Rejected')}</p>
+                                    <p className="font-medium">
+                                        {t('Rejected')}
+                                    </p>
                                     {invoice?.rejection_reason && (
-                                        <p className="text-sm text-red-600">{invoice?.rejection_reason}</p>
+                                        <p className="text-sm text-red-600">
+                                            {invoice?.rejection_reason}
+                                        </p>
                                     )}
                                 </div>
                             </div>
@@ -229,11 +319,15 @@ const AdminInvoiceShow = () => {
 
                         {invoice?.status === 'pending' && (
                             <div className="flex items-center gap-3">
-                                <Clock className="h-5 w-5 text-yellow-500 animate-pulse" />
+                                <Clock className="h-5 w-5 animate-pulse text-yellow-500" />
                                 <div>
-                                    <p className="font-medium">{t('Awaiting Review')}</p>
+                                    <p className="font-medium">
+                                        {t('Awaiting Review')}
+                                    </p>
                                     <p className="text-sm text-muted-foreground">
-                                        {t('This invoice requires your attention')}
+                                        {t(
+                                            'This invoice requires your attention',
+                                        )}
                                     </p>
                                 </div>
                             </div>
@@ -243,7 +337,8 @@ const AdminInvoiceShow = () => {
                 <InfoCardSkeleton
                     icon={<DollarSign className="h-5 w-5" />}
                     title={t('Included Earnings')}
-                    description={t('All earnings included in this invoice')}>
+                    description={t('All earnings included in this invoice')}
+                >
                     {invoice?.earnings && invoice?.earnings?.length > 0 ? (
                         <CustomBaseTable
                             columns={InvoiceEarningsColumns}
@@ -260,7 +355,9 @@ const AdminInvoiceShow = () => {
                             }}
                         />
                     ) : (
-                        <p className="text-muted-foreground">{t('No earnings attached to this invoice')}</p>
+                        <p className="text-muted-foreground">
+                            {t('No earnings attached to this invoice')}
+                        </p>
                     )}
                 </InfoCardSkeleton>
 

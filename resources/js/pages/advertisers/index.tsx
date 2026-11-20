@@ -1,21 +1,32 @@
+import { PartnerDiscoveryDialog } from '@/components/partner-discovery-dialog';
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Button } from '@/components/ui/button'
-import { CustomDialogComponent, ReusablePageTitle, useConfirmationDialog } from '@/dev/core'
-import { useCustomDialogContextFactory, useDebounce } from '@/hooks'
-import AppLayout from '@/layouts/app-layout'
-import { BreadcrumbItem, SingleActionsHandler, TAdvertiser, TFilterOptions, TPaginationFilters } from '@/types'
-import { Head, router, usePage } from '@inertiajs/react'
-import { Plus } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
-import CreateAdvertiser from './modals/create'
-import { useReducer } from 'react'
-import advertisers, { show } from '@/routes/advertisers'
-import { CustomBaseTable, SearchTools } from '@/dev/table'
-import { ActionColumn, AdvertisersColumns } from '@/dev/columns/columns'
-import EditAdvertiser from './modals/edit'
-import { FILTEROPTIONS, ReusableReducer } from '@/utils/constants'
-import { ChangeNetworkModal } from './modals/change-network'
+import { Button } from '@/components/ui/button';
+import { ActionColumn, AdvertisersColumns } from '@/dev/columns/columns';
+import {
+    CustomDialogComponent,
+    ReusablePageTitle,
+    useConfirmationDialog,
+} from '@/dev/core';
+import { CustomBaseTable, SearchTools } from '@/dev/table';
+import { useCustomDialogContextFactory, useDebounce } from '@/hooks';
+import AppLayout from '@/layouts/app-layout';
+import advertisers, { show } from '@/routes/advertisers';
+import {
+    BreadcrumbItem,
+    SingleActionsHandler,
+    TAdvertiser,
+    TFilterOptions,
+    TPaginationFilters,
+} from '@/types';
+import { FILTEROPTIONS, ReusableReducer } from '@/utils/constants';
+import { Head, router, usePage } from '@inertiajs/react';
+import { Plus } from 'lucide-react';
+import { useReducer } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ChangeNetworkModal } from './modals/change-network';
+import CreateAdvertiser from './modals/create';
+import EditAdvertiser from './modals/edit';
 
 const Advertisers_page = () => {
     const { t } = useTranslation();
@@ -24,30 +35,30 @@ const Advertisers_page = () => {
 
     const [PageFilter, optionsDispatcher] = useReducer(
         ReusableReducer<TPaginationFilters & TFilterOptions>,
-        { ...FILTEROPTIONS, page: 1, pageSize: 25 }
+        { ...FILTEROPTIONS, page: 1, pageSize: 25 },
     );
     const optionsDispatcherDebounce = useDebounce({
         debounceCallback: optionsDispatcher,
     });
 
-
     const breadcrumbs: BreadcrumbItem[] = [
         {
             title: t('Advertisers'),
             href: advertisers.index.url(),
-        }
+        },
     ];
     const { handleDialogContextSwitch, dialogContent, dialogOpen } =
         useCustomDialogContextFactory<{
-            advertisers?: TAdvertiser,
+            advertisers?: TAdvertiser;
         }>();
 
     const ActionsHandlerMapping: SingleActionsHandler<TAdvertiser>[] = [
         {
             label: t('View'),
+            href: (data) => show.url(data.user_id),
             onSelect: (data: TAdvertiser) => {
-                router.visit(show.url(data?.user_id))
-            }
+                router.visit(show.url(data?.user_id));
+            },
         },
         {
             label: t('Edit'),
@@ -82,9 +93,13 @@ const Advertisers_page = () => {
                     cancelLabel: t('Cancel'),
                     variant: 'destructive',
                     onConfirm: () => {
-                        router.post(advertisers.deactivate.url(data?.id), {}, {
-                            preserveScroll: true,
-                        });
+                        router.post(
+                            advertisers.deactivate.url(data?.id),
+                            {},
+                            {
+                                preserveScroll: true,
+                            },
+                        );
                     },
                 });
             },
@@ -92,16 +107,19 @@ const Advertisers_page = () => {
     ];
     return (
         <AppLayout>
-            <Head title={t("Advertisers")} />
-            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
+            <Head title={t('Advertisers')} />
+            <div className="workspace-page flex h-full flex-1 flex-col gap-4">
                 <ReusablePageTitle
-                    title={t("Advertisers")}
-                    description={t("Manage Advertisers here")}
+                    title={t('Advertisers')}
+                    description={t(
+                        'Meet your advertisers and keep partnerships moving.',
+                    )}
                     breadcrumbs={breadcrumbs}
                     children={
-                        <div className="flex items-center gap-4">
+                        <div className="flex flex-wrap items-center gap-3">
+                            <PartnerDiscoveryDialog kind="advertisers" />
                             <Button
-                                className="rounded-xl px-4 py-2 cursor-pointer bg-gray-800 dark:bg-gray-200 dark:text-gray-800"
+                                className="cursor-pointer rounded-xl bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90"
                                 onClick={() =>
                                     handleDialogContextSwitch({
                                         Component: CreateAdvertiser,
@@ -109,16 +127,19 @@ const Advertisers_page = () => {
                                             handleDialogContextSwitch,
                                         },
                                     })
-                                }>
+                                }
+                            >
                                 <Plus size="medium" />
-                                <p className="font-medium leading-6 text-lg">
+                                <p className="text-lg leading-6 font-medium">
                                     {t('Add Advertisers')}
                                 </p>
                             </Button>
                         </div>
-                    } />
-                <div className='w-full'>
+                    }
+                />
+                <div className="w-full">
                     <CustomBaseTable
+                        presentation="cards"
                         {...{
                             onPageChange: (page) =>
                                 optionsDispatcher({
@@ -155,7 +176,8 @@ const Advertisers_page = () => {
                 </div>
                 <CustomDialogComponent
                     {...{ handleDialogContextSwitch, dialogOpen }}
-                    className='sm:max-w-[700px]'>
+                    className="sm:max-w-[700px]"
+                >
                     {dialogContent?.Component && (
                         <dialogContent.Component
                             {...{
@@ -169,6 +191,6 @@ const Advertisers_page = () => {
                 <ConfirmDialog />
             </div>
         </AppLayout>
-    )
-}
+    );
+};
 export default Advertisers_page;

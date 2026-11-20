@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import { formatCommission } from '@/components/partner-money';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -21,7 +21,8 @@ import { useCustomDialogContextFactory } from '@/hooks';
 import AppLayout from '@/layouts/app-layout';
 import applications from '@/routes/applications';
 import { ApplicationDetails, BreadcrumbItem, TOffers } from '@/types';
-import { formatCurrency } from '@/utils/utils';
+import { trafficSourceLabels } from '@/utils/campaign-display';
+import { termsText } from '@/utils/partner-terms';
 import { Head, router, usePage } from '@inertiajs/react';
 import {
     Calendar,
@@ -45,7 +46,10 @@ const ApplicationShowPage = () => {
         campaignOffers: TOffers[];
     }>().props;
 
-    const [selectedOfferId, setSelectedOfferId] = useState<string>('');
+    const serverErrors = usePage().props.errors;
+    const [selectedOfferId, setSelectedOfferId] = useState<string>(
+        application.requested_offer_id?.toString() ?? '',
+    );
     const [approving, setApproving] = useState(false);
     const { confirm, ConfirmDialog } = useConfirmationDialog();
 
@@ -136,7 +140,7 @@ const ApplicationShowPage = () => {
     const offerOptions =
         campaignOffers?.map((offer: TOffers) => ({
             value: offer.id.toString(),
-            label: `${offer.name} (${formatCurrency(offer.commission_value_1 ?? 0)})`,
+            label: `${offer.name} (${formatCommission(offer.commission_value_1, offer.commission_type_1, application.currency)})`,
         })) || [];
 
     return (
@@ -144,7 +148,7 @@ const ApplicationShowPage = () => {
             <Head
                 title={`${t('Application')} - ${application.first_name} ${application.last_name}`}
             />
-            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
+            <div className="workspace-page flex h-full flex-1 flex-col gap-4">
                 <ReusablePageTitle
                     title={t('Application Details')}
                     breadcrumbs={breadcrumbs}
@@ -214,7 +218,10 @@ const ApplicationShowPage = () => {
                                 <Separator />
                                 <InfoRow
                                     label={t('Traffic Sources')}
-                                    value={application.traffic_sources || 'N/A'}
+                                    value={trafficSourceLabels(
+                                        application.traffic_sources,
+                                        t('Not set'),
+                                    )}
                                 />
                                 <Separator />
                                 <InfoRow
@@ -243,9 +250,14 @@ const ApplicationShowPage = () => {
                                 />
                                 <Separator />
                                 <InfoRow
-                                    label={t('Assigned Offer')}
+                                    label={t(
+                                        application.offer_id
+                                            ? 'Assigned Offer'
+                                            : 'Requested Offer',
+                                    )}
                                     value={
-                                        application.offer_name || (
+                                        application.offer_name ||
+                                        application.requested_offer_name || (
                                             <Badge
                                                 variant="outline"
                                                 className="border-yellow-600 text-yellow-600"
@@ -264,20 +276,12 @@ const ApplicationShowPage = () => {
                                     <>
                                         <Separator />
                                         <InfoRow
-                                            label={t('Commission 1')}
-                                            value={
-                                                application.commission_value_1 ??
-                                                'N/A'
-                                            }
-                                            icon={DollarSign}
-                                        />
-                                        <Separator />
-                                        <InfoRow
-                                            label={t('Commission 2')}
-                                            value={
-                                                application.commission_value_2 ??
-                                                'N/A'
-                                            }
+                                            label={t('Commission')}
+                                            value={formatCommission(
+                                                application.commission_value_1,
+                                                application.commission_type_1,
+                                                application.currency,
+                                            )}
                                             icon={DollarSign}
                                         />
                                     </>
@@ -336,6 +340,48 @@ const ApplicationShowPage = () => {
                             </CardContent>
                         </Card>
 
+                        {application.terms_snapshot && (
+                            <Card className="md:col-span-2 lg:col-span-3">
+                                <CardHeader>
+                                    <CardTitle>{t('Accepted terms')}</CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-3 text-sm">
+                                    <p>
+                                        {t('Accepted at')}:{' '}
+                                        {formatDate(
+                                            application.terms_accepted_at ??
+                                                null,
+                                        )}
+                                    </p>
+                                    <p className="whitespace-pre-wrap">
+                                        {termsText(
+                                            application.terms_snapshot
+                                                .campaign_terms,
+                                        )}
+                                    </p>
+                                    <p className="whitespace-pre-wrap">
+                                        {termsText(
+                                            application.terms_snapshot
+                                                .offer_terms,
+                                        )}
+                                    </p>
+                                    {application.terms_snapshot.commissions.map(
+                                        (rule, index) => (
+                                            <p key={index}>
+                                                {rule.type}:{' '}
+                                                {formatCommission(
+                                                    rule.value,
+                                                    rule.type,
+                                                    application.terms_snapshot
+                                                        ?.currency,
+                                                )}
+                                            </p>
+                                        ),
+                                    )}
+                                </CardContent>
+                            </Card>
+                        )}
+
                         {/* Offer Assignment Section - Only for pending applications */}
                         {application.status === 'P' &&
                             campaignOffers &&
@@ -353,6 +399,21 @@ const ApplicationShowPage = () => {
                                         </CardDescription>
                                     </CardHeader>
                                     <CardContent className="space-y-4">
+                                        <p className="text-sm">
+                                            {t(
+                                                'Approval requires the offer and current terms accepted by the publisher.',
+                                            )}
+                                        </p>
+                                        {Object.entries(serverErrors).map(
+                                            ([field, error]) => (
+                                                <p
+                                                    key={field}
+                                                    className="text-sm text-destructive"
+                                                >
+                                                    {error}
+                                                </p>
+                                            ),
+                                        )}
                                         <div className="grid gap-4 md:grid-cols-2">
                                             <div>
                                                 <Label className="mb-2 block">
@@ -430,8 +491,10 @@ const ApplicationShowPage = () => {
                                                                         variant="outline"
                                                                         className="text-green-600"
                                                                     >
-                                                                        {formatCurrency(
+                                                                        {formatCommission(
                                                                             offer.commission_value_1,
+                                                                            offer.commission_type_1,
+                                                                            application.currency,
                                                                         )}
                                                                     </Badge>
                                                                 )}

@@ -1,15 +1,25 @@
 import { router, usePage } from '@inertiajs/react';
 import type { TFunction } from 'i18next';
-import { createContext, useCallback, useContext, useEffect, type ReactNode } from 'react';
+import {
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    type ReactNode,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 
 interface LocaleData {
     current: string;
     fallback: string;
-    available: Record<string, { name: string; native: string; regional: string }>;
+    available: Record<
+        string,
+        { name: string; native: string; regional: string }
+    >;
 }
 
 interface PageProps {
+    [key: string]: unknown;
     locale?: LocaleData;
 }
 
@@ -40,6 +50,7 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
         if (locale?.current && i18nInstance.language !== locale.current) {
             i18nInstance.changeLanguage(locale.current);
         }
+        if (locale?.current) document.documentElement.lang = locale.current;
     }, [locale?.current, i18nInstance]);
 
     // Change language function
@@ -55,10 +66,10 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
                 {
                     preserveState: true,
                     preserveScroll: true,
-                }
+                },
             );
         },
-        [i18nInstance]
+        [i18nInstance],
     );
 
     // Get available locales as array for dropdowns
@@ -67,7 +78,7 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
             code,
             name: data.name,
             native: data.native,
-        })
+        }),
     );
 
     // Legacy compatibility: __() function that wraps t()
@@ -76,7 +87,7 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
             const result = t(text, params as Record<string, string>);
             return typeof result === 'string' ? result : text;
         },
-        [t]
+        [t],
     );
 
     const currentLocale = locale?.current || 'nl';
@@ -126,7 +137,7 @@ export function useLanguageContext(): LanguageContextType {
             {
                 preserveState: true,
                 preserveScroll: true,
-            }
+            },
         );
     };
 

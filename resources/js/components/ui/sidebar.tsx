@@ -28,9 +28,9 @@ import {
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
 // Slightly smaller than the previous value to reduce the gap vs the main inset.
-const SIDEBAR_WIDTH = "21.25rem"
-const SIDEBAR_WIDTH_MOBILE = "20rem"
-const SIDEBAR_WIDTH_ICON = "3rem"
+const SIDEBAR_WIDTH = "16rem"
+const SIDEBAR_WIDTH_MOBILE = "18rem"
+const SIDEBAR_WIDTH_ICON = "4rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
 
 type SidebarContextProps = {
@@ -238,7 +238,7 @@ function Sidebar({
         <div
           data-sidebar="sidebar"
           data-slot="sidebar-inner"
-          className=" backdrop-xl flex h-full w-full flex-col group-data-[variant=floating]:rounded-3xl group-data-[variant=floating]:border group-data-[variant=floating]:border-primary/20 group-data-[variant=floating]:shadow-lg">
+          className="bg-sidebar flex h-full w-full flex-col group-data-[variant=floating]:rounded-3xl group-data-[variant=floating]:border group-data-[variant=floating]:border-primary/20 group-data-[variant=floating]:shadow-lg">
           {children}
         </div>
       </div>
@@ -678,8 +678,8 @@ function SidebarMenuSubButton({
       data-size={size}
       data-active={isActive}
       className={cn(
-        "text-sidebar-foreground ring-sidebar-ring hover:bg-primary/5 hover:text-primary active:scale-[0.98] [&>svg]:text-sidebar-accent-foreground flex h-10 min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-lg px-4 outline-hidden transition-all duration-300 ease-in-out focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0 hover:[&>svg]:scale-110 [&>svg]:transition-transform [&>svg]:duration-300",
-        "data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:font-medium data-[active=true]:shadow-sm",
+        "text-sidebar-foreground ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground [&>svg]:text-sidebar-accent-foreground flex h-10 min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-lg px-4 outline-hidden transition-all duration-300 ease-in-out focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0  [&>svg]:transition-transform [&>svg]:duration-300",
+        "data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground data-[active=true]:font-medium data-[active=true]:shadow-sm",
         size === "sm" && "text-base",
         size === "md" && "text-lg",
         "group-data-[collapsible=icon]:hidden",

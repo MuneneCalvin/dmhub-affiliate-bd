@@ -8,6 +8,7 @@ use App\Models\Currency;
 use App\Models\Publisher;
 use App\Models\User;
 use App\Models\UserNetworks;
+use App\Services\PublisherWorkspaceService;
 use Exception;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
@@ -97,8 +98,8 @@ class PublisherController extends Controller
                 'email' => ['required', 'email', 'max:255', 'unique:users,email'],
                 'title' => ['required', 'string', 'max:255'],
                 'network_id' => ['required', 'integer', 'exists:networks,id'],
-                'website_name' => ['required', 'max:255'],
-                'payout_threshold' => ['nullable', 'numeric', 'min:1', 'max:4'],
+                'website_name' => ['nullable', 'url:http,https', 'max:255'],
+                'payout_threshold' => ['nullable', 'numeric', 'min:0', 'max:999999999', 'decimal:0,2'],
                 'currency_code' => ['required', 'string', 'max:255'],
                 'coc_number' => ['nullable', 'string', 'max:10', 'unique:publishers,coc_number'],
             ]);
@@ -108,7 +109,7 @@ class PublisherController extends Controller
                 abort_unless($actor->networkId() === (int) $validated['network_id'], 403, 'Unauthorized action.');
             }
             DB::beginTransaction();
-            $password = Str::password(8);
+            $password = Str::random(64);
             $user = new User([
                 'first_name' => $validated['first_name'],
                 'last_name' => $validated['last_name'],
@@ -120,6 +121,8 @@ class PublisherController extends Controller
                 'currency' => $validated['currency_code'],
             ]);
             $user->user_name = $user->generateUsername();
+            // An administrator vouches for the address; without this the account is locked out by the `verified` gate.
+            $user->email_verified_at = now();
             $user->save();
             // Assign roles
             $role = DB::table('roles')->where('name', 'publisher')->first();
@@ -130,13 +133,13 @@ class PublisherController extends Controller
             $publisher = Publisher::create([
                 'user_id' => $user->id,
                 'network_id' => $validated['network_id'],
-                'website_url' => $validated['website_name'],
+                'website_url' => $validated['website_name'] ?? null,
                 'payout_threshold' => $validated['payout_threshold'] ?? 0,
                 'coc_number' => $validated['coc_number'] ?? null,
                 'is_verified' => true,
             ]);
 
-            SendUserCredentialsJob::dispatch($user, $password, $user?->user_name);
+            SendUserCredentialsJob::dispatch($user)->afterCommit();
             DB::commit();
 
             return redirect()->route('publishers.show', $publisher->id)->with('success', 'Publisher created successfully');
@@ -161,8 +164,8 @@ class PublisherController extends Controller
                 'email' => ['required', 'email', 'max:255', 'unique:users,email,'.$id],
                 'title' => ['nullable', 'string', 'max:255'],
                 'network_id' => ['required', 'integer', 'exists:networks,id'],
-                'website_url' => ['required', 'url', 'max:255'],
-                'payout_threshold' => ['required', 'numeric', 'min:1', 'max:4'],
+                'website_url' => ['nullable', 'url:http,https', 'max:255'],
+                'payout_threshold' => ['required', 'numeric', 'min:0', 'max:999999999', 'decimal:0,2'],
                 'currency' => ['required', 'string', 'max:255'],
                 'coc_number' => ['nullable', 'string', 'max:10', 'unique:publishers,coc_number,'.$publisher->id],
             ]);
@@ -170,7 +173,7 @@ class PublisherController extends Controller
             $user = User::findOrFail($id);
             $user->first_name = $validated['first_name'];
             $user->last_name = $validated['last_name'];
-            $user->title = $validated['title'];
+            $user->title = $validated['title'] ?? null;
             $user->email = $validated['email'];
             $user->currency = $validated['currency'];
             $user->save();
@@ -178,13 +181,13 @@ class PublisherController extends Controller
             if (Auth::user()->is_super_admin) {
                 $publisher->network_id = $validated['network_id'];
             }
-            $publisher->website_url = $validated['website_url'];
+            $publisher->website_url = $validated['website_url'] ?? null;
             $publisher->payout_threshold = $validated['payout_threshold'];
             $publisher->coc_number = $validated['coc_number'] ?? null;
             $publisher->save();
             DB::commit();
 
-            return redirect()->route('publishers.show', $publisher->id)->with('success', 'Publisher updated successfully');
+            return redirect()->route('publishers.show', ['id' => $publisher->id, 'tab' => 'settings'])->with('success', 'Publisher updated successfully');
         } catch (HttpExceptionInterface|ValidationException|ModelNotFoundException $e) {
             DB::rollBack();
             throw $e;
@@ -196,73 +199,25 @@ class PublisherController extends Controller
         }
     }
 
-    public function show($id)
+    public function myAccount(Request $request)
     {
-        try {
-            $columns = [
-                'users.id as user_id',
-                'users.first_name',
-                'users.last_name',
-                'users.email',
-                'users.user_name',
-                'users.title',
-                'users.status',
-                'users.is_super_admin',
-                'users.is_publisher',
-                'users.is_advertiser',
-                'users.email_verified_at',
-                'users.password_expiry_date',
-                'users.timezone',
-                'users.language',
-                'users.currency',
-                'users.country_iso',
-                'publishers.id as publisher_id',
-                'publishers.user_id as publisher_user_id',
-                'publishers.network_id',
-                'publishers.website_url',
-                'publishers.traffic_sources',
-                'publishers.monthly_visitors',
-                'publishers.primary_verticals',
-                'publishers.secondary_verticals',
-                'publishers.payout_method',
-                'publishers.payout_threshold',
-                'publishers.is_verified',
-                'publishers.verified_at',
-                'publishers.total_clicks',
-                'publishers.total_conversions',
-                'publishers.total_earnings',
-                'publishers.conversion_rate',
-                'publishers.account_health_score',
-                'publishers.last_active_at',
-                'publishers.coc_number',
-                'publishers.created_at as publisher_created_at',
-                'publishers.updated_at as publisher_updated_at',
-                'currencies.currency_code as currency_code',
-                'currencies.currency_name as currency_name',
-                'networks.network_name as network_name',
-            ];
-            $query = DB::table('publishers')
-                ->join('users', 'users.id', '=', 'publishers.user_id')
-                ->leftJoin('currencies', 'currencies.currency_code', '=', 'users.currency')
-                ->leftJoin('networks', 'networks.id', '=', 'publishers.network_id')
-                ->select($columns)
-                ->where('publishers.id', $id);
-            $this->scopeToNetwork($query);
-            $publisher = $query->first();
-            abort_if($publisher === null, 404);
+        abort_unless($request->user()->is_publisher, 403);
+        $publisher = Publisher::where('user_id', $request->user()->id)->firstOrFail();
 
-            return inertia('publishers/show', [
-                'publisher' => $publisher,
-                'networks' => $this->networkOptions(),
-                'currencies' => Currency::all(),
-            ]);
-        } catch (HttpExceptionInterface $e) {
-            throw $e;
-        } catch (Exception $e) {
-            report($e);
+        return redirect()->route('publishers.show', $publisher->id);
+    }
 
-            return redirect()->route('publishers.index')->with('error', 'An error occurred.');
-        }
+    public function show(Request $request, int $id, PublisherWorkspaceService $workspace)
+    {
+        $publisher = $workspace->find($request->user(), $id);
+        $data = $workspace->build($publisher, $request);
+
+        return inertia('publishers/show', [
+            'publisher' => $workspace->account($publisher, $data['permissions']),
+            'workspace' => $data,
+            'networks' => $data['permissions']['changeNetwork'] ? $this->networkOptions() : [],
+            'currencies' => $data['permissions']['edit'] ? Currency::all() : [],
+        ]);
     }
 
     public function changeStatus($id)
@@ -304,7 +259,7 @@ class PublisherController extends Controller
                 ]);
             });
 
-            return redirect()->route('publishers.index')->with('success', 'Publisher deactivated successfully');
+            return redirect()->back()->with('success', 'Publisher deactivated successfully');
         } catch (Exception $e) {
             return redirect()->route('publishers.index')->with('error', 'Could not deactivate publisher.');
         }

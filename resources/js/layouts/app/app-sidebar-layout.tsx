@@ -16,10 +16,21 @@ export default function AppSidebarLayout({
             <PermissionProvider>
                 <AppShell variant="sidebar">
                     <AppSidebar />
-                    <AppContent variant="sidebar" className="overflow-x-hidden">
-                        <AppSidebarHeader/>
+                    <AppContent
+                        variant="sidebar"
+                        className="workspace-main overflow-x-hidden"
+                    >
+                        <a
+                            href="#main-content"
+                            className="sr-only z-50 bg-card p-3 text-primary focus:not-sr-only focus:fixed focus:top-2 focus:left-2"
+                        >
+                            Skip to content
+                        </a>
+                        <AppSidebarHeader />
                         <FlashMessages />
-                        {children}
+                        <div id="main-content" className="contents">
+                            {children}
+                        </div>
                     </AppContent>
                 </AppShell>
             </PermissionProvider>

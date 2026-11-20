@@ -1,24 +1,21 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import {
-    ActionColumn,
-    MyCampaignsColumns
-} from '@/dev/columns/columns';
+import { ActionColumn, MyCampaignsColumns } from '@/dev/columns/columns';
 import { CustomDialogComponent, ReusablePageTitle } from '@/dev/core';
 import { CustomBaseTable, SearchTools } from '@/dev/table';
 import { useCustomDialogContextFactory, useDebounce } from '@/hooks';
 import AppLayout from '@/layouts/app-layout';
-import publishers from '@/routes/publishers';
 import publisher from '@/routes/publisher';
+import publishers from '@/routes/publishers';
 import {
     BreadcrumbItem,
     SingleActionsHandler,
     TFilterOptions,
-    TPaginationFilters
+    TPaginationFilters,
 } from '@/types';
 import { FILTEROPTIONS, ReusableReducer } from '@/utils/constants';
 import { Head, router, usePage } from '@inertiajs/react';
-import { useReducer } from 'react'
+import { useReducer } from 'react';
 import { useTranslation } from 'react-i18next';
 import QrCodeModal from './modals/qrcode';
 
@@ -27,7 +24,7 @@ const MyCampaignsIndexPage = () => {
     const { campaigns } = usePage<any>().props;
     const [filter, optionsDispatcher] = useReducer(
         ReusableReducer<TPaginationFilters & TFilterOptions>,
-        { ...FILTEROPTIONS, page: 1, pageSize: 25 }
+        { ...FILTEROPTIONS, page: 1, pageSize: 25 },
     );
     const optionsDispatcherDebounce = useDebounce({
         debounceCallback: optionsDispatcher,
@@ -49,13 +46,17 @@ const MyCampaignsIndexPage = () => {
     const ActionsHandlerMapping: SingleActionsHandler<any>[] = [
         {
             label: t('View'),
-            onSelect:(data: any) => {
-                router.visit(publishers.my.campaign.show(data?.publisher_campaign_id))
-            }
+            href: (data) =>
+                publishers.my.campaign.show.url(data.publisher_campaign_id),
+            onSelect: (data: any) => {
+                router.visit(
+                    publishers.my.campaign.show(data?.publisher_campaign_id),
+                );
+            },
         },
         {
             label: t('QR Code'),
-            onSelect:(data: any) => {
+            onSelect: (data: any) => {
                 handleDialogContextSwitch({
                     Component: QrCodeModal,
                     componentProps: {
@@ -63,33 +64,38 @@ const MyCampaignsIndexPage = () => {
                         campaignName: data?.campaign_name,
                     },
                 });
-            }
+            },
         },
         {
             label: t('Script'),
-            onSelect:(data: any) => {
-                router.visit(publisher.scripts.show.url(data?.publisher_campaign_id))
-            }
+            onSelect: (data: any) => {
+                router.visit(
+                    publisher.scripts.show.url(data?.publisher_campaign_id),
+                );
+            },
         },
         {
             label: t('View docs'),
-            onSelect:(data: any) => {
-                router.visit(publisher.scripts.docs.url(data?.publisher_campaign_id))
-            }
-        }
+            onSelect: (data: any) => {
+                router.visit(
+                    publisher.scripts.docs.url(data?.publisher_campaign_id),
+                );
+            },
+        },
     ];
 
     return (
         <AppLayout>
-            <Head title={t("My Campaigns")} />
-            <div className="flex h-full flex-1 flex-col gap-6 p-6">
+            <Head title={t('My Campaigns')} />
+            <div className="workspace-page flex h-full flex-1 flex-col gap-6">
                 <ReusablePageTitle
-                    title={t("My Campaigns")}
+                    title={t('My Campaigns')}
                     description={t('View and manage your campaigns')}
                     breadcrumbs={breadcrumbs}
                 />
-                <div className='w-full'>
+                <div className="campaigns-directory w-full">
                     <CustomBaseTable
+                        presentation="cards"
                         {...{
                             onPageChange: (page) =>
                                 optionsDispatcher({
@@ -128,7 +134,8 @@ const MyCampaignsIndexPage = () => {
 
             <CustomDialogComponent
                 {...{ handleDialogContextSwitch, dialogOpen }}
-                className='sm:max-w-md'>
+                className="sm:max-w-md"
+            >
                 {dialogContent?.Component && (
                     <dialogContent.Component
                         {...{
@@ -139,7 +146,7 @@ const MyCampaignsIndexPage = () => {
                 )}
             </CustomDialogComponent>
         </AppLayout>
-    )
-}
+    );
+};
 
 export default MyCampaignsIndexPage;

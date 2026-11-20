@@ -13,6 +13,7 @@ class NetworkInvoice extends Model
     protected $table = 'network_invoices';
 
     protected $fillable = [
+        'approved_by', 'approved_at', 'paid_by', 'payment_evidence', 'ledger_backed',
         'invoice_number',
         'network_id',
         'amount',
@@ -27,6 +28,7 @@ class NetworkInvoice extends Model
     ];
 
     protected $casts = [
+        'ledger_backed' => 'boolean',
         'amount' => 'decimal:2',
         'period_start' => 'date',
         'period_end' => 'date',
@@ -46,22 +48,7 @@ class NetworkInvoice extends Model
 
     public static function generateInvoiceNumber(): string
     {
-        $prefix = 'NET-INV';
-        $year = date('Y');
-        $month = date('m');
-
-        $lastInvoice = self::where('invoice_number', 'like', "{$prefix}-{$year}{$month}-%")
-            ->orderBy('id', 'desc')
-            ->first();
-
-        if ($lastInvoice) {
-            $lastNumber = (int) Str::afterLast($lastInvoice->invoice_number, '-');
-            $newNumber = $lastNumber + 1;
-        } else {
-            $newNumber = 1;
-        }
-
-        return sprintf('%s-%s%s-%05d', $prefix, $year, $month, $newNumber);
+        return 'NET-INV-'.Str::ulid();
     }
 
     public function network()

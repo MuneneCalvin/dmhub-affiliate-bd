@@ -16,6 +16,6 @@ it('adds HSTS only on secure production requests', function () {
     $this->get('http://localhost/login')->assertHeaderMissing('Strict-Transport-Security');
 });
 
-it('does not block embedding of public lead and script endpoints', function () {
+it('does not block embedding of public script endpoints', function () {
     $this->get('/login')->assertHeaderMissing('X-Frame-Options');
 });

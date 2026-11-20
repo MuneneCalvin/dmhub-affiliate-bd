@@ -1,0 +1,27 @@
+# Copy to shopify.app.toml and use your registered app values. Never commit secrets.
+client_id = "REPLACE_WITH_SHOPIFY_CLIENT_ID"
+name = "DM Hub Promotions"
+application_url = "https://YOUR_DM_HUB_HOST"
+embedded = false
+
+[access_scopes]
+scopes = "read_orders,write_discounts,read_products,write_app_proxy"
+
+[auth]
+redirect_urls = ["https://YOUR_DM_HUB_HOST/integrations/shopify/callback"]
+
+[app_proxy]
+url = "https://YOUR_DM_HUB_HOST/api/integrations/shopify/proxy"
+subpath = "dmhub"
+prefix = "apps"
+
+[webhooks]
+api_version = "2026-10"
+
+[[webhooks.subscriptions]]
+topics = ["orders/paid", "orders/cancelled", "refunds/create", "app/uninstalled"]
+uri = "/api/integrations/shopify/webhooks"
+
+[[webhooks.subscriptions]]
+compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
+uri = "/api/integrations/shopify/webhooks"

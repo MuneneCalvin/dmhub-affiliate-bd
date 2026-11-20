@@ -7,7 +7,6 @@ use App\Models\PublisherInvoice;
 use App\Services\InvoiceService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class AdminInvoiceController extends Controller
@@ -58,7 +57,9 @@ class AdminInvoiceController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->where('invoice_number', 'like', "%{$search}%")
                     ->orWhereHas('publisher.user', function ($q) use ($search) {
-                        $q->where('name', 'like', "%{$search}%")
+                        $q->where('first_name', 'like', "%{$search}%")
+                            ->orWhere('last_name', 'like', "%{$search}%")
+                            ->orWhere('user_name', 'like', "%{$search}%")
                             ->orWhere('email', 'like', "%{$search}%");
                     });
             });
@@ -67,16 +68,8 @@ class AdminInvoiceController extends Controller
         $invoices = $query->orderBy('requested_at', 'desc')->paginate(20);
 
         // Get summary stats
-        $stats = [
-            'pending' => $this->invoiceQuery($request)->where('status', 'pending')->count(),
-            'pending_amount' => $this->invoiceQuery($request)->where('status', 'pending')->sum('amount'),
-            'approved' => $this->invoiceQuery($request)->where('status', 'approved')->count(),
-            'approved_amount' => $this->invoiceQuery($request)->where('status', 'approved')->sum('amount'),
-            'paid_this_month' => $this->invoiceQuery($request)->where('status', 'paid')
-                ->whereMonth('paid_at', now()->month)
-                ->whereYear('paid_at', now()->year)
-                ->sum('amount'),
-        ];
+        $stats = $this->invoiceQuery($request)->selectRaw('currency, status, SUM(amount) as amount, COUNT(*) as count')
+            ->groupBy('currency', 'status')->get()->groupBy('currency')->map(fn ($rows) => $rows->keyBy('status'));
 
         return Inertia::render('admin/invoices/index', [
             'invoices' => $invoices,
@@ -93,12 +86,11 @@ class AdminInvoiceController extends Controller
             'approvedByUser',
             'earnings.publisherCampaign.campaign',
             'earnings.publisherCampaign.offer',
-            'earnings.lead',
             'earnings.conversion',
         ])->findOrFail($id);
 
         return Inertia::render('admin/invoices/show', [
-            'invoice' => $invoice,
+            'invoice' => $invoice->attachLineAmounts(),
         ]);
     }
 
@@ -123,8 +115,8 @@ class AdminInvoiceController extends Controller
 
         $invoice = $this->invoiceQuery($request)->findOrFail($id);
 
-        if ($invoice->status !== 'pending') {
-            return back()->with('error', 'Invoice is not pending and cannot be rejected');
+        if (! in_array($invoice->status, ['pending', 'approved'])) {
+            return back()->with('error', 'Only unpaid invoices can be cancelled');
         }
 
         $this->invoiceService->rejectInvoice($invoice, $validated['reason'], $request->user()->id);
@@ -135,16 +127,13 @@ class AdminInvoiceController extends Controller
     public function markPaid(Request $request, int $id)
     {
         $validated = $request->validate([
-            'payment_reference' => 'nullable|string|max:255',
+            'payment_reference' => 'required|string|max:120',
+            'payment_evidence' => 'required|string|max:1000',
         ]);
 
         $invoice = $this->invoiceQuery($request)->findOrFail($id);
 
-        if (! in_array($invoice->status, ['approved', 'processing'])) {
-            return back()->with('error', 'Invoice must be approved before marking as paid');
-        }
-
-        $this->invoiceService->markAsPaid($invoice, $validated['payment_reference'] ?? null);
+        $this->invoiceService->markAsPaid($invoice, $validated['payment_reference'], $validated['payment_evidence'], $request->user()->id);
 
         return back()->with('success', sprintf('Invoice #%s marked as paid', $invoice->invoice_number));
     }
@@ -156,18 +145,13 @@ class AdminInvoiceController extends Controller
             'invoice_ids.*' => 'exists:publisher_invoices,id',
         ]);
 
-        $approved = DB::transaction(function () use ($request, $validated) {
-            $approved = 0;
-            $invoices = $this->invoiceQuery($request)->whereIn('id', $validated['invoice_ids'])->lockForUpdate()->get();
-            foreach ($invoices as $invoice) {
-                if ($invoice->status === 'pending') {
-                    $this->invoiceService->approveInvoice($invoice, $request->user()->id);
-                    $approved++;
-                }
+        $approved = 0;
+        foreach ($this->invoiceQuery($request)->whereIn('id', $validated['invoice_ids'])->orderBy('network_id')->orderBy('id')->get() as $invoice) {
+            if ($invoice->status === 'pending') {
+                $this->invoiceService->approveInvoice($invoice, $request->user()->id);
+                $approved++;
             }
-
-            return $approved;
-        });
+        }
 
         return back()->with('success', sprintf('%d invoices approved', $approved));
     }

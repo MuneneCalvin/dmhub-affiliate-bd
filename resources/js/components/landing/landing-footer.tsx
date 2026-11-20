@@ -12,7 +12,7 @@ export default function LandingFooter({
 }: LandingFooterProps) {
     // const defaultBrandName = (
     //     <span className="font-semibold text-gray-900 dark:text-white">
-    //         Affiliate<span>-</span><span className="text-[#FF6B35]">Marketing</span>
+    //         Affiliate<span>-</span><span className="text-primary">Marketing</span>
     //     </span>
     // );
 
@@ -23,7 +23,7 @@ export default function LandingFooter({
     // );
 
     const currentYear = new Date().getFullYear();
-    const defaultCopyright = `© ${currentYear} Affiliate-Marketing. Powered by BrandNewDay.`;
+    const defaultCopyright = `© ${currentYear} DM Hub. All rights reserved.`;
 
     return (
         <footer
@@ -43,7 +43,7 @@ export default function LandingFooter({
                                 <a
                                     key={index}
                                     href={link.href}
-                                    className="transition hover:text-[#FF6B35]"
+                                    className="transition hover:text-primary"
                                 >
                                     {link.label}
                                 </a>

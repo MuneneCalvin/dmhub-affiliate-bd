@@ -37,7 +37,7 @@ const Permissions = () => {
     return (
         <AppLayout>
             <Head title={t("Permissions")} />
-            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
+            <div className="workspace-page flex h-full flex-1 flex-col gap-4">
                 <ReusablePageTitle
                     title={t("Permissions")}
                     description={t("Manage user access permissions")}

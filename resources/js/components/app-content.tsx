@@ -15,8 +15,9 @@ export function AppContent({
     }
     return (
         <main
-            className="mx-auto flex h-full w-full max-w-7xl flex-1 flex-col gap-4 rounded-xl bg-white dark:bg-[#0f1419]"
-            {...props}>
+            className="mx-auto flex w-full flex-1 flex-col bg-background"
+            {...props}
+        >
             {children}
         </main>
     );

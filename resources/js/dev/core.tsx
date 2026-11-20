@@ -2,24 +2,88 @@
 /* eslint-disable no-extra-boolean-cast */
 
 import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
     Breadcrumb,
     BreadcrumbItem,
     BreadcrumbLink,
     BreadcrumbList,
     BreadcrumbPage,
     BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { dashboard } from "@/routes";
-import { markAsRead as markAsReadRoute, markAllAsRead as markAllAsReadRoute } from "@/routes/notifications";
-import { Link, usePage, router } from "@inertiajs/react";
-import React, { Fragment, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+} from '@/components/ui/breadcrumb';
+import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuCheckboxItem,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import {
+    Sheet,
+    SheetClose,
+    SheetContent,
+    SheetDescription,
+    SheetFooter,
+    SheetHeader,
+    SheetTitle,
+} from '@/components/ui/sheet';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import { UserMenuContent } from '@/components/user-menu-content';
+import { useLanguage } from '@/context/language-context';
+import { cn } from '@/lib/utils';
+import { dashboard } from '@/routes';
+import {
+    markAllAsRead as markAllAsReadRoute,
+    markAsRead as markAsReadRoute,
+} from '@/routes/notifications';
 import {
     type BreadcrumbItem as BreadcrumbItemType,
     ConfirmationDialogProps,
     InfoCardProps,
     ReusableAlertModalProps,
-    ReusableCheckboxProps,
     ReusableCheckBoxGroupProps,
+    ReusableCheckboxProps,
     ReusableDateInputProps,
     ReusableEmailInputProps,
     ReusableFileInputProps,
@@ -48,8 +112,13 @@ import {
     TReusableSelectProps,
     TTableReusableComponent,
     TUseTabsProps,
-    UseConfirmationDialogReturn
-} from "@/types";
+    UseConfirmationDialogReturn,
+} from '@/types';
+import { VARIANTCOLOR } from '@/utils/enums';
+import { getInitials } from '@/utils/utils';
+import { Link, router, usePage } from '@inertiajs/react';
+import { Command, CommandGroup, CommandItem, CommandList } from 'cmdk';
+import { t } from 'i18next';
 import {
     Bell,
     Check,
@@ -66,60 +135,22 @@ import {
     Search,
     User,
     X,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
-import { getInitials } from "@/utils/utils";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle
-} from "@/components/ui/dialog";
-import { VARIANTCOLOR } from "@/utils/enums";
-import { useTranslation } from "react-i18next";
-import { t } from "i18next";
-import { useLanguage } from "@/context/language-context";
-import {
-    Command,
-    CommandList,
-    CommandGroup,
-    CommandItem,
-} from "cmdk";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
-import {
-    Sheet,
-    SheetContent,
-    SheetHeader,
-    SheetTitle,
-    SheetDescription,
-    SheetFooter,
-    SheetClose,
-} from "@/components/ui/sheet";
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { UserMenuContent } from "@/components/user-menu-content";
+} from 'lucide-react';
+import React, {
+    Fragment,
+    ReactNode,
+    useCallback,
+    useEffect,
+    useMemo,
+    useState,
+} from 'react';
+import { useTranslation } from 'react-i18next';
 
-export const BreadCrumbComponent = ({ breadcrumbs }: { breadcrumbs: BreadcrumbItemType[] }) => {
+export const BreadCrumbComponent = ({
+    breadcrumbs,
+}: {
+    breadcrumbs: BreadcrumbItemType[];
+}) => {
     const { t } = useTranslation();
     return (
         <div className="w-auto">
@@ -127,9 +158,12 @@ export const BreadCrumbComponent = ({ breadcrumbs }: { breadcrumbs: BreadcrumbIt
                 <BreadcrumbList>
                     <BreadcrumbItem>
                         <BreadcrumbLink asChild>
-                            <Link href={dashboard().url} className="flex items-center gap-1">
-                                <p className="capitalize font-medium select-none leading-6">
-                                    {t("Dashboard")}
+                            <Link
+                                href={dashboard().url}
+                                className="flex items-center gap-1"
+                            >
+                                <p className="leading-6 font-medium capitalize select-none">
+                                    {t('Dashboard')}
                                 </p>
                             </Link>
                         </BreadcrumbLink>
@@ -141,10 +175,14 @@ export const BreadCrumbComponent = ({ breadcrumbs }: { breadcrumbs: BreadcrumbIt
                                 <BreadcrumbSeparator />
                                 <BreadcrumbItem>
                                     {isLast ? (
-                                        <BreadcrumbPage>{item.title}</BreadcrumbPage>
+                                        <BreadcrumbPage>
+                                            {item.title}
+                                        </BreadcrumbPage>
                                     ) : (
                                         <BreadcrumbLink asChild>
-                                            <Link href={item.href}>{item.title}</Link>
+                                            <Link href={item.href}>
+                                                {item.title}
+                                            </Link>
                                         </BreadcrumbLink>
                                     )}
                                 </BreadcrumbItem>
@@ -164,21 +202,29 @@ export const ReusablePageTitle = ({
     breadcrumbs,
 }: TReusablePageProps) => {
     return (
-        <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-                <div className="flex flex-col gap-1">
-                    <p className="text-primary font-semibold text-xl leading-8">
-                        {title}
-                    </p>
-                    <p className="font-normal text-base leading-7">
-                        {description}
-                    </p>
-                </div>
-                <div className="shrink-0">
+        <div className="page-heading space-y-3">
+            {breadcrumbs.length > 0 && (
+                <div className="text-xs">
                     <BreadCrumbComponent breadcrumbs={breadcrumbs} />
                 </div>
+            )}
+            <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="min-w-0 space-y-1.5">
+                    <h1 className="text-[28px] leading-tight font-semibold tracking-tight text-foreground">
+                        {title}
+                    </h1>
+                    {description && (
+                        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+                            {description}
+                        </p>
+                    )}
+                </div>
+                {children && (
+                    <div className="page-heading-actions shrink-0">
+                        {children}
+                    </div>
+                )}
             </div>
-            {children && <div className="w-fit self-end">{children}</div>}
         </div>
     );
 };
@@ -189,7 +235,8 @@ export const NavBarLanguageChanger = () => {
         { code: 'nl', name: 'Dutch' },
         { code: 'en', name: 'English' },
     ];
-    const selected = languages.find((l) => l.code === currentLocale) ?? languages[0];
+    const selected =
+        languages.find((l) => l.code === currentLocale) ?? languages[0];
     const onSelect = (lang: TLANG) => {
         setLanguage(lang.code);
     };
@@ -202,14 +249,17 @@ export const NavBarLanguageChanger = () => {
                     onSelect,
                 }))}
                 triggerEl={
-                    <div className={cn(
-                        'w-fit flex justify-between items-center cursor-pointer border-none bg-neutral-100 dark:bg-black h-10 min-w-8 rounded-3xl p-2'
-                    )}
-                        role="button">
-                        <Globe className="size-6" />
+                    <button
+                        type="button"
+                        className={cn(
+                            'flex h-9 items-center gap-1 rounded-lg px-2 text-xs text-muted-foreground hover:bg-muted',
+                        )}
+                        aria-label="Change language"
+                    >
+                        <Globe className="size-4" />
                         <span className="mx-2">{selected.name}</span>
-                        <ChevronDown />
-                    </div>
+                        <ChevronDown className="size-3.5" />
+                    </button>
                 }
                 className="w-fit"
             />
@@ -217,7 +267,7 @@ export const NavBarLanguageChanger = () => {
     );
 };
 
-export const ReusableDropDownWithCheckComponent = <T = string>({
+export const ReusableDropDownWithCheckComponent = <T = string,>({
     ActionsHandlerMapping,
     className = 'w-fit',
     triggerEl,
@@ -229,20 +279,25 @@ export const ReusableDropDownWithCheckComponent = <T = string>({
             <DropdownMenuContent
                 {...{
                     className,
-                }}>
-                {ActionsHandlerMapping.map(({ label, value, onSelect }, index) => {
-                    return (
-                        <DropdownMenuCheckboxItem
-                            className='w-full'
-                            {...{
-                                onSelect: () => value && onSelect(value),
-                                onCheckedChange: () => value && onSelect(value),
-                            }}
-                            key={index}>
-                            {label}
-                        </DropdownMenuCheckboxItem>
-                    );
-                })}
+                }}
+            >
+                {ActionsHandlerMapping.map(
+                    ({ label, value, onSelect }, index) => {
+                        return (
+                            <DropdownMenuCheckboxItem
+                                className="w-full"
+                                {...{
+                                    onSelect: () => value && onSelect(value),
+                                    onCheckedChange: () =>
+                                        value && onSelect(value),
+                                }}
+                                key={index}
+                            >
+                                {label}
+                            </DropdownMenuCheckboxItem>
+                        );
+                    },
+                )}
             </DropdownMenuContent>
         </DropdownMenu>
     );
@@ -261,12 +316,13 @@ export const ReusablePopOverComponent = ({
                 ...(onOpenChange ? { onOpenChange } : {}),
                 ...(!!open ? { open } : {}),
                 modal: true,
-            }}>
+            }}
+        >
             <PopoverTrigger asChild {...{}}>
                 {triggerEl}
             </PopoverTrigger>
             <PopoverContent
-                className={cn('p-0 w-44', className)}
+                className={cn('w-44 p-0', className)}
                 {...{
                     collisionBoundary: document.querySelector('body'),
                     avoidCollisions: true,
@@ -276,7 +332,8 @@ export const ReusablePopOverComponent = ({
                     sideOffset: 8,
                     side: 'bottom',
                     align: 'end',
-                }}>
+                }}
+            >
                 {children}
             </PopoverContent>
         </Popover>
@@ -287,7 +344,7 @@ export const NavBarNotification = () => {
     const { auth } = usePage<SharedData>().props;
     const userNotifications = React.useMemo(
         () => (auth?.user as any)?.notifications ?? [],
-        [auth]
+        [auth],
     );
     const { t } = useTranslation();
     const mappedNotifications: TNotifs[] = userNotifications.map((n: any) => ({
@@ -299,109 +356,141 @@ export const NavBarNotification = () => {
         time: new Date(n.created_at).toLocaleString(),
         type: n.data.type || 'info',
         created_at: n.created_at,
-        updated_at: n.updated_at
+        updated_at: n.updated_at,
     }));
-    const [notifications, setNotifications] = useState<TNotifs[]>(mappedNotifications);
+    const [notifications, setNotifications] =
+        useState<TNotifs[]>(mappedNotifications);
     useEffect(() => {
         setNotifications(mappedNotifications);
     }, [mappedNotifications]);
     const unreadCount = notifications.filter((n) => n.unread).length;
     const markAsRead = (id: string) => {
-        router.post(markAsReadRoute.url({ id }), {}, {
-            preserveScroll: true,
-            onSuccess: () => {
-                setNotifications((prev) =>
-                    prev.map((notification) =>
-                        notification.id === id
-                            ? { ...notification, unread: false }
-                            : notification
-                    )
-                );
-            }
-        });
+        router.post(
+            markAsReadRoute.url({ id }),
+            {},
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setNotifications((prev) =>
+                        prev.map((notification) =>
+                            notification.id === id
+                                ? { ...notification, unread: false }
+                                : notification,
+                        ),
+                    );
+                },
+            },
+        );
     };
     const markAllAsRead = () => {
-        router.post(markAllAsReadRoute.url(), {}, {
-            preserveScroll: true,
-            onSuccess: () => {
-                setNotifications((prev) =>
-                    prev.map((notification) => ({ ...notification, unread: false }))
-                );
-            }
-        });
+        router.post(
+            markAllAsReadRoute.url(),
+            {},
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setNotifications((prev) =>
+                        prev.map((notification) => ({
+                            ...notification,
+                            unread: false,
+                        })),
+                    );
+                },
+            },
+        );
     };
     return (
-        <div className='relative'>
+        <div className="relative">
             <ReusablePopOverComponent
-                className='rounded-lg shadow-lg border border-gray-200 divide-y divide-gray-100 w-80'
+                className="w-80 divide-y divide-gray-100 rounded-lg border border-gray-200 shadow-lg"
                 {...{
                     triggerEl: (
                         <Button
-                            className='relative cursor-pointer inline-flex items-center p-2 text-sm font-medium  transition-colors duration-200 rounded-full w-10 h-10'
-                            {...{ variant: 'outline' }}>
+                            aria-label={t('Notifications')}
+                            className="relative inline-flex h-10 w-10 cursor-pointer items-center rounded-full p-2 text-sm font-medium transition-colors duration-200"
+                            {...{ variant: 'outline' }}
+                        >
                             <Bell />
                             {unreadCount > 0 && (
-                                <div className='absolute flex items-center justify-center w-4 h-4 p-2 border-2 border-white bg-primary text-white rounded-full -top-1 -right-1 text-xs font-medium'>
+                                <div className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-white bg-primary p-2 text-xs font-medium text-primary-foreground">
                                     {unreadCount > 9 ? '9+' : unreadCount}
                                 </div>
                             )}
                         </Button>
                     ),
                     children: (
-                        <div className='w-full max-h-96 overflow-hidden'>
-                            <div className='flex items-center justify-between px-4 py-3 border-b border-slate-200'>
-                                <h3 className='font-medium'>{t('Notifications')}</h3>
+                        <div className="max-h-96 w-full overflow-hidden">
+                            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+                                <h3 className="font-medium">
+                                    {t('Notifications')}
+                                </h3>
                                 {unreadCount > 0 && (
                                     <Button
                                         onClick={markAllAsRead}
-                                        className='text-xs font-medium cursor-pointer'>
+                                        className="cursor-pointer text-xs font-medium"
+                                    >
                                         {t('Mark all as read')}
                                     </Button>
                                 )}
                             </div>
-                            <div className='max-h-64 overflow-y-auto p-2'>
-                                {notifications.length > 0 ? notifications.map((notification) => (
-                                    <div
-                                        key={notification.id}
-                                        className={`flex items-start p-4 transition-colors duration-150 border-b border-slate-100 last:border-b-0 ${notification.unread ? 'bg-primary-50/50' : ''
-                                            }`}>
-                                        <div className='relative flex-0'>
-                                            {notification?.avatar && typeof notification.avatar === 'string' ? (
-                                                <img
-                                                    className='w-10 h-10 rounded-full object-cover'
-                                                    src={notification?.avatar}
-                                                    alt='Notification Avatar'
-                                                />
-                                            ) : (
-                                                <CircleUser />
+                            <div className="max-h-64 overflow-y-auto p-2">
+                                {notifications.length > 0 ? (
+                                    notifications.map((notification) => (
+                                        <div
+                                            key={notification.id}
+                                            className={`flex items-start border-b border-slate-100 p-4 transition-colors duration-150 last:border-b-0 ${
+                                                notification.unread
+                                                    ? 'bg-primary-50/50'
+                                                    : ''
+                                            }`}
+                                        >
+                                            <div className="relative flex-0">
+                                                {notification?.avatar &&
+                                                typeof notification.avatar ===
+                                                    'string' ? (
+                                                    <img
+                                                        className="h-10 w-10 rounded-full object-cover"
+                                                        src={
+                                                            notification?.avatar
+                                                        }
+                                                        alt="Notification Avatar"
+                                                    />
+                                                ) : (
+                                                    <CircleUser />
+                                                )}
+                                            </div>
+                                            <div className="ml-3 min-w-0 flex-1">
+                                                <p className="text-sm leading-relaxed">
+                                                    {notification?.message}
+                                                </p>
+                                                <p className="mt-1 text-xs">
+                                                    {notification?.time}
+                                                </p>
+                                            </div>
+                                            {notification.unread && (
+                                                <Button
+                                                    size="icon"
+                                                    variant="ghost"
+                                                    onClick={() =>
+                                                        markAsRead(
+                                                            notification?.id,
+                                                        )
+                                                    }
+                                                >
+                                                    <CircleCheckBig className="h-4 w-4" />
+                                                </Button>
                                             )}
                                         </div>
-                                        <div className='ml-3 flex-1 min-w-0'>
-                                            <p className='text-sm leading-relaxed'>
-                                                {notification?.message}
-                                            </p>
-                                            <p className='text-xs mt-1'>
-                                                {notification?.time}
-                                            </p>
-                                        </div>
-                                        {notification.unread && (
-                                            <Button
-                                                size="icon"
-                                                variant="ghost"
-                                                onClick={() => markAsRead(notification?.id)}>
-                                                <CircleCheckBig className="h-4 w-4" />
-                                            </Button>
-                                        )}
-                                    </div>
-                                )) : (
+                                    ))
+                                ) : (
                                     <div className="p-4 text-center text-gray-500">
                                         {t('No notifications')}
                                     </div>
                                 )}
                             </div>
-                            <div className='px-4 py-3 border-t border-slate-200'>
-                                <button className='w-full flex items-center justify-center text-sm font-medium'>
-                                    <Eye className='w-4 h-4 mr-2' />
+                            <div className="border-t border-slate-200 px-4 py-3">
+                                <button className="flex w-full items-center justify-center text-sm font-medium">
+                                    <Eye className="mr-2 h-4 w-4" />
                                     {t('View all notifications')}
                                 </button>
                             </div>
@@ -423,21 +512,26 @@ export const EmployeeAvatar = ({ className, alt, url }: TAvatartTypes) => {
             <DropdownMenuTrigger asChild>
                 <div
                     className={cn(
-                        'flex items-center justify-center border-[.8px] border-gray-100 overflow-clip rounded-full select-none cursor-pointer',
-                        className ?? ''
-                    )}>
+                        'flex cursor-pointer items-center justify-center overflow-clip rounded-full border-[.8px] border-gray-100 select-none',
+                        className ?? '',
+                    )}
+                >
                     {url ? (
-                        <img src={url} alt={alt} className='w-full h-full object-cover' />
+                        <img
+                            src={url}
+                            alt={alt}
+                            className="h-full w-full object-cover"
+                        />
                     ) : initials ? (
-                        <p className='text-sm flex items-center justify-center font-semibold'>
+                        <p className="flex items-center justify-center text-sm font-semibold">
                             {initials}
                         </p>
                     ) : (
-                        <User className='w-5 h-5 text-gray-500' />
+                        <User className="h-5 w-5 text-gray-500" />
                     )}
                 </div>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className='w-56' align='end'>
+            <DropdownMenuContent className="w-56" align="end">
                 <UserMenuContent user={user} />
             </DropdownMenuContent>
         </DropdownMenu>
@@ -446,7 +540,7 @@ export const EmployeeAvatar = ({ className, alt, url }: TAvatartTypes) => {
 
 export const TableComponentHeadings = ({ children }: TNodeChildrentType) => {
     return (
-        <div className='flex flex-col justify-between items-center w-full gap-6 flex-wrap px-6 py-2.5'>
+        <div className="flex w-full flex-wrap items-center justify-between gap-4 py-1">
             {children}
         </div>
     );
@@ -461,11 +555,20 @@ export const PageForPagination = ({
     content: string;
     active?: boolean;
 }) => (
-    <div className={`rounded-[8px] selection:bg-inherit flex items-center justify-center leading-6 hover:bg-[#F9F5FF] text-[14px] font-medium text-center cursor-pointer w-10 h-10 ${active ? 'bg-[#F9F5FF] text-[#7F56D9]' : 'text-main-orange'
-        }`}
-        onClick={handler}>
+    <button
+        type="button"
+        aria-label={`Page ${content}`}
+        aria-current={active ? 'page' : undefined}
+        className={cn(
+            'flex size-9 shrink-0 items-center justify-center rounded-lg text-sm font-medium transition-colors hover:bg-accent',
+            active
+                ? 'bg-accent text-accent-foreground'
+                : 'text-muted-foreground',
+        )}
+        onClick={handler}
+    >
         {content}
-    </div>
+    </button>
 );
 
 export const ReusablePagination = ({
@@ -497,7 +600,14 @@ export const ReusablePagination = ({
                 isEllipsis: false,
             })),
             ...(gap > 1
-                ? [{ key: 'ellipsis', label: '...', value: -1, isEllipsis: true }]
+                ? [
+                      {
+                          key: 'ellipsis',
+                          label: '...',
+                          value: -1,
+                          isEllipsis: true,
+                      },
+                  ]
                 : []),
             ...rightPages
                 .filter((value) => !leftPages.includes(value))
@@ -515,13 +625,17 @@ export const ReusablePagination = ({
     const pages = renderSlidingPages();
 
     return (
-        <div className='flex flex-col items-center'>
-            <div className='flex items-center justify-center'>
+        <div className="flex flex-col items-center">
+            <div className="flex items-center justify-center">
                 {pages.map((item) => (
                     <PageForPagination
                         key={item.key}
                         content={item.label}
-                        handler={item.isEllipsis ? () => { } : () => onPageChange(item.value)}
+                        handler={
+                            item.isEllipsis
+                                ? () => {}
+                                : () => onPageChange(item.value)
+                        }
                         active={!item.isEllipsis && page === item.value}
                     />
                 ))}
@@ -540,7 +654,7 @@ export const useTabs = <KeyType extends string>({
 
     const activeTabComponent = useMemo(
         () => tabs.find((tab) => tab.key === activeTab),
-        [activeTab, tabs]
+        [activeTab, tabs],
     );
 
     return {
@@ -558,6 +672,7 @@ export const ReusableTabComponent = <KeyType extends string>({
     defaultTab,
     header,
     tabs,
+    onTabChange,
 }: ReusableTabComponentProps<KeyType>) => {
     const { activeTab, tabList, ActiveTabComponent, switchTab } =
         useTabs<KeyType>({
@@ -565,31 +680,37 @@ export const ReusableTabComponent = <KeyType extends string>({
             tabs,
         });
 
-    const onValueChange = (val: string) => switchTab(val as KeyType);
+    const onValueChange = (val: string) => {
+        switchTab(val as KeyType);
+        onTabChange?.(val as KeyType);
+    };
     return (
-        <div className={cn('w-full flex flex-col gap-2')}>
+        <div className={cn('flex w-full flex-col gap-2')}>
             {header}
             <Tabs
                 {...{
                     defaultValue: defaultTab,
                     value: activeTab,
                     onValueChange,
-                }}>
-                <div className='w-full flex items-center justify-between mb-2'>
+                }}
+            >
+                <div className="mb-2 flex w-full items-center justify-between">
                     <TabsList
                         className={cn(
-                            'bg-neutral-200 px-1.5 py-2 rounded-xl h-9',
-                            className
-                        )}>
+                            'h-10 rounded-lg bg-muted p-1',
+                            className,
+                        )}
+                    >
                         {tabList.map(({ title, key }) => (
                             <TabsTrigger
                                 className={cn(
-                                    'cursor-pointer rounded-sm px-3 py-1 transition-all duration-200 font-medium leading-5 text-sm h-7',
-                                    'data-[state=active]:bg-white data-[state=active]:text-dark-brown data-[state=active]:shadow-sm',
-                                    'data-[state=inactive]:text-gray-600 data-[state=inactive]:hover:text-gray-800'
+                                    'h-7 cursor-pointer rounded-sm px-3 py-1 text-sm leading-5 font-medium transition-all duration-200',
+                                    'data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm',
+                                    'data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground',
                                 )}
                                 {...{ value: key }}
-                                key={key}>
+                                key={key}
+                            >
                                 {title}
                             </TabsTrigger>
                         ))}
@@ -599,7 +720,7 @@ export const ReusableTabComponent = <KeyType extends string>({
                 </div>
 
                 {ActiveTabComponent && (
-                    <TabsContent value={activeTab} className='mt-4'>
+                    <TabsContent value={activeTab} className="mt-4">
                         <ActiveTabComponent
                             {...{
                                 ...tabProps,
@@ -622,8 +743,8 @@ export const ReusableReportDropdownFilter = ({
     title,
 }: TReusableSelectProps) => {
     return (
-        <div className={cn(parentClassName, 'w-full flex flex-col gap-2')}>
-            <p className='text-sm font-medium leading-5'>{title}</p>
+        <div className={cn(parentClassName, 'flex w-full flex-col gap-2')}>
+            <p className="text-sm leading-5 font-medium">{title}</p>
             <ReusableSelectComponent
                 className={cn('w-56', className)}
                 {...{
@@ -644,39 +765,44 @@ export const ReusableSelectComponent = ({
     triggerEl,
 }: TReusableSelectProp<string>) => (
     <Select {...{ onValueChange }}>
-        <SelectTrigger className={cn('w-44', className)}>{triggerEl}</SelectTrigger>
+        <SelectTrigger className={cn('w-44', className)}>
+            {triggerEl}
+        </SelectTrigger>
 
         <SelectContent className={cn(className)}>
             {isLoading ? (
                 <SelectItem
-                    className='w-full'
+                    className="w-full"
                     {...{
                         disabled: isLoading,
                         value: 'loading...',
                         align: 'end',
-                    }}>
+                    }}
+                >
                     {t('Loading...')}
                 </SelectItem>
             ) : Array.isArray(actionsMap) && actionsMap.length > 0 ? (
                 actionsMap.map(({ label, value }, index) => (
                     <SelectItem
-                        className='w-full'
+                        className="w-full"
                         {...{
                             value: value!,
                             align: 'end',
                         }}
-                        key={index}>
+                        key={index}
+                    >
                         {label}
                     </SelectItem>
                 ))
             ) : (
                 <SelectItem
-                    className='w-full'
+                    className="w-full"
                     {...{
                         value: 'no-records',
                         disabled: true,
                         align: 'end',
-                    }}>
+                    }}
+                >
                     {t('No records found to show')}
                 </SelectItem>
             )}
@@ -684,7 +810,7 @@ export const ReusableSelectComponent = ({
     </Select>
 );
 
-export const CustomDialogComponent = <T = TKeyValueStringType>({
+export const CustomDialogComponent = <T = TKeyValueStringType,>({
     handleDialogContextSwitch,
     dialogOpen,
     className,
@@ -699,17 +825,20 @@ export const CustomDialogComponent = <T = TKeyValueStringType>({
                 onOpenChange: () => handleDialogContextSwitch({}),
                 open: dialogOpen,
                 modal: true,
-            }}>
+            }}
+        >
             <DialogContent
                 onOpenAutoFocus={(e) => e.preventDefault()}
                 className={cn(
-                    'select-none max-h-[80dvh] flex flex-col overflow-hidden p-0! m-0!',
-                    className ?? ''
-                )}>
+                    'm-0! flex max-h-[80dvh] flex-col overflow-hidden p-0! select-none',
+                    className ?? '',
+                )}
+            >
                 <div
                     {...{
                         className: `relative w-full flex-1 h-full overflow-y-auto py-5 px-4`,
-                    }}>
+                    }}
+                >
                     {children}
                 </div>
             </DialogContent>
@@ -718,7 +847,7 @@ export const CustomDialogComponent = <T = TKeyValueStringType>({
 };
 
 export const ReusableDropDownComponent = <T,>({
-    className = "w-fit max-w-40",
+    className = 'w-fit max-w-40',
     ActionsHandlerMapping,
     triggerEl,
 }: TReusableDropdownProp<T>) => {
@@ -726,35 +855,40 @@ export const ReusableDropDownComponent = <T,>({
         <DropdownMenu
             {...{
                 modal: true,
-            }}>
+            }}
+        >
             <DropdownMenuTrigger asChild>{triggerEl}</DropdownMenuTrigger>
             <DropdownMenuContent className={cn(className)}>
-                {ActionsHandlerMapping.map(({ label, value, onSelect }, index) => {
-                    return (
-                        <DropdownMenuItem
-                            className='w-full capitalize'
-                            {...{
-                                onSelect: () => value && onSelect(value),
-                                align: 'end',
-                            }}
-                            key={index}>
-                            {label}
-                        </DropdownMenuItem>
-                    );
-                })}
+                {ActionsHandlerMapping.map(
+                    ({ label, value, onSelect }, index) => {
+                        return (
+                            <DropdownMenuItem
+                                className="w-full capitalize"
+                                {...{
+                                    onSelect: () => value && onSelect(value),
+                                    align: 'end',
+                                }}
+                                key={index}
+                            >
+                                {label}
+                            </DropdownMenuItem>
+                        );
+                    },
+                )}
             </DropdownMenuContent>
         </DropdownMenu>
     );
 };
 
-export const ReusableModalHeader = ({ title, className }: TReusableModalHeaderProps) => {
+export const ReusableModalHeader = ({
+    title,
+    className,
+}: TReusableModalHeaderProps) => {
     return (
         <>
             <DialogTitle
-                className={cn(
-                    "text-xl font-semibold border-b pb-2",
-                    className
-                )}>
+                className={cn('border-b pb-2 text-xl font-semibold', className)}
+            >
                 {title}
             </DialogTitle>
             <hr />
@@ -768,8 +902,8 @@ export const ReusableAlertModal: React.FC<ReusableAlertModalProps> = ({
     const {
         title,
         description,
-        confirmText = "Confirm",
-        cancelText = "Cancel",
+        confirmText = 'Confirm',
+        cancelText = 'Cancel',
         onConfirm,
         onClose,
         variant = VARIANTCOLOR.default,
@@ -786,16 +920,21 @@ export const ReusableAlertModal: React.FC<ReusableAlertModalProps> = ({
                         variant="outline"
                         onClick={() => {
                             onClose?.();
-                        }}>
+                        }}
+                    >
                         {cancelText}
                     </Button>
                 </DialogClose>
                 <Button
-                    variant={VARIANTCOLOR[variant as keyof typeof VARIANTCOLOR] || VARIANTCOLOR.default}
+                    variant={
+                        VARIANTCOLOR[variant as keyof typeof VARIANTCOLOR] ||
+                        VARIANTCOLOR.default
+                    }
                     onClick={() => {
                         onConfirm?.();
                         onClose?.();
-                    }}>
+                    }}
+                >
                     {confirmText}
                 </Button>
             </DialogFooter>
@@ -809,14 +948,14 @@ export const ReusableSearchSelect: React.FC<ReusableSearchSelectProps> = ({
     data,
     error,
     required = false,
-    placeholder = "Select an option...",
+    placeholder = 'Select an option...',
     onChange,
     value: controlledValue,
-    emptyMessage = "No results found.",
-    searchPlaceholder = "Search...",
+    emptyMessage = 'No results found.',
+    searchPlaceholder = 'Search...',
 }) => {
-    const [value, setValue] = React.useState(controlledValue ?? "");
-    const [nativeSearch, setNativeSearch] = React.useState("");
+    const [value, setValue] = React.useState(controlledValue ?? '');
+    const [nativeSearch, setNativeSearch] = React.useState('');
 
     React.useEffect(() => {
         if (controlledValue !== undefined) setValue(controlledValue);
@@ -840,14 +979,19 @@ export const ReusableSearchSelect: React.FC<ReusableSearchSelectProps> = ({
                     setValue(v);
                     onChange?.(v);
                 }}
-                onOpenChange={(o) => { if (!o) setNativeSearch(""); }}
+                onOpenChange={(o) => {
+                    if (!o) setNativeSearch('');
+                }}
             >
-                <SelectTrigger id={id} className={cn(!value && "text-muted-foreground")}>
+                <SelectTrigger
+                    id={id}
+                    className={cn(!value && 'text-muted-foreground')}
+                >
                     <SelectValue placeholder={placeholder} />
                 </SelectTrigger>
                 <SelectContent>
                     <div
-                        className="flex items-center border-b px-3 sticky top-0 bg-popover z-10"
+                        className="sticky top-0 z-10 flex items-center border-b bg-popover px-3"
                         onPointerDown={(e) => e.stopPropagation()}
                         onKeyDown={(e) => e.stopPropagation()}
                     >
@@ -866,7 +1010,10 @@ export const ReusableSearchSelect: React.FC<ReusableSearchSelectProps> = ({
                     ) : (
                         filteredNative.map((item) => (
                             <SelectItem key={item.value} value={item.value}>
-                                <HighlightMatch text={item.label} query={nativeSearch} />
+                                <HighlightMatch
+                                    text={item.label}
+                                    query={nativeSearch}
+                                />
                             </SelectItem>
                         ))
                     )}
@@ -884,7 +1031,7 @@ function HighlightMatch({ text, query }: { text: string; query: string }) {
     return (
         <span>
             {text.slice(0, idx)}
-            <mark className="bg-yellow-200 dark:bg-yellow-800 rounded-[2px] px-0.5">
+            <mark className="rounded-[2px] bg-yellow-200 px-0.5 dark:bg-yellow-800">
                 {text.slice(idx, idx + query.length)}
             </mark>
             {text.slice(idx + query.length)}
@@ -900,7 +1047,7 @@ export const ReusableTextInput = ({
     required = false,
     onChange,
     error,
-    type
+    type,
 }: ReusableTextInputProps) => {
     return (
         <div>
@@ -915,9 +1062,7 @@ export const ReusableTextInput = ({
                 placeholder={placeholder}
                 onChange={(e) => onChange(e.target.value)}
             />
-            {error && (
-                <p className="text-sm text-red-600 mt-1">{error}</p>
-            )}
+            {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
         </div>
     );
 };
@@ -926,7 +1071,7 @@ export const ReusableEmailInput = ({
     id,
     label,
     value,
-    placeholder = "example@mail.com",
+    placeholder = 'example@mail.com',
     required = false,
     onChange,
     error,
@@ -945,9 +1090,7 @@ export const ReusableEmailInput = ({
                 onChange={(e) => onChange(e.target.value)}
             />
 
-            {error && (
-                <p className="text-sm text-red-600 mt-1">{error}</p>
-            )}
+            {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
         </div>
     );
 };
@@ -962,7 +1105,7 @@ export const ReusableNumberInput = ({
     max,
     step,
     onChange,
-    error
+    error,
 }: ReusableNumberInputProps) => {
     return (
         <div className="w-full">
@@ -980,9 +1123,7 @@ export const ReusableNumberInput = ({
                 step={step}
                 onChange={(e) => onChange(e.target.value)}
             />
-            {error && (
-                <p className="text-sm text-red-600 mt-1">{error}</p>
-            )}
+            {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
         </div>
     );
 };
@@ -995,7 +1136,7 @@ export const ReusableDateInput = ({
     min,
     max,
     onChange,
-    error
+    error,
 }: ReusableDateInputProps) => {
     return (
         <div className="w-full">
@@ -1011,9 +1152,7 @@ export const ReusableDateInput = ({
                 max={max}
                 onChange={(e) => onChange(e.target.value)}
             />
-            {error && (
-                <p className="text-sm text-red-600 mt-1">{error}</p>
-            )}
+            {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
         </div>
     );
 };
@@ -1022,7 +1161,7 @@ export const ReusableCheckbox = ({
     id,
     label,
     checked,
-    onChange
+    onChange,
 }: ReusableCheckboxProps) => {
     return (
         <div className="flex items-center space-x-2">
@@ -1044,7 +1183,7 @@ export const ReusableTextarea = ({
     required = false,
     rows = 3,
     error,
-    onChange
+    onChange,
 }: ReusableTextareaProps) => {
     return (
         <div className="w-full">
@@ -1059,35 +1198,45 @@ export const ReusableTextarea = ({
                 rows={rows}
                 onChange={(e) => onChange(e.target.value)}
             />
-            {error && (
-                <p className="text-sm text-red-600 mt-1">{error}</p>
-            )}
+            {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
         </div>
     );
 };
 
-export const ReusableSearchMultiSelect: React.FC<ReusableSearchMultiSelectProps> = ({
+export const ReusableSearchMultiSelect: React.FC<
+    ReusableSearchMultiSelectProps
+> = ({
     id,
     label,
     data,
     error,
     required = false,
-    placeholder = "Select an option...",
+    placeholder = 'Select an option...',
     onChange,
     value: controlledValue,
-    emptyMessage = "No results found.",
-    searchPlaceholder = "Search...",
+    emptyMessage = 'No results found.',
+    searchPlaceholder = 'Search...',
     multiple = false,
 }) => {
     const [open, setOpen] = React.useState(false);
-    const [search, setSearch] = React.useState("");
+    const [search, setSearch] = React.useState('');
     const [value, setValue] = React.useState<string[]>(() =>
-        Array.isArray(controlledValue) ? controlledValue : controlledValue ? [controlledValue] : []
+        Array.isArray(controlledValue)
+            ? controlledValue
+            : controlledValue
+              ? [controlledValue]
+              : [],
     );
 
     React.useEffect(() => {
         if (controlledValue !== undefined) {
-            setValue(Array.isArray(controlledValue) ? controlledValue : controlledValue ? [controlledValue] : []);
+            setValue(
+                Array.isArray(controlledValue)
+                    ? controlledValue
+                    : controlledValue
+                      ? [controlledValue]
+                      : [],
+            );
         }
     }, [controlledValue]);
 
@@ -1102,20 +1251,20 @@ export const ReusableSearchMultiSelect: React.FC<ReusableSearchMultiSelectProps>
             setOpen(false);
         }
         setValue(newValue);
-        onChange?.(multiple ? newValue : newValue[0] || "");
+        onChange?.(multiple ? newValue : newValue[0] || '');
     };
 
     const handleClear = (e: React.MouseEvent) => {
         e.stopPropagation();
         setValue([]);
-        onChange?.(multiple ? [] : "");
+        onChange?.(multiple ? [] : '');
     };
 
     const handleRemoveTag = (e: React.MouseEvent, val: string) => {
         e.stopPropagation();
         const newValue = value.filter((v) => v !== val);
         setValue(newValue);
-        onChange?.(multiple ? newValue : newValue[0] || "");
+        onChange?.(multiple ? newValue : newValue[0] || '');
     };
     const filtered = React.useMemo(() => {
         if (!search.trim()) return data;
@@ -1131,7 +1280,13 @@ export const ReusableSearchMultiSelect: React.FC<ReusableSearchMultiSelectProps>
                 {label}
                 {required && <span className="text-red-500">*</span>}
             </Label>
-            <Popover open={open} onOpenChange={(o) => { setOpen(o); if (!o) setSearch(""); }}>
+            <Popover
+                open={open}
+                onOpenChange={(o) => {
+                    setOpen(o);
+                    if (!o) setSearch('');
+                }}
+            >
                 <PopoverTrigger asChild>
                     <Button
                         id={id}
@@ -1139,33 +1294,40 @@ export const ReusableSearchMultiSelect: React.FC<ReusableSearchMultiSelectProps>
                         role="combobox"
                         aria-expanded={open}
                         className={cn(
-                            "w-full justify-between font-normal min-h-9 h-auto py-1.5",
-                            !value.length && "text-muted-foreground"
-                        )}>
+                            'h-auto min-h-9 w-full justify-between py-1.5 font-normal',
+                            !value.length && 'text-muted-foreground',
+                        )}
+                    >
                         {multiple && selectedItems.length > 0 ? (
-                            <div className="flex flex-wrap gap-1 flex-1 mr-2">
+                            <div className="mr-2 flex flex-1 flex-wrap gap-1">
                                 {selectedItems.map((item) => (
                                     <span
                                         key={item.value}
-                                        className="inline-flex items-center gap-1 rounded-md bg-secondary text-secondary-foreground text-xs px-1.5 py-0.5"
+                                        className="inline-flex items-center gap-1 rounded-md bg-secondary px-1.5 py-0.5 text-xs text-secondary-foreground"
                                     >
-                                        <span className="max-w-[120px] truncate">{item.label}</span>
+                                        <span className="max-w-[120px] truncate">
+                                            {item.label}
+                                        </span>
                                         <X
-                                            className="h-3 w-3 shrink-0 opacity-60 hover:opacity-100 cursor-pointer"
-                                            onClick={(e) => handleRemoveTag(e, item.value)}
+                                            className="h-3 w-3 shrink-0 cursor-pointer opacity-60 hover:opacity-100"
+                                            onClick={(e) =>
+                                                handleRemoveTag(e, item.value)
+                                            }
                                         />
                                     </span>
                                 ))}
                             </div>
                         ) : (
-                            <span className="truncate flex-1 text-left">
-                                {selectedItems.length === 1 ? selectedItems[0].label : placeholder}
+                            <span className="flex-1 truncate text-left">
+                                {selectedItems.length === 1
+                                    ? selectedItems[0].label
+                                    : placeholder}
                             </span>
                         )}
-                        <div className="flex items-center gap-1 shrink-0 ml-1">
+                        <div className="ml-1 flex shrink-0 items-center gap-1">
                             {value.length > 0 && (
                                 <X
-                                    className="h-3.5 w-3.5 opacity-50 hover:opacity-100 cursor-pointer"
+                                    className="h-3.5 w-3.5 cursor-pointer opacity-50 hover:opacity-100"
                                     onClick={handleClear}
                                 />
                             )}
@@ -1174,13 +1336,15 @@ export const ReusableSearchMultiSelect: React.FC<ReusableSearchMultiSelectProps>
                     </Button>
                 </PopoverTrigger>
                 <PopoverContent
-                    className="w-(--radix-popover-trigger-width) p-0 shadow-lg border border-border/60 rounded-lg overflow-hidden"
+                    className="w-(--radix-popover-trigger-width) overflow-hidden rounded-lg border border-border/60 p-0 shadow-lg"
                     align="start"
-                    sideOffset={6}>
+                    sideOffset={6}
+                >
                     <Command shouldFilter={false}>
                         <div
-                            className="flex items-center gap-2 px-3 py-2 border-b bg-muted/30"
-                            onPointerDown={(e) => e.stopPropagation()}>
+                            className="flex items-center gap-2 border-b bg-muted/30 px-3 py-2"
+                            onPointerDown={(e) => e.stopPropagation()}
+                        >
                             <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
                             <input
                                 value={search}
@@ -1190,41 +1354,62 @@ export const ReusableSearchMultiSelect: React.FC<ReusableSearchMultiSelectProps>
                             />
                             {search && (
                                 <button
-                                    onClick={() => setSearch("")}
-                                    className="rounded-sm p-0.5 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
+                                    onClick={() => setSearch('')}
+                                    className="rounded-sm p-0.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                                >
                                     <X className="h-3.5 w-3.5" />
                                 </button>
                             )}
                         </div>
-                        <CommandList className="max-h-64 overflow-y-auto scrollbar-thin">
+                        <CommandList className="scrollbar-thin max-h-64 overflow-y-auto">
                             {filtered.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
                                     <div className="rounded-full bg-muted p-2">
                                         <Search className="h-4 w-4 text-muted-foreground" />
                                     </div>
-                                    <p className="text-sm text-muted-foreground">{emptyMessage}</p>
+                                    <p className="text-sm text-muted-foreground">
+                                        {emptyMessage}
+                                    </p>
                                 </div>
                             ) : (
                                 <CommandGroup className="p-1.5">
                                     {multiple && !search && (
                                         <CommandItem
                                             onSelect={() => {
-                                                const allValues = data.map((d) => d.value);
-                                                const allSelected = allValues.every((v) => value.includes(v));
-                                                const newValue = allSelected ? [] : allValues;
+                                                const allValues = data.map(
+                                                    (d) => d.value,
+                                                );
+                                                const allSelected =
+                                                    allValues.every((v) =>
+                                                        value.includes(v),
+                                                    );
+                                                const newValue = allSelected
+                                                    ? []
+                                                    : allValues;
                                                 setValue(newValue);
                                                 onChange?.(newValue);
                                             }}
-                                            className="cursor-pointer rounded-md mb-1 px-2 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground data-[selected=true]:bg-accent">
-                                            <div className="flex items-center gap-2.5 w-full">
-                                                <div className={cn(
-                                                    "flex h-4 w-4 items-center justify-center rounded-sm border shrink-0 transition-colors",
-                                                    data.every((d) => value.includes(d.value))
-                                                        ? "bg-primary border-primary text-primary-foreground"
-                                                        : data.some((d) => value.includes(d.value))
-                                                            ? "bg-primary/30 border-primary/50 text-primary-foreground"
-                                                            : "border-border"
-                                                )}>
+                                            className="mb-1 cursor-pointer rounded-md px-2 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground data-[selected=true]:bg-accent"
+                                        >
+                                            <div className="flex w-full items-center gap-2.5">
+                                                <div
+                                                    className={cn(
+                                                        'flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border transition-colors',
+                                                        data.every((d) =>
+                                                            value.includes(
+                                                                d.value,
+                                                            ),
+                                                        )
+                                                            ? 'border-primary bg-primary text-primary-foreground'
+                                                            : data.some((d) =>
+                                                                    value.includes(
+                                                                        d.value,
+                                                                    ),
+                                                                )
+                                                              ? 'border-primary/50 bg-primary/30 text-primary-foreground'
+                                                              : 'border-border',
+                                                    )}
+                                                >
                                                     <Check className="h-3 w-3" />
                                                 </div>
                                                 <span>Select all</span>
@@ -1235,23 +1420,48 @@ export const ReusableSearchMultiSelect: React.FC<ReusableSearchMultiSelectProps>
                                         </CommandItem>
                                     )}
 
-                                    <div className={cn(multiple && !search && "border-t pt-1 mt-0.5")}>
+                                    <div
+                                        className={cn(
+                                            multiple &&
+                                                !search &&
+                                                'mt-0.5 border-t pt-1',
+                                        )}
+                                    >
                                         {filtered.map((item) => (
                                             <CommandItem
                                                 key={item.value}
                                                 value={item.value}
-                                                onSelect={() => handleSelect(item.value)}
-                                                className="cursor-pointer rounded-md px-2 py-1.5 data-[selected=true]:bg-accent aria-selected:bg-accent">
-                                                <div className="flex items-center gap-2.5 w-full">
-                                                    <div className={cn(
-                                                        "flex h-4 w-4 items-center justify-center rounded-sm border shrink-0 transition-colors",
-                                                        value.includes(item.value)
-                                                            ? "bg-primary border-primary text-primary-foreground"
-                                                            : "border-border opacity-60"
-                                                    )}>
-                                                        <Check className={cn("h-3 w-3 transition-opacity", value.includes(item.value) ? "opacity-100" : "opacity-0")} />
+                                                onSelect={() =>
+                                                    handleSelect(item.value)
+                                                }
+                                                className="cursor-pointer rounded-md px-2 py-1.5 aria-selected:bg-accent data-[selected=true]:bg-accent"
+                                            >
+                                                <div className="flex w-full items-center gap-2.5">
+                                                    <div
+                                                        className={cn(
+                                                            'flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border transition-colors',
+                                                            value.includes(
+                                                                item.value,
+                                                            )
+                                                                ? 'border-primary bg-primary text-primary-foreground'
+                                                                : 'border-border opacity-60',
+                                                        )}
+                                                    >
+                                                        <Check
+                                                            className={cn(
+                                                                'h-3 w-3 transition-opacity',
+                                                                value.includes(
+                                                                    item.value,
+                                                                )
+                                                                    ? 'opacity-100'
+                                                                    : 'opacity-0',
+                                                            )}
+                                                        />
                                                     </div>
-                                                    <HighlightMatch text={item.label} query={search} />
+                                                    <HighlightMatch
+                                                        text={item.label}
+                                                        query={search}
+                                                    />
                                                 </div>
                                             </CommandItem>
                                         ))}
@@ -1262,11 +1472,15 @@ export const ReusableSearchMultiSelect: React.FC<ReusableSearchMultiSelectProps>
                         {multiple && value.length > 0 && (
                             <div className="flex items-center justify-between border-t bg-muted/20 px-3 py-2">
                                 <span className="text-xs text-muted-foreground">
-                                    <span className="font-medium text-foreground">{value.length}</span> of {data.length} selected
+                                    <span className="font-medium text-foreground">
+                                        {value.length}
+                                    </span>{' '}
+                                    of {data.length} selected
                                 </span>
                                 <button
                                     onClick={handleClear}
-                                    className="text-xs text-muted-foreground hover:text-foreground transition-colors underline-offset-2 hover:underline">
+                                    className="text-xs text-muted-foreground underline-offset-2 transition-colors hover:text-foreground hover:underline"
+                                >
                                     Clear all
                                 </button>
                             </div>
@@ -1292,15 +1506,22 @@ export const ReusableNormalSelect: React.FC<ReusableNormalSelectProps> = ({
     return (
         <div className="space-y-1">
             <Label htmlFor={id}>
-                {label} {required && <span className="text-destructive">*</span>}
+                {label}{' '}
+                {required && <span className="text-destructive">*</span>}
             </Label>
-            <Select value={value === undefined ? undefined : String(value)} onValueChange={(val) => onChange?.(val)}>
+            <Select
+                value={value === undefined ? undefined : String(value)}
+                onValueChange={(val) => onChange?.(val)}
+            >
                 <SelectTrigger id={id}>
                     <SelectValue placeholder={placeholder} />
                 </SelectTrigger>
                 <SelectContent>
                     {data.map((item: any) => (
-                        <SelectItem key={item.value} value={String(item?.value)}>
+                        <SelectItem
+                            key={item.value}
+                            value={String(item?.value)}
+                        >
                             {item.label}
                         </SelectItem>
                     ))}
@@ -1350,37 +1571,43 @@ export const ReusableFileInput: React.FC<ReusableFileInputProps> = ({
         const updated = value.filter((_, i) => i !== index);
         onChange(updated);
     };
-    const renderPreview = (item: { file: File; url: string; type: string }, index: number) => {
-        const isImage = item.type.startsWith("image/");
-        const isPDF = item.type === "application/pdf";
+    const renderPreview = (
+        item: { file: File; url: string; type: string },
+        index: number,
+    ) => {
+        const isImage = item.type.startsWith('image/');
+        const isPDF = item.type === 'application/pdf';
         return (
             <div
                 key={index}
-                className="relative border p-3 rounded-lg bg-gray-50 flex items-center gap-3">
+                className="relative flex items-center gap-3 rounded-lg border bg-gray-50 p-3"
+            >
                 {isImage && (
                     <img
                         src={item.url}
                         alt={item.file.name}
-                        className="h-20 w-20 rounded object-cover border"
+                        className="h-20 w-20 rounded border object-cover"
                     />
                 )}
                 {isPDF && (
-                    <div className="h-20 w-20 flex items-center justify-center bg-red-100 rounded">
+                    <div className="flex h-20 w-20 items-center justify-center rounded bg-red-100">
                         <FileText className="h-10 w-10 text-red-600" />
                     </div>
                 )}
                 {!isImage && !isPDF && (
-                    <div className="h-20 w-20 flex items-center justify-center bg-gray-200 rounded">
+                    <div className="flex h-20 w-20 items-center justify-center rounded bg-gray-200">
                         <FileIcon className="h-10 w-10 text-gray-600" />
                     </div>
                 )}
                 <div className="flex-1">
-                    <p className="text-sm font-medium line-clamp-1">{item.file.name}</p>
+                    <p className="line-clamp-1 text-sm font-medium">
+                        {item.file.name}
+                    </p>
                     <p className="text-xs text-gray-500">{item.file.type}</p>
                     <a
                         href={item.url}
                         download={item.file.name}
-                        className="inline-flex items-center gap-1 text-blue-600 text-xs underline mt-1"
+                        className="mt-1 inline-flex items-center gap-1 text-xs text-blue-600 underline"
                     >
                         <Download className="h-3 w-3" /> {t('Download')}
                     </a>
@@ -1389,7 +1616,8 @@ export const ReusableFileInput: React.FC<ReusableFileInputProps> = ({
                     variant="ghost"
                     size="icon"
                     onClick={() => removeFile(index)}
-                    className="absolute right-2 top-2">
+                    className="absolute top-2 right-2"
+                >
                     <X className="h-4 w-4" />
                 </Button>
             </div>
@@ -1401,7 +1629,7 @@ export const ReusableFileInput: React.FC<ReusableFileInputProps> = ({
             {label && (
                 <Label htmlFor={id}>
                     {label}
-                    {required && <span className="text-red-500 ml-1">*</span>}
+                    {required && <span className="ml-1 text-red-500">*</span>}
                 </Label>
             )}
 
@@ -1410,10 +1638,10 @@ export const ReusableFileInput: React.FC<ReusableFileInputProps> = ({
                 type="file"
                 multiple={multiple}
                 onChange={handleSelectFiles}
-                className="block w-full border rounded px-3 py-2 text-sm"
+                className="block w-full rounded border px-3 py-2 text-sm"
             />
             {previews.length > 0 && (
-                <div className="space-y-3 mt-2">
+                <div className="mt-2 space-y-3">
                     {previews.map((item, index) => renderPreview(item, index))}
                 </div>
             )}
@@ -1437,7 +1665,7 @@ export const InfoRow = ({
             {Icon && <Icon className="h-4 w-4" />}
             <span>{label}</span>
         </div>
-        <div className="text-sm font-medium text-right">{value}</div>
+        <div className="text-right text-sm font-medium">{value}</div>
     </div>
 );
 
@@ -1448,24 +1676,33 @@ export const ReusableSheet = ({
     description,
     children,
     footer,
-    side = "right",
+    side = 'right',
     width,
 }: ReusableSheetProps) => {
     const defaultWidth =
-        side === "left" || side === "right"
-            ? "w-full sm:max-w-xl md:max-w-2xl lg:max-w-3xl"
-            : "w-full mx-auto sm:max-w-xl md:max-w-2xl lg:max-w-3xl";
+        side === 'left' || side === 'right'
+            ? 'w-full sm:max-w-xl md:max-w-2xl lg:max-w-3xl'
+            : 'w-full mx-auto sm:max-w-xl md:max-w-2xl lg:max-w-3xl';
 
     const appliedWidth = width ? width : defaultWidth;
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent side={side} style={{ maxWidth: width }} className={`${appliedWidth} flex flex-col h-full`}>
+            <SheetContent
+                side={side}
+                style={{
+                    width: width ? `min(100vw, ${width})` : undefined,
+                    maxWidth: '100vw',
+                }}
+                className={`${appliedWidth} flex h-full flex-col`}
+            >
                 <SheetHeader className="shrink-0">
                     <SheetTitle>{title}</SheetTitle>
-                    {description && <SheetDescription>{description}</SheetDescription>}
+                    {description && (
+                        <SheetDescription>{description}</SheetDescription>
+                    )}
                 </SheetHeader>
 
-                <div className="p-2 sm:p-4 flex-1 overflow-auto min-h-0">
+                <div className="min-h-0 flex-1 overflow-auto p-2 sm:p-4">
                     {children}
                 </div>
 
@@ -1484,8 +1721,8 @@ export const ReusableSheet = ({
 };
 const infoCardVariants = {
     default: '',
-    elevated: 'border border-border/50 bg-gradient-to-b from-card to-muted/30',
-    bordered: 'border-l-4 border-l-primary',
+    elevated: 'bg-card',
+    bordered: 'bg-card',
 };
 
 export function InfoCardSkeleton({
@@ -1499,26 +1736,29 @@ export function InfoCardSkeleton({
     return (
         <Card className={cn(infoCardVariants[variant], className)}>
             <CardHeader className={cn(variant !== 'default' && 'pb-3')}>
-                <CardTitle className={cn(
-                    'flex items-center gap-2',
-                    variant !== 'default' && 'gap-2.5 text-base'
-                )}>
-                    {icon && (variant !== 'default' ? (
-                        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary [&>svg]:size-4">
-                            {icon}
-                        </span>
-                    ) : (
-                        icon
-                    ))}
+                <CardTitle
+                    className={cn(
+                        'flex items-center gap-2',
+                        variant !== 'default' && 'gap-2.5 text-base',
+                    )}
+                >
+                    {icon &&
+                        (variant !== 'default' ? (
+                            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary [&>svg]:size-4">
+                                {icon}
+                            </span>
+                        ) : (
+                            icon
+                        ))}
                     {title}
                 </CardTitle>
                 {description && (
-                    <CardDescription className="mt-0.5">{description}</CardDescription>
+                    <CardDescription className="mt-0.5">
+                        {description}
+                    </CardDescription>
                 )}
             </CardHeader>
-            <CardContent className="space-y-0 pt-0">
-                {children}
-            </CardContent>
+            <CardContent className="space-y-0 pt-0">{children}</CardContent>
         </Card>
     );
 }
@@ -1554,16 +1794,25 @@ export const ConfirmationDialog = ({
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>{t(title)}</AlertDialogTitle>
-                    <AlertDialogDescription>{t(description)}</AlertDialogDescription>
+                    <AlertDialogDescription>
+                        {t(description)}
+                    </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel onClick={handleCancel} disabled={isLoading}>
+                    <AlertDialogCancel
+                        onClick={handleCancel}
+                        disabled={isLoading}
+                    >
                         {t(cancelLabel)}
                     </AlertDialogCancel>
                     <AlertDialogAction
                         onClick={handleConfirm}
                         disabled={isLoading}
-                        className={variant === 'destructive' ? 'bg-destructive text-white hover:bg-destructive/90' : ''}
+                        className={
+                            variant === 'destructive'
+                                ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                                : ''
+                        }
                     >
                         {isLoading ? t('Processing...') : t(confirmLabel)}
                     </AlertDialogAction>
@@ -1576,23 +1825,34 @@ export const ConfirmationDialog = ({
 export const useConfirmationDialog = (): UseConfirmationDialogReturn => {
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [config, setConfig] = useState<Omit<ConfirmationDialogProps, 'open' | 'onOpenChange'> | null>(null);
+    const [config, setConfig] = useState<Omit<
+        ConfirmationDialogProps,
+        'open' | 'onOpenChange'
+    > | null>(null);
 
-    const confirm = useCallback((newConfig: Omit<ConfirmationDialogProps, 'open' | 'onOpenChange' | 'onConfirm'> & { onConfirm: () => void | Promise<void> }) => {
-        setConfig({
-            ...newConfig,
-            onConfirm: async () => {
-                setIsLoading(true);
-                try {
-                    await newConfig.onConfirm();
-                } finally {
-                    setIsLoading(false);
-                    setIsOpen(false);
-                }
-            },
-        });
-        setIsOpen(true);
-    }, []);
+    const confirm = useCallback(
+        (
+            newConfig: Omit<
+                ConfirmationDialogProps,
+                'open' | 'onOpenChange' | 'onConfirm'
+            > & { onConfirm: () => void | Promise<void> },
+        ) => {
+            setConfig({
+                ...newConfig,
+                onConfirm: async () => {
+                    setIsLoading(true);
+                    try {
+                        await newConfig.onConfirm();
+                    } finally {
+                        setIsLoading(false);
+                        setIsOpen(false);
+                    }
+                },
+            });
+            setIsOpen(true);
+        },
+        [],
+    );
 
     const ConfirmDialog = useCallback(() => {
         if (!config) return null;
@@ -1611,7 +1871,7 @@ export const useConfirmationDialog = (): UseConfirmationDialogReturn => {
 
 const statCardVariants = {
     default: '',
-    highlight: 'border border-primary/20 bg-primary/5',
+    highlight: 'border-primary/20',
     compact: 'py-4',
 };
 
@@ -1624,48 +1884,73 @@ export const StatCard = ({
     valueClassName,
     descriptionClassName,
     variant = 'default',
-    className
+    className,
 }: StatCardProps) => {
     return (
-        <Card className={cn(statCardVariants[variant], className)}>
+        <Card
+            className={cn(
+                'stat-card gap-3 py-5',
+                statCardVariants[variant],
+                className,
+            )}
+        >
             <CardHeader className="pb-2">
                 <div className="flex items-center justify-between gap-2">
                     <CardTitle
                         className={cn(
                             'text-sm font-medium text-muted-foreground',
                             variant === 'highlight' && 'text-foreground',
-                            titleClassName
-                        )}>
+                            titleClassName,
+                        )}
+                    >
                         {title}
                     </CardTitle>
-                    <span className={cn(
-                        'flex size-9 shrink-0 items-center justify-center rounded-lg',
-                        variant === 'highlight' ? 'bg-primary/20 text-primary' : 'bg-muted/80 text-muted-foreground'
-                    )}>
+                    <span
+                        className={cn(
+                            'flex size-8 shrink-0 items-center justify-center rounded-lg bg-accent text-primary',
+                            variant === 'highlight'
+                                ? 'text-primary'
+                                : 'text-muted-foreground',
+                        )}
+                    >
                         {icon}
                     </span>
                 </div>
             </CardHeader>
             <CardContent>
-                <div className={cn(
-                    'font-bold tabular-nums',
-                    variant === 'compact' ? 'text-xl' : 'text-2xl',
-                    valueClassName
-                )}>
+                <div
+                    className={cn(
+                        'font-semibold tracking-tight tabular-nums',
+                        variant === 'compact'
+                            ? 'text-xl'
+                            : 'text-[28px] leading-tight',
+                        valueClassName,
+                    )}
+                >
                     {value}
                 </div>
                 {description && (
-                    <p className={cn('text-xs text-muted-foreground mt-1.5', descriptionClassName)}>
+                    <p
+                        className={cn(
+                            'mt-1.5 text-xs text-muted-foreground',
+                            descriptionClassName,
+                        )}
+                    >
                         {description}
                     </p>
                 )}
             </CardContent>
         </Card>
     );
-
 };
 
-export const CopyButton = ({ text, label }: { text: string; label?: string }) => {
+export const CopyButton = ({
+    text,
+    label,
+}: {
+    text: string;
+    label?: string;
+}) => {
     const { t } = useTranslation();
     const [copied, setCopied] = useState(false);
 
@@ -1679,16 +1964,27 @@ export const CopyButton = ({ text, label }: { text: string; label?: string }) =>
             variant="outline"
             size="sm"
             onClick={handleCopy}
-            className="flex items-center gap-1">
-            {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+            className="flex items-center gap-1"
+        >
+            {copied ? (
+                <Check className="h-4 w-4 text-green-500" />
+            ) : (
+                <Copy className="h-4 w-4" />
+            )}
             {label || (copied ? t('Copied!') : t('Copy'))}
         </Button>
     );
 };
 
-export const CodeBlock = ({ code, language = 'html' }: { code: string; language?: string }) => (
+export const CodeBlock = ({
+    code,
+    language = 'html',
+}: {
+    code: string;
+    language?: string;
+}) => (
     <div className="relative">
-        <pre className="bg-slate-900 text-slate-100 p-4 rounded-lg overflow-x-auto text-sm">
+        <pre className="overflow-x-auto rounded-lg bg-slate-900 p-4 text-sm text-slate-100">
             <code className={`language-${language}`}>{code}</code>
         </pre>
         <div className="absolute top-2 right-2">
@@ -1728,20 +2024,29 @@ export const ReusableCheckBoxGroup = <T,>({
                     <Label
                         key={String(option.value)}
                         className={cn(
-                            'hover:bg-accent/50 flex items-start gap-2 rounded-lg border p-3',
-                            'has-aria-checked:border-blue-600 has-aria-checked:bg-blue-50',
-                            option.disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
-                        )}>
+                            'flex items-start gap-2 rounded-lg border p-3 hover:bg-accent/50',
+                            'has-aria-checked:border-primary has-aria-checked:bg-accent',
+                            option.disabled
+                                ? 'cursor-not-allowed opacity-60'
+                                : 'cursor-pointer',
+                        )}
+                    >
                         <Checkbox
                             checked={isChecked}
                             disabled={option.disabled}
-                            onCheckedChange={(checked) => handleToggle(option.value, Boolean(checked))}
-                            className='data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600 data-[state=checked]:text-white'
+                            onCheckedChange={(checked) =>
+                                handleToggle(option.value, Boolean(checked))
+                            }
+                            className="data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
                         />
-                        <div className='grid gap-1.5 font-normal'>
-                            <p className='text-sm leading-none font-medium'>{option.label}</p>
+                        <div className="grid gap-1.5 font-normal">
+                            <p className="text-sm leading-none font-medium">
+                                {option.label}
+                            </p>
                             {option.description ? (
-                                <p className='text-muted-foreground text-sm'>{option.description}</p>
+                                <p className="text-sm text-muted-foreground">
+                                    {option.description}
+                                </p>
                             ) : null}
                         </div>
                     </Label>

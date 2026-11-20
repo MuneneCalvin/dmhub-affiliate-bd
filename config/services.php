@@ -2,10 +2,6 @@
 
 return [
 
-    'postback' => [
-        'secret' => env('POSTBACK_SECRET'),
-    ],
-
     /*
     |--------------------------------------------------------------------------
     | Third Party Services

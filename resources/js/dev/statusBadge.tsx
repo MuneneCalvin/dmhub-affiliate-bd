@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Badge } from '@/components/ui/badge';
-import i18n from '@/i18n/index';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 export const StatusBadge: React.FC<any> = ({ status }) => {
+    const { t } = useTranslation();
     const getStatusVariant = (
         status: any,
     ): 'default' | 'secondary' | 'destructive' | 'outline' => {
@@ -22,10 +23,13 @@ export const StatusBadge: React.FC<any> = ({ status }) => {
             case 'approved':
             case 'paid':
             case 'invoiced':
+            case 'locked':
+            case 'payable':
                 return 'outline';
             case 'D':
             case 'N':
             case 'R':
+            case 'reversed':
             case 'rejected':
             case 'cancelled':
                 return 'destructive';
@@ -46,17 +50,6 @@ export const StatusBadge: React.FC<any> = ({ status }) => {
                 return 'default';
             case 'low':
                 return 'secondary';
-            // Lead statuses
-            case 'new':
-                return 'default';
-            case 'contacted':
-                return 'secondary';
-            case 'qualified':
-                return 'outline';
-            case 'converted':
-                return 'outline';
-            case 'lost':
-                return 'destructive';
             // Payment frequency
             case 'W':
             case 'M':
@@ -77,84 +70,73 @@ export const StatusBadge: React.FC<any> = ({ status }) => {
     const getStatusLabel = (status: any): string => {
         switch (status) {
             case 'draft':
-                return i18n.t('Draft');
+                return t('Draft');
             case 'pending_approval':
-                return i18n.t('Pending Approval');
+                return t('Pending Approval');
             case 'A':
-                return i18n.t('Active');
+                return t('Active');
             case 'P':
             case 'pending':
-                return i18n.t('Pending');
+                return t('Pending');
             case 'D':
             case 'N':
-                return i18n.t('Deactivated');
+                return t('Deactivated');
             case 'I':
-                return i18n.t('Inactive');
+                return t('Inactive');
             case 'R':
             case 'rejected':
-                return i18n.t('Rejected');
+                return t('Rejected');
             case 'cancelled':
-                return i18n.t('Cancelled');
+                return t('Cancelled');
             case 'partially_converted':
-                return i18n.t('Partially Converted');
+                return t('Partially Converted');
             case 'fully_converted':
-                return i18n.t('Fully Converted');
+                return t('Fully Converted');
             case 'pending_inspection':
-                return i18n.t('Pending Inspection');
+                return t('Pending Inspection');
             // Invoice/Earning statuses
             case 'approved':
-                return i18n.t('Approved');
+                return t('Approved');
             case 'paid':
-                return i18n.t('Paid');
+                return t('Paid');
             case 'invoiced':
-                return i18n.t('Invoiced');
+                return t('Invoiced');
             case 'processing':
-                return i18n.t('Processing');
+                return t('Processing');
             // Commission types
             case 'CPL':
-                return i18n.t('Cost Per Lead');
+                return t('Cost Per Submission');
             case 'CPA':
-                return i18n.t('Cost Per Action');
+                return t('Cost Per Action');
             case 'CPS':
-                return i18n.t('Cost Per Sale');
+                return t('Cost Per Sale');
             case 'RevShare':
-                return i18n.t('Revenue Share');
+                return t('Revenue Share');
             case 'Flat':
-                return i18n.t('Flat Rate');
+                return t('Flat Rate');
             // Priority levels
             case 'high':
-                return i18n.t('High');
+                return t('High');
             case 'medium':
-                return i18n.t('Medium');
+                return t('Medium');
             case 'low':
-                return i18n.t('Low');
-            // Lead statuses
-            case 'new':
-                return i18n.t('New');
-            case 'contacted':
-                return i18n.t('Contacted');
-            case 'qualified':
-                return i18n.t('Qualified');
-            case 'converted':
-                return i18n.t('Converted');
-            case 'lost':
-                return i18n.t('Lost');
+                return t('Low');
             // Payment frequency
             case 'W':
             case 'weekly':
-                return i18n.t('Weekly');
+                return t('Weekly');
             case 'biweekly':
-                return i18n.t('Bi-Weekly');
+                return t('Bi-Weekly');
             case 'M':
             case 'monthly':
-                return i18n.t('Monthly');
+                return t('Monthly');
             case 'quarterly':
-                return i18n.t('Quarterly');
+                return t('Quarterly');
             case 'annually':
-                return i18n.t('Annually');
+                return t('Annually');
             // Commission model
             case 'F':
-                return i18n.t('Fixed');
+                return t('Fixed');
             default:
                 return status;
         }
@@ -206,17 +188,6 @@ export const StatusBadge: React.FC<any> = ({ status }) => {
                 return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
             case 'low':
                 return 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300';
-            // Lead statuses
-            case 'new':
-                return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
-            case 'contacted':
-                return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
-            case 'qualified':
-                return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
-            case 'converted':
-                return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
-            case 'lost':
-                return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
             // Payment frequency
             case 'W':
             case 'weekly':

@@ -1,3 +1,4 @@
+import { EditableOverview } from '@/components/editable-overview';
 import { Transition } from '@headlessui/react';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import { FormEvent } from 'react';
@@ -53,7 +54,7 @@ export default function NetworkSettingsIndex() {
     return (
         <AppLayout>
             <Head title={t('Network Settings')} />
-            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
+            <div className="workspace-page flex h-full flex-1 flex-col gap-4">
                 <ReusablePageTitle
                     title={t('Network Branding')}
                     description={t(
@@ -62,7 +63,54 @@ export default function NetworkSettingsIndex() {
                     breadcrumbs={breadcrumbs}
                 />
                 <div className="px-4 py-6">
-                    <div className="mx-auto space-y-6">
+                    <EditableOverview
+                        title={t('Network Branding')}
+                        description={t(
+                            'Your identity, brand assets, and support details.',
+                        )}
+                        summary={
+                            <div className="grid gap-6 sm:grid-cols-2">
+                                <div className="flex items-center gap-4">
+                                    {network.logo_url ? (
+                                        <img
+                                            src={network.logo_url}
+                                            alt={network.network_name}
+                                            className="h-16 w-16 object-contain"
+                                        />
+                                    ) : (
+                                        <div className="identity-tile tone-0">
+                                            {network.network_name
+                                                ?.slice(0, 2)
+                                                .toUpperCase()}
+                                        </div>
+                                    )}
+                                    <p className="text-xl font-medium">
+                                        {network.network_name}
+                                    </p>
+                                </div>
+                                <dl className="space-y-4">
+                                    <div>
+                                        <dt className="text-xs text-muted-foreground">
+                                            {t('Support Email')}
+                                        </dt>
+                                        <dd className="mt-1">
+                                            {network.support_email ||
+                                                t('Not provided')}
+                                        </dd>
+                                    </div>
+                                    <div>
+                                        <dt className="text-xs text-muted-foreground">
+                                            {t('Support Phone')}
+                                        </dt>
+                                        <dd className="mt-1">
+                                            {network.support_phone ||
+                                                t('Not provided')}
+                                        </dd>
+                                    </div>
+                                </dl>
+                            </div>
+                        }
+                    >
                         <form onSubmit={handleSubmit} className="space-y-8">
                             <div className="max-w-md">
                                 <ReusableTextInput
@@ -96,7 +144,7 @@ export default function NetworkSettingsIndex() {
                                     </p>
                                     {network.logo_url &&
                                         data.logo.length === 0 && (
-                                            <div className="mt-2 rounded-lg border bg-gray-50 p-2 dark:bg-gray-800">
+                                            <div className="mt-2 rounded-lg border bg-muted/50 p-2 dark:bg-gray-800">
                                                 <p className="mb-1 text-xs text-muted-foreground">
                                                     {t('Current logo')}:
                                                 </p>
@@ -126,7 +174,7 @@ export default function NetworkSettingsIndex() {
                                     </p>
                                     {network.sidebar_logo_url &&
                                         data.sidebar_logo.length === 0 && (
-                                            <div className="mt-2 rounded-lg border bg-gray-50 p-2 dark:bg-gray-800">
+                                            <div className="mt-2 rounded-lg border bg-muted/50 p-2 dark:bg-gray-800">
                                                 <p className="mb-1 text-xs text-muted-foreground">
                                                     {t('Current sidebar logo')}:
                                                 </p>
@@ -161,7 +209,7 @@ export default function NetworkSettingsIndex() {
                                 </p>
                                 {network.favicon_url &&
                                     data.favicon.length === 0 && (
-                                        <div className="mt-2 rounded-lg border bg-gray-50 p-2 dark:bg-gray-800">
+                                        <div className="mt-2 rounded-lg border bg-muted/50 p-2 dark:bg-gray-800">
                                             <p className="mb-1 text-xs text-muted-foreground">
                                                 {t('Current favicon')}:
                                             </p>
@@ -222,7 +270,7 @@ export default function NetworkSettingsIndex() {
                                 </Transition>
                             </div>
                         </form>
-                    </div>
+                    </EditableOverview>
                 </div>
             </div>
         </AppLayout>

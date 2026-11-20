@@ -46,14 +46,46 @@ class Offer extends Model
         'expires_at' => 'datetime',
     ];
 
+    protected $appends = ['commission_value_1', 'commission_value_2', 'commission_type_1', 'commission_type_2'];
+
+    public function getCommissionValue1Attribute()
+    {
+        return $this->commissions->get(0)?->commission_value;
+    }
+
+    public function getCommissionValue2Attribute()
+    {
+        return $this->commissions->get(1)?->commission_value;
+    }
+
+    public function getCommissionType1Attribute()
+    {
+        return $this->commissions->get(0)?->commissionType?->name;
+    }
+
+    public function getCommissionType2Attribute()
+    {
+        return $this->commissions->get(1)?->commissionType?->name;
+    }
+
+    public function customerPromotion()
+    {
+        return $this->hasOne(CustomerPromotion::class);
+    }
+
     public function campaign(): BelongsTo
     {
         return $this->belongsTo(Campaign::class);
     }
 
+    public function creatives(): HasMany
+    {
+        return $this->hasMany(Creative::class);
+    }
+
     public function commissions(): HasMany
     {
-        return $this->hasMany(OfferCommission::class);
+        return $this->hasMany(OfferCommission::class)->orderBy('id');
     }
 
     /**

@@ -1,11 +1,8 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NavMain } from '@/components/nav-main';
-import { NavUser } from '@/components/nav-user';
 import {
     Sidebar,
     SidebarContent,
-    SidebarFooter,
     SidebarHeader,
 } from '@/components/ui/sidebar';
 import { usePermissions } from '@/context/permission-context';
@@ -18,21 +15,20 @@ import publisher from '@/routes/publisher';
 import publishers from '@/routes/publishers';
 import system from '@/routes/system';
 import { Permissions, roles } from '@/routes/system/settings';
-import { type NavItem } from '@/types';
-import { Link } from '@inertiajs/react';
+import { type NavItem, type SharedData } from '@/types';
+import { Link, usePage } from '@inertiajs/react';
 import {
     Bolt,
     BookOpenCheck,
-    Dot,
     FileText,
-    Image,
+    KeyRound,
     LayoutGrid,
     Megaphone,
     Network,
     Receipt,
     Rss,
     Settings,
-    UserCheck,
+    ShieldCheck,
     Users,
     Wallet,
 } from 'lucide-react';
@@ -57,7 +53,7 @@ const mainNavItems: NavItem[] = [
     },
     {
         title: 'Dashboard',
-        href: dashboard(),
+        href: '/network/dashboard',
         icon: LayoutGrid,
         permissions: ['access_network_dashboard'],
         children: [],
@@ -102,40 +98,17 @@ const mainNavItems: NavItem[] = [
     // ADVERTISER SECTION
     {
         title: 'My Campaigns',
-        href: '',
+        href: advertiser.campaign.index(),
         icon: Megaphone,
-        permissions: ['view_campaigns', 'manage_campaigns'],
-        children: [
-            {
-                title: 'My Campaigns',
-                href: advertiser.campaign.index(),
-                icon: Dot,
-                permissions: ['view_campaigns', 'manage_campaigns'],
-            },
-            {
-                title: 'My Terms',
-                href: advertiser.terms(),
-                icon: Dot,
-                permissions: ['view_campaigns', 'manage_campaigns'],
-            },
-        ],
-    },
-    {
-        title: 'Creatives',
-        href: advertiser.creatives.index(),
-        icon: Image,
-        permissions: ['upload_creatives', 'manage_creatives'],
+        permissions: ['view_campaigns'],
         children: [],
     },
+
     {
-        title: 'Leads',
-        href: advertiser.leads.index(),
-        icon: UserCheck,
-        permissions: [
-            'view_campaigns',
-            'manage_campaigns',
-            'access_advertiser_dashboard',
-        ],
+        title: 'Financial review',
+        href: '/finance',
+        icon: Wallet,
+        permissions: ['review_commissions'],
         children: [],
     },
 
@@ -190,26 +163,6 @@ const mainNavItems: NavItem[] = [
         permissions: ['view_network_invoices'],
         children: [],
     },
-    {
-        title: 'Pool',
-        href: '',
-        icon: Users,
-        permissions: ['access_pool'],
-        children: [
-            {
-                title: 'Advertisers',
-                href: networks.pool.advertisers.url(),
-                icon: Rss,
-                permissions: ['view_advertisers', 'manage_advertisers'],
-            },
-            {
-                title: 'Publishers',
-                href: networks.pool.publishers.url(),
-                icon: BookOpenCheck,
-                permissions: ['view_publishers', 'manage_publishers'],
-            },
-        ],
-    },
 
     // SUPER ADMIN SECTION
     {
@@ -242,23 +195,22 @@ const mainNavItems: NavItem[] = [
             {
                 title: 'Roles',
                 href: roles(),
-                icon: Dot,
+                icon: ShieldCheck,
                 permissions: ['manage_roles'],
             },
             {
                 title: 'Permissions',
                 href: Permissions(),
-                icon: Dot,
+                icon: KeyRound,
                 permissions: ['manage_permissions'],
             },
         ],
     },
 ];
 
-const footerNavItems: NavItem[] = [];
-
 export function AppSidebar() {
     const { t } = useTranslation();
+    const { networkBranding, auth } = usePage<SharedData>().props;
     const { hasAnyPermission } = usePermissions();
 
     const hasPermission = (permissions?: string[]) =>
@@ -280,7 +232,75 @@ export function AppSidebar() {
                 (item.children?.length ?? 0) > 0,
         );
 
-    const translatedMainNavItems = filteredMainNavItems.map((item) => ({
+    const categories = [
+        {
+            title: 'Campaigns',
+            icon: Megaphone,
+            names: ['My Campaigns', 'Creatives', 'Embed Scripts'],
+        },
+        {
+            title: 'Partners',
+            icon: Users,
+            names: [
+                'Advertisers',
+                'Publishers',
+                'Publisher Applications',
+                'Networks',
+            ],
+        },
+        {
+            title: 'Finance',
+            icon: Wallet,
+            names: [
+                'Financial review',
+                'My Earnings',
+                'Invoices',
+                'Publisher Invoices',
+                'My Invoices',
+                'Network Invoices',
+            ],
+        },
+        {
+            title: 'Administration',
+            icon: Settings,
+            names: ['System Users', 'Settings', 'Network Settings'],
+        },
+    ];
+    const grouped: NavItem[] = filteredMainNavItems
+        .filter((item) => ['Dashboard', 'Marketplace'].includes(item.title))
+        .map((item) => ({
+            ...item,
+            title: item.title === 'Dashboard' ? 'Overview' : item.title,
+        }));
+    for (const category of categories) {
+        const children = filteredMainNavItems
+            .filter((item) => category.names.includes(item.title))
+            .flatMap((item) => (item.children?.length ? item.children : [item]))
+            .map((item) => ({
+                ...item,
+                title:
+                    item.title === 'My Campaigns' &&
+                    (auth.user.is_super_admin || auth.user.is_network)
+                        ? 'Campaign directory'
+                        : item.title,
+            }));
+        const unique = children.filter(
+            (item, index) =>
+                children.findIndex(
+                    (other) =>
+                        JSON.stringify(other.href) ===
+                        JSON.stringify(item.href),
+                ) === index,
+        );
+        if (unique.length)
+            grouped.push({
+                title: category.title,
+                href: '',
+                icon: category.icon,
+                children: unique,
+            });
+    }
+    const translatedMainNavItems = grouped.map((item) => ({
         ...item,
         title: t(item.title),
         children: item.children?.map((child: any) => ({
@@ -292,30 +312,33 @@ export function AppSidebar() {
     return (
         <Sidebar
             collapsible="icon"
-            variant="floating"
-            className="ml-0 bg-white dark:bg-sidebar"
+            variant="sidebar"
+            className="border-r border-sidebar-border"
         >
             <div className="flex h-full flex-col">
-                <SidebarHeader className="pt-6 pb-2 group-data-[collapsible=icon]:hidden">
-                    <div className="mt-2 mb-4 flex items-center justify-center">
-                        <Link
-                            href={dashboard()}
-                            prefetch
-                            className="flex size-18 items-center justify-center overflow-hidden rounded-full border border-primary"
-                        >
-                            <AppLogoIcon
-                                size="lg"
-                                className="size-12 object-contain"
-                            />
-                        </Link>
-                    </div>
+                <SidebarHeader className="h-[72px] justify-center border-b border-sidebar-border px-5 group-data-[collapsible=icon]:px-3">
+                    <Link
+                        href={dashboard()}
+                        prefetch
+                        className="flex min-w-0 items-center gap-3"
+                        aria-label={networkBranding?.network_name || 'DM Hub'}
+                    >
+                        <div className="flex size-9 shrink-0 items-center justify-center">
+                            <AppLogoIcon size="md" />
+                        </div>
+                        <div className="min-w-0 group-data-[collapsible=icon]:hidden">
+                            <span className="block truncate text-base font-semibold tracking-tight text-foreground">
+                                {networkBranding?.network_name || 'DM Hub'}
+                            </span>
+                            <span className="block text-[11px] text-sidebar-foreground/70">
+                                {t('Affiliate Platform')}
+                            </span>
+                        </div>
+                    </Link>
                 </SidebarHeader>
-                <SidebarContent className="group-data-[collapsible=icon]:mt-25">
+                <SidebarContent className="px-2 py-6">
                     <NavMain items={translatedMainNavItems} />
                 </SidebarContent>
-                <SidebarFooter className="group-data-[collapsible=icon]:hidden">
-                    <NavUser />
-                </SidebarFooter>
             </div>
         </Sidebar>
     );

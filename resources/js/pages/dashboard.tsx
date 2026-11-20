@@ -1,42 +1,46 @@
-
-import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { ReusablePageTitle } from '@/dev/core';
 import AppLayout from '@/layouts/app-layout';
-import { dashboard } from '@/routes';
-import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
-
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Home',
-        href: dashboard().url,
-    },
-];
+import { edit } from '@/routes/profile';
+import { Head, Link } from '@inertiajs/react';
+import { ArrowRight, Settings } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export default function Dashboard() {
+    const { t } = useTranslation();
     return (
         <AppLayout>
-            <Head title="Dashboard" />
-            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
+            <Head title={t('Workspace')} />
+            <div className="workspace-page flex flex-1 flex-col">
                 <ReusablePageTitle
-                    title="Dashboard"
-                    breadcrumbs={breadcrumbs}
+                    title={t('Workspace')}
+                    description={t('Manage your profile and account settings')}
+                    breadcrumbs={[]}
                 />
-                <div className="flex flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
-                    <div className="grid auto-rows-min gap-4 md:grid-cols-3">
-                        {[...Array(3)].map((_, i) => (
-                            <div
-                                key={i}
-                                className="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
-                            >
-                                <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
-                            </div>
-                        ))}
-                    </div>
-                    <div className="relative flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 md:min-h-min dark:border-sidebar-border">
-                        <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
-                    </div>
-                </div>
+                <Card className="max-w-2xl">
+                    <CardContent className="space-y-5">
+                        <span className="flex size-11 items-center justify-center rounded-lg bg-accent text-primary">
+                            <Settings className="size-5" />
+                        </span>
+                        <div className="space-y-2">
+                            <h2 className="text-lg font-semibold">
+                                {t('Your account')}
+                            </h2>
+                            <p className="text-sm leading-6 text-muted-foreground">
+                                {t(
+                                    'Use the navigation to access the tools available to your role, or manage your account settings below.',
+                                )}
+                            </p>
+                        </div>
+                        <Button asChild>
+                            <Link href={edit()}>
+                                {t('Settings')}
+                                <ArrowRight className="size-4" />
+                            </Link>
+                        </Button>
+                    </CardContent>
+                </Card>
             </div>
         </AppLayout>
     );

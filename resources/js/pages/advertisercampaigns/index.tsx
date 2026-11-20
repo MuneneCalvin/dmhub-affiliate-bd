@@ -1,34 +1,38 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useReducer } from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
-import { useTranslation } from 'react-i18next';
 import { Plus } from 'lucide-react';
+import { useReducer } from 'react';
+import { useTranslation } from 'react-i18next';
 
-import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { ReusablePageTitle } from '@/dev/core';
 import { CustomBaseTable, SearchTools } from '@/dev/table';
+import AppLayout from '@/layouts/app-layout';
 import advertiser from '@/routes/advertiser';
 import {
     BreadcrumbItem,
+    campaignsPageProps,
+    SingleActionsHandler,
+    TCampaign,
     TFilterOptions,
     TPaginationFilters,
-    TNetwork,
-    SingleActionsHandler,
-    campaignsPageProps,
-    TCampaign,
 } from '@/types';
 
 import {
-    FILTEROPTIONS,
-    ReusableReducer,
-} from '@/utils/constants';
+    ActionColumn,
+    AdvertiserCampaignsColumns,
+} from '@/dev/columns/columns';
 import { useDebounce } from '@/hooks';
-import { ActionColumn, AdvertiserCampaignsColumns } from '@/dev/columns/columns';
+import { FILTEROPTIONS, ReusableReducer } from '@/utils/constants';
 
 const AdvertiserIndex = () => {
     const { t } = useTranslation();
+    const { auth } = usePage<any>().props;
+    const can = (permission: string) =>
+        Boolean(
+            auth.user.is_super_admin || auth.permissions?.includes(permission),
+        );
     const { campaigns } = usePage<campaignsPageProps>().props;
     const breadcrumbs: BreadcrumbItem[] = [
         {
@@ -39,7 +43,7 @@ const AdvertiserIndex = () => {
 
     const [PageFilter, optionsDispatcher] = useReducer(
         ReusableReducer<TPaginationFilters & TFilterOptions>,
-        { ...FILTEROPTIONS, page: 1, pageSize: 25 }
+        { ...FILTEROPTIONS, page: 1, pageSize: 25 },
     );
     const optionsDispatcherDebounce = useDebounce({
         debounceCallback: optionsDispatcher,
@@ -47,37 +51,46 @@ const AdvertiserIndex = () => {
 
     const ActionsHandlerMapping: SingleActionsHandler<TCampaign>[] = [
         {
-            label: (t('View')),
+            label: t('View'),
+            href: (data) => advertiser.campaign.show.url(data.id),
             onSelect: (data: any) => {
-               router.visit(advertiser.campaign.show(data?.id))
+                router.visit(advertiser.campaign.show(data?.id));
             },
-        }
+        },
     ];
     return (
         <AppLayout>
             <Head title={t('Campaigns')} />
-            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
+            <div className="workspace-page flex h-full flex-1 flex-col gap-4">
                 <ReusablePageTitle
                     title={t('Campaigns')}
-                    description={t('Manage Your Campaigns here')}
+                    description={t(
+                        'Explore your campaigns, offers, and next opportunities.',
+                    )}
                     breadcrumbs={breadcrumbs}
                     children={
                         <div className="flex items-center gap-4">
-                            <Button
-                                className="rounded-xl px-4 py-2 cursor-pointer "
-                                onClick={() =>
-                                    router.visit(advertiser.campaign.create())
-                                }>
-                                <Plus size="medium" />
-                                <p className="font-medium leading-6 text-lg">
-                                    {t('Create Campaign')}
-                                </p>
-                            </Button>
+                            {can('create_campaigns') && (
+                                <Button
+                                    className="cursor-pointer rounded-xl px-4 py-2"
+                                    onClick={() =>
+                                        router.visit(
+                                            advertiser.campaign.create(),
+                                        )
+                                    }
+                                >
+                                    <Plus size="medium" />
+                                    <p className="text-lg leading-6 font-medium">
+                                        {t('Create Campaign')}
+                                    </p>
+                                </Button>
+                            )}
                         </div>
                     }
                 />
-                <div className="w-full">
+                <div className="campaigns-directory w-full">
                     <CustomBaseTable
+                        presentation="cards"
                         onPageChange={(page) =>
                             optionsDispatcher({
                                 payload: { page },
@@ -97,7 +110,7 @@ const AdvertiserIndex = () => {
                             ...AdvertiserCampaignsColumns,
                             ActionColumn({ ActionsHandlerMapping }),
                         ]}
-                        OtherTools= {SearchTools}
+                        OtherTools={SearchTools}
                         data={campaigns?.results?.data ?? []}
                         pageCount={campaigns?.results?.last_page ?? 1}
                         title={t('Campaigns')}

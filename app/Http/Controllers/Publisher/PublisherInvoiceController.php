@@ -14,6 +14,7 @@ use Inertia\Inertia;
 class PublisherInvoiceController extends Controller
 {
     protected InvoiceService $invoiceService;
+
     protected CommissionService $commissionService;
 
     public function __construct(InvoiceService $invoiceService, CommissionService $commissionService)
@@ -26,7 +27,7 @@ class PublisherInvoiceController extends Controller
     {
         $user = $request->user();
         $publisher = Publisher::where('user_id', $user->id)->first();
-        if (!$publisher) {
+        if (! $publisher) {
             return redirect()->route('dashboard')->with('error', 'Publisher account not found');
         }
         $invoices = PublisherInvoice::where('publisher_id', $publisher->id)
@@ -50,16 +51,16 @@ class PublisherInvoiceController extends Controller
         $user = $request->user();
         $publisher = Publisher::where('user_id', $user->id)->first();
 
-        if (!$publisher) {
+        if (! $publisher) {
             return redirect()->route('dashboard')->with('error', 'Publisher account not found');
         }
 
         $invoice = PublisherInvoice::where('publisher_id', $publisher->id)
-            ->with(['earnings.publisherCampaign.campaign', 'earnings.lead', 'approvedByUser'])
+            ->with(['earnings.publisherCampaign.campaign', 'approvedByUser'])
             ->findOrFail($id);
 
         return Inertia::render('publisher/invoices/show', [
-            'invoice' => $invoice,
+            'invoice' => $invoice->attachLineAmounts(),
         ]);
     }
 
@@ -68,16 +69,16 @@ class PublisherInvoiceController extends Controller
         $user = $request->user();
         $publisher = Publisher::where('user_id', $user->id)->first();
 
-        if (!$publisher) {
+        if (! $publisher) {
             return redirect()->route('dashboard')->with('error', 'Publisher account not found');
         }
 
         $canRequest = $this->invoiceService->canRequestInvoice($publisher);
 
         $earnings = PublisherEarning::where('publisher_id', $publisher->id)
-            ->whereIn('status', ['pending', 'approved'])
+            ->where('status', 'approved')->whereNotNull('ledger_transaction_id')
             ->whereNull('invoice_id')
-            ->with(['publisherCampaign.campaign', 'publisherCampaign.offer', 'lead'])
+            ->with(['publisherCampaign.campaign', 'publisherCampaign.offer'])
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -93,37 +94,34 @@ class PublisherInvoiceController extends Controller
         $user = $request->user();
         $publisher = Publisher::where('user_id', $user->id)->first();
 
-        if (!$publisher) {
+        if (! $publisher) {
             return response()->json(['error' => 'Publisher account not found'], 404);
         }
 
         $validated = $request->validate([
+            'currency' => 'required|string|size:3',
+            'network_id' => 'required|integer',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
         ]);
 
         $canRequest = $this->invoiceService->canRequestInvoice($publisher);
 
-        if (!$canRequest['can_request']) {
-            return back()->with('error', sprintf(
-                'Minimum payout threshold not met. You need $%.2f more to request a payout.',
-                $canRequest['remaining']
-            ));
-        }
-
         $invoice = $this->invoiceService->createInvoice(
             $publisher,
             $validated['start_date'] ?? null,
-            $validated['end_date'] ?? null
+            $validated['end_date'] ?? null,
+            $validated['currency'],
+            $validated['network_id']
         );
 
-        if (!$invoice) {
+        if (! $invoice) {
             return back()->with('error', 'No earnings available for invoice');
         }
 
         return redirect()
             ->route('publisher.invoices.show', $invoice->id)
-            ->with('success', sprintf('Invoice #%s created successfully for $%.2f', $invoice->invoice_number, $invoice->amount));
+            ->with('success', 'Invoice #'.$invoice->invoice_number.' created for '.$invoice->currency.' '.$invoice->amount);
     }
 
     public function earnings(Request $request)
@@ -131,12 +129,12 @@ class PublisherInvoiceController extends Controller
         $user = $request->user();
         $publisher = Publisher::where('user_id', $user->id)->first();
 
-        if (!$publisher) {
+        if (! $publisher) {
             return redirect()->route('dashboard')->with('error', 'Publisher account not found');
         }
 
         $earnings = PublisherEarning::where('publisher_id', $publisher->id)
-            ->with(['publisherCampaign.campaign', 'publisherCampaign.offer', 'lead', 'conversion', 'invoice'])
+            ->with(['publisherCampaign.campaign', 'publisherCampaign.offer', 'conversion', 'invoice'])
             ->orderBy('created_at', 'desc')
             ->paginate(50);
 

@@ -1,17 +1,22 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { ActionColumn, PoolPublishersColumns } from '@/dev/columns/columns'
-import { CustomDialogComponent, ReusablePageTitle } from '@/dev/core'
-import { CustomBaseTable, SearchTools } from '@/dev/table'
-import { useCustomDialogContextFactory, useDebounce } from '@/hooks'
-import AppLayout from '@/layouts/app-layout'
-import { BreadcrumbItem, SingleActionsHandler, TFilterOptions, TPaginationFilters } from '@/types'
-import { FILTEROPTIONS, ReusableReducer } from '@/utils/constants'
-import { Head, router } from '@inertiajs/react'
-import { useReducer } from 'react'
-import { useTranslation } from 'react-i18next'
-import RejectModal from './modals/reject'
-import networks from '@/routes/networks'
+import { ActionColumn, PoolPublishersColumns } from '@/dev/columns/columns';
+import { CustomDialogComponent, ReusablePageTitle } from '@/dev/core';
+import { CustomBaseTable, SearchTools } from '@/dev/table';
+import { useCustomDialogContextFactory, useDebounce } from '@/hooks';
+import AppLayout from '@/layouts/app-layout';
+import networks from '@/routes/networks';
+import {
+    BreadcrumbItem,
+    SingleActionsHandler,
+    TFilterOptions,
+    TPaginationFilters,
+} from '@/types';
+import { FILTEROPTIONS, ReusableReducer } from '@/utils/constants';
+import { Head, router } from '@inertiajs/react';
+import { useReducer } from 'react';
+import { useTranslation } from 'react-i18next';
+import RejectModal from './modals/reject';
 
 const PoolPublishersPage = ({ publishers }: any) => {
     const { t } = useTranslation();
@@ -28,7 +33,7 @@ const PoolPublishersPage = ({ publishers }: any) => {
 
     const [PageFilter, optionsDispatcher] = useReducer(
         ReusableReducer<TPaginationFilters & TFilterOptions>,
-        { ...FILTEROPTIONS, page: 1, pageSize: 25 }
+        { ...FILTEROPTIONS, page: 1, pageSize: 25 },
     );
 
     const optionsDispatcherDebounce = useDebounce({
@@ -44,14 +49,15 @@ const PoolPublishersPage = ({ publishers }: any) => {
     const ActionsHandlerMapping: SingleActionsHandler<any>[] = [
         {
             label: t('View Details'),
+            href: (data) => networks.pool.publishers.show.url(data.id),
             onSelect: (data: any) => {
-                router.visit(networks.pool.publishers.show(data?.id))
+                router.visit(networks.pool.publishers.show(data?.id));
             },
         },
         {
             label: t('Approve'),
-            onSelect: (data: any) =>{
-                router.post(networks.pool.publishers.approve(data?.id))
+            onSelect: (data: any) => {
+                router.post(networks.pool.publishers.approve(data?.id));
             },
         },
         {
@@ -70,16 +76,19 @@ const PoolPublishersPage = ({ publishers }: any) => {
 
     return (
         <AppLayout>
-            <Head title={t("Pool - Publishers")} />
-            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
+            <Head title={t('Pool - Publishers')} />
+            <div className="workspace-page flex h-full flex-1 flex-col gap-4">
                 <ReusablePageTitle
-                    title={t("Publisher Pool")}
-                    description={t("Review and approve publishers to add them to your network")}
+                    title={t('Publisher Pool')}
+                    description={t(
+                        'Review and approve publishers to add them to your network',
+                    )}
                     breadcrumbs={breadcrumbs}
                 />
 
-                <div className='w-full'>
+                <div className="w-full">
                     <CustomBaseTable
+                        presentation="cards"
                         {...{
                             onPageChange: (page) =>
                                 optionsDispatcher({
@@ -99,7 +108,7 @@ const PoolPublishersPage = ({ publishers }: any) => {
                                 ...PoolPublishersColumns,
                                 ActionColumn({ ActionsHandlerMapping }),
                             ],
-                             OtherTools:SearchTools,
+                            OtherTools: SearchTools,
                             data: publishers?.data ?? [],
                             pageCount: publishers?.last_page ?? 1,
                             title: t('Publishers'),
@@ -117,7 +126,8 @@ const PoolPublishersPage = ({ publishers }: any) => {
 
                 <CustomDialogComponent
                     {...{ handleDialogContextSwitch, dialogOpen }}
-                    className='sm:max-w-[500px]'>
+                    className="sm:max-w-[500px]"
+                >
                     {dialogContent?.Component && (
                         <dialogContent.Component
                             {...{

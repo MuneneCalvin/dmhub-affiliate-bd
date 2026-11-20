@@ -8,6 +8,8 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -41,7 +43,7 @@ class ProfileController extends Controller
     }
 
     /**
-     * Delete the user's account.
+     * Close access while retaining attribution and financial evidence.
      */
     public function destroy(Request $request): RedirectResponse
     {
@@ -50,8 +52,23 @@ class ProfileController extends Controller
         ]);
 
         $user = $request->user();
+        DB::transaction(function () use ($user) {
+            $user->forceFill([
+                'status' => 'C',
+                'closed_at' => now(),
+                'password' => Str::random(64),
+                'remember_token' => null,
+                'two_factor_secret' => null,
+                'two_factor_recovery_codes' => null,
+            ])->save();
+            DB::table('sessions')->where('user_id', $user->id)->delete();
+            DB::table('password_reset_tokens')->where('email', $user->email)->delete();
+            if ($user->advertiser) {
+                DB::table('postback_credentials')->where('advertiser_id', $user->advertiser->id)
+                    ->update(['revoked_at' => now()]);
+            }
+        });
         Auth::logout();
-        $user->delete();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 

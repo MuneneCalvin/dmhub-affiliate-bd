@@ -14,9 +14,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Role;
-use Throwable;
 
 class NetworkController extends Controller
 {
@@ -26,13 +26,14 @@ class NetworkController extends Controller
         $status = $request->get('status');
         try {
             $query = DB::table('networks');
-            if (!empty($status) && in_array($status, ['A', 'P', 'D'])) {
+            if (! empty($status) && in_array($status, ['A', 'P', 'D'])) {
                 $query->where('status', $status);
             }
             $networks = $query->orderBy('id', 'desc')
                 ->paginate($pageSize);
             $currencies = Currency::all();
             $countries = DB::table('countries')->where('status', 'A')->get();
+
             return Inertia::render('networks/index', [
                 'currencies' => $currencies,
                 'countries' => $countries,
@@ -58,6 +59,7 @@ class NetworkController extends Controller
                 'network_name' => 'required|string|max:100',
                 'owner_email' => 'required|email|unique:networks,owner_email',
                 'default_currency' => 'required|string|size:3',
+                'requires_prepaid_funding' => 'sometimes|boolean',
                 'default_commission_model' => 'required|string|in:P,F',
                 'default_commission_value' => 'required|numeric|min:0',
                 'min_payment_threshold' => 'required|numeric|min:0',
@@ -73,6 +75,7 @@ class NetworkController extends Controller
                 'network_name' => $validated['network_name'],
                 'owner_email' => $validated['owner_email'],
                 'default_currency' => $validated['default_currency'],
+                'requires_prepaid_funding' => $validated['requires_prepaid_funding'] ?? false,
                 'default_commission_model' => $validated['default_commission_model'],
                 'default_commission_value' => $validated['default_commission_value'],
                 'min_payment_threshold' => $validated['min_payment_threshold'],
@@ -87,7 +90,10 @@ class NetworkController extends Controller
                 'updated_at' => now(),
                 'status' => 'A',
             ]);
+
             return redirect()->route('networks.show', [$networkId])->with('success', 'Network created successfully');
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (Exception $e) {
             return redirect()->route('networks.index')->with('error', 'Couldnot create a network!');
         }
@@ -100,7 +106,7 @@ class NetworkController extends Controller
                 ->join('countries', 'countries.country_iso', '=', 'networks.country_iso')
                 ->first();
 
-            if (!$networks) {
+            if (! $networks) {
                 return redirect()->route('networks.index')->with('error', 'Network not found');
             }
 
@@ -117,6 +123,7 @@ class NetworkController extends Controller
             return redirect()->route('networks.index')->with('error', 'Failed to load network details');
         }
     }
+
     public function updateNetwork(Request $request, $id)
     {
         try {
@@ -124,8 +131,9 @@ class NetworkController extends Controller
                 'network_name' => 'required|string|max:255',
                 'owner_email' => 'required|email',
                 'default_currency' => 'required|string|max:3',
-                'default_commission_model' => 'required|string',
-                'default_commission_value' => 'required|numeric',
+                'requires_prepaid_funding' => 'sometimes|boolean',
+                'default_commission_model' => 'required|string|in:P,F',
+                'default_commission_value' => 'required|numeric|min:0',
                 'min_payment_threshold' => 'required|numeric',
                 'payment_frequency' => 'required|string',
                 'pay_day_of_month' => 'nullable|integer|min:1|max:31',
@@ -136,11 +144,14 @@ class NetworkController extends Controller
                 'country_iso' => 'required|string|max:3',
             ]);
             $network = Network::find($id);
-            if (!$network) {
+            if (! $network) {
                 return back()->with('error', 'Network not found');
             }
             $network->update($validated);
+
             return redirect()->route('networks.show', [$id])->with('success', 'Network updated successfully');
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (Exception $e) {
             return back()->with('error', 'Network could not be updated');
         }
@@ -150,10 +161,11 @@ class NetworkController extends Controller
     {
         try {
             $network = Network::find($id);
-            if (!$network) {
+            if (! $network) {
                 return back()->with('error', 'Network not found');
             }
             $network->update(['status' => 'D']);
+
             return redirect()->route('networks.index')->with('success', 'Network deactivated successfully');
         } catch (Exception $e) {
             return back()->with('error', 'Network could not be deactivated');
@@ -164,7 +176,7 @@ class NetworkController extends Controller
     {
         try {
             $network = Network::find($id);
-            if (!$network) {
+            if (! $network) {
                 return back()->with('error', 'Network not found');
             }
             $network->update([
@@ -172,6 +184,7 @@ class NetworkController extends Controller
                 'approved_at' => now(),
                 'approved_by' => Auth::id(),
             ]);
+
             return redirect()->route('networks.index')->with('success', 'Network approved successfully');
         } catch (Exception $e) {
             return back()->with('error', 'Network could not be approved');
@@ -190,7 +203,7 @@ class NetworkController extends Controller
 
         DB::beginTransaction();
         try {
-            $password = Str::password(8);
+            $password = Str::random(64);
 
             $user = new User([
                 'first_name' => $validated['first_name'],
@@ -203,7 +216,7 @@ class NetworkController extends Controller
             ]);
             $user->user_name = $user->generateUsername();
             $user->save();
-            
+
             $role = Role::where('name', 'network_owner')->first();
             if ($role) {
                 $user->assignRoleById($role->id);
@@ -214,17 +227,19 @@ class NetworkController extends Controller
                 'network_id' => $validated['network_id'],
             ]);
             $network = Network::find($validated['network_id']);
-            SendUserCredentialsJob::dispatch($user, $password, $network?->network_name);
+            SendUserCredentialsJob::dispatch($user, $network?->network_name)->afterCommit();
             DB::commit();
+
             return redirect()
                 ->route('networks.show', $validated['network_id'])
                 ->with('success', 'User created successfully. Credentials sent via email.');
         } catch (Exception $e) {
             DB::rollBack();
+
             return redirect()
                 ->back()
                 ->withInput()
-                ->withErrors(['error' => 'Failed to create user: ' . $e->getMessage()]);
+                ->withErrors(['error' => 'Failed to create user: '.$e->getMessage()]);
         }
     }
 
@@ -234,14 +249,14 @@ class NetworkController extends Controller
             $validated = $request->validate([
                 'first_name' => 'required|string|max:255',
                 'last_name' => 'required|string|max:255',
-                'email' => 'required|email|unique:users,email,' . $id,
+                'email' => 'required|email|unique:users,email,'.$id,
                 'title' => 'required|string|max:255',
                 'status' => 'required|string|in:A,D,P',
                 'network_id' => 'required|numeric|exists:networks,id',
             ]);
 
             $user = User::find($id);
-            if (!$user) {
+            if (! $user) {
                 return back()->with('error', 'User not found');
             }
 
@@ -249,7 +264,7 @@ class NetworkController extends Controller
                 ->where('network_id', $validated['network_id'])
                 ->first();
 
-            if (!$userNetwork) {
+            if (! $userNetwork) {
                 return back()->with('error', 'User does not belong to this network');
             }
 
@@ -277,7 +292,7 @@ class NetworkController extends Controller
             ]);
 
             $user = User::find($id);
-            if (!$user) {
+            if (! $user) {
                 return back()->with('error', 'User not found');
             }
 
@@ -285,7 +300,7 @@ class NetworkController extends Controller
                 ->where('network_id', $validated['network_id'])
                 ->first();
 
-            if (!$userNetwork) {
+            if (! $userNetwork) {
                 return back()->with('error', 'User does not belong to this network');
             }
 
@@ -307,7 +322,7 @@ class NetworkController extends Controller
             ]);
 
             $user = User::find($id);
-            if (!$user) {
+            if (! $user) {
                 return back()->with('error', 'User not found');
             }
 
@@ -315,7 +330,7 @@ class NetworkController extends Controller
                 ->where('network_id', $validated['network_id'])
                 ->first();
 
-            if (!$userNetwork) {
+            if (! $userNetwork) {
                 return back()->with('error', 'User does not belong to this network');
             }
 
@@ -340,11 +355,15 @@ class NetworkController extends Controller
                 ->where('network_id', $validated['network_id'])
                 ->first();
 
-            if (!$userNetwork) {
+            if (! $userNetwork) {
                 return back()->with('error', 'User does not belong to this network');
             }
 
             $userNetwork->delete();
+            $user = User::findOrFail($id);
+            if (! $user->userNetworks()->exists()) {
+                $user->update(['is_network' => false]);
+            }
 
             return redirect()
                 ->route('networks.show', $validated['network_id'])

@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Models\UserRoles;
 use Exception;
 use Illuminate\Http\Request;
 use Spatie\Permission\Models\Role;
@@ -53,10 +52,7 @@ class SystemUsersController extends Controller
             $request->validate([
                 'role_id' => ['required', 'exists:roles,id'],
             ]);
-            UserRoles::firstOrCreate([
-                'user_id' => $user->id,
-                'role_id' => $request->role_id,
-            ]);
+            $user->assignRoleById((int) $request->role_id);
 
             return redirect()->route('system.settings.users')->with('success', 'User assigned role successfully.');
         } catch (Exception $e) {

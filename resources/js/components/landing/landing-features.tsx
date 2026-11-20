@@ -1,5 +1,5 @@
-import type { LandingFeaturesProps } from '@/types/landing';
 import { cn } from '@/lib/utils';
+import type { LandingFeaturesProps } from '@/types/landing';
 
 export default function LandingFeatures({
     title,
@@ -38,8 +38,9 @@ export default function LandingFeatures({
                     {features.map((feature, index) => (
                         <div
                             key={index}
-                            className="group rounded-2xl border border-gray-100 bg-white p-8 transition hover:border-[#FF6B35]/30 hover:shadow-xl hover:shadow-orange-500/5 dark:border-gray-800 dark:bg-gray-900">
-                            <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-linear-to-br from-[#FF6B35]/10 to-[#F7931E]/10 text-[#FF6B35] transition group-hover:from-[#FF6B35] group-hover:to-[#F7931E] group-hover:text-white">
+                            className="group rounded-2xl border border-gray-100 bg-white p-8 transition hover:border-primary/30 dark:border-gray-800 dark:bg-gray-900"
+                        >
+                            <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-linear-to-br from-[#FF6B35]/10 to-[#F7931E]/10 text-primary transition group-hover:from-[#FF6B35] group-hover:to-[#F7931E] group-hover:text-white">
                                 {feature.icon}
                             </div>
                             <h3 className="mb-2 text-xl font-semibold text-gray-900 dark:text-white">

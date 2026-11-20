@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class TestUsersSeeder extends Seeder
@@ -20,7 +20,7 @@ class TestUsersSeeder extends Seeder
         for ($i = 1; $i <= 200; $i++) {
             $suffix = str_pad((string) $i, 3, '0', STR_PAD_LEFT);
 
-            DB::table('users')->updateOrInsert(
+            User::firstOrCreate(
                 ['email' => "testuser_{$suffix}@example.test"],
                 [
                     'first_name' => 'Test',

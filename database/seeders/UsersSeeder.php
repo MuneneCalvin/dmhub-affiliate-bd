@@ -2,8 +2,12 @@
 
 namespace Database\Seeders;
 
+use App\Models\Advertiser;
+use App\Models\Network;
+use App\Models\Publisher;
+use App\Models\User;
+use App\Models\UserNetworks;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
@@ -58,24 +62,63 @@ class UsersSeeder extends Seeder
             ],
         ];
 
-        foreach ($users as $user) {
-            DB::table('users')->updateOrInsert(
-                ['email' => $user['email']],
-                [
-                    'first_name' => $user['first_name'],
-                    'last_name' => $user['last_name'],
-                    'user_name' => $user['user_name'],
-                    'status' => 'A',
-                    'is_super_admin' => $user['is_super_admin'],
-                    'is_network' => $user['is_network'],
-                    'is_publisher' => $user['is_publisher'],
-                    'is_advertiser' => $user['is_advertiser'],
-                    'email_verified_at' => Carbon::now(),
-                    'password' => Hash::make('Abcd1234!'),
-                    'created_at' => Carbon::now(),
-                    'updated_at' => Carbon::now(),
-                ]
-            );
-        }
+        DB::transaction(function () use ($users) {
+            $this->call(NetworkSeeder::class);
+            $network = Network::where('owner_email', 'admin@dmhub.com')->firstOrFail();
+
+            foreach ($users as $attributes) {
+                // Existing accounts keep their password, approval state and terminal closure.
+                $user = User::firstOrCreate(
+                    ['email' => $attributes['email']],
+                    array_merge($attributes, [
+                        'status' => 'A',
+                        'email_verified_at' => now(),
+                        'password' => Hash::make('Abcd1234!'),
+                        'locale' => 'en',
+                        'timezone' => 'UTC',
+                        'language' => 'en',
+                        'currency' => 'EUR',
+                        'country_iso' => 'KEN',
+                    ])
+                );
+
+                if ($user->closed_at !== null || $user->status === 'C') {
+                    continue;
+                }
+
+                if (! $user->is_super_admin) {
+                    UserNetworks::firstOrCreate([
+                        'user_id' => $user->id,
+                        'network_id' => $network->id,
+                    ]);
+                }
+
+                if ($user->is_advertiser) {
+                    Advertiser::firstOrCreate(['user_id' => $user->id], [
+                        'network_id' => $network->id,
+                        'business_name' => 'DMHub Demo Advertiser',
+                        'website_name' => 'https://advertiser.example.test',
+                        'industry' => 'Retail',
+                        'currency' => 'EUR',
+                        'status' => 'A',
+                        'is_verified' => true,
+                        'verified_at' => now(),
+                    ]);
+                }
+
+                if ($user->is_publisher) {
+                    Publisher::firstOrCreate(['user_id' => $user->id], [
+                        'network_id' => $network->id,
+                        'website_url' => 'https://publisher.example.test',
+                        'traffic_sources' => ['organic', 'social'],
+                        'is_verified' => true,
+                        'verified_at' => now(),
+                    ]);
+                }
+            }
+
+            // Category flags alone no longer grant access to business routes.
+            $this->call(RolePermsSeeder::class);
+        });
     }
 }

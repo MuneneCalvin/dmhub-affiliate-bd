@@ -16,7 +16,10 @@ export interface LanguageProviderProps {
 export interface LocaleData {
     current: string;
     fallback: string;
-    available: Record<string, { name: string; native: string; regional: string }>;
+    available: Record<
+        string,
+        { name: string; native: string; regional: string }
+    >;
 }
 
 export interface LanguageContextType {
@@ -53,12 +56,12 @@ export type BASE_PAYLOAD_TYPES = {
 export type TCurrency = {
     currency_code: string;
     currency_name: string;
-}
+};
 export type TCountry = {
     country_iso: string;
     country_name: string;
     status: string;
-}
+};
 
 export interface BreadcrumbItem {
     title: string;
@@ -128,20 +131,18 @@ export interface SystemUser {
 export type TReusablePageProps = {
     description?: string;
     title: string;
-    breadcrumbs: any
+    breadcrumbs: any;
 } & Partial<TNodeChildrentType>;
 
 export type TReusableDropdownProp<T> = {
     className?: string;
-} & Pick<TDropDownProps<T>, "triggerEl"> &
+} & Pick<TDropDownProps<T>, 'triggerEl'> &
     TActionColumnGenProps<T>;
-
 
 export type TReusableModalHeaderProps = {
     title: string;
     className?: string;
 };
-
 
 export type TLANG = {
     code: string;
@@ -164,6 +165,7 @@ export type TActionColumnGenProps<T = string> = {
 };
 
 export type SingleActionsHandler<T = string> = {
+    href?: (payload: T) => string;
     conditional?: (payload: T) => boolean;
 } & TCommandOption<T> &
     Pick<TDropDownProps<T>, 'onSelect'>;
@@ -203,6 +205,7 @@ export type TNavBarUrlType = {
 };
 
 export type TTableReusableComponent<T = any> = {
+    presentation?: 'cards' | 'table';
     OtherTools?: React.ComponentType<Partial<TClassType> & TSearchToolProps>;
     onRowSelectionChange?: OnChangeFn<RowSelectionState>;
     OtherToolsProps: Partial<TSearchToolProps>;
@@ -265,7 +268,6 @@ export interface RoleFormModalProps {
     handleDialogContextSwitch: (data: { open: boolean }) => void;
 }
 
-
 export type TDebounceprops<T> = {
     debounceTimeOut?: number;
     debounceCallback: (args: T) => void;
@@ -296,12 +298,12 @@ export type TUseTabsProps<KeyType = string> = {
     defaultTab: KeyType;
 };
 
-
 export type ReusableTabComponentProps<KeyType extends string = string> = {
     Children?: React.ComponentType<any>;
     tabProps?: Record<string, any>;
     tabs: TTab<KeyType>[];
     defaultTab: KeyType;
+    onTabChange?: (key: KeyType) => void;
     header?: ReactNode;
 } & Partial<TClassType>;
 
@@ -317,6 +319,7 @@ export type TReusableSelectProp<T> = {
 } & Pick<TDropDownProps, 'triggerEl' | 'className'>;
 
 export type SingleActionsHandler<T = string> = {
+    href?: (payload: T) => string;
     conditional?: (payload: T) => boolean;
 } & TCommandOption<T> &
     Pick<TDropDownProps<T>, 'onSelect'>;
@@ -340,7 +343,7 @@ export type TMemberSummaryProps = {
                 date: Date[];
                 term: string;
             } & Record<string, any>
-        >
+        >,
     ) => void;
 
     filters: {
@@ -360,7 +363,7 @@ export type TCustomDialogPropsContextProps<T = TKeyValueStringType> = {
 
 export type TCustomDialogProps<T = TKeyValueStringType> = {
     handleDialogContextSwitch: (
-        context: TCustomDialogPropsContextProps<T>
+        context: TCustomDialogPropsContextProps<T>,
     ) => void;
     children: ReactNode;
     toggleDialog: () => any;
@@ -368,23 +371,24 @@ export type TCustomDialogProps<T = TKeyValueStringType> = {
 } & Partial<TClassType>;
 
 export type TNetwork = {
-    approved_at: string | null
-    approved_by: string | null
-    country_iso: string
-    default_commission_model: string
-    default_commission_value: string
-    default_currency: string
-    logo_url: string
-    min_payment_threshold: string
-    network_name: string
-    owner_email: string
-    pay_day_of_month: number
-    pay_day_of_week: number
-    payment_frequency: string
-    settings: any | null
-    status: string
-    support_email: string
-    support_phone: string
+    approved_at: string | null;
+    approved_by: string | null;
+    country_iso: string;
+    default_commission_model: string;
+    requires_prepaid_funding: boolean;
+    default_commission_value: string;
+    default_currency: string;
+    logo_url: string;
+    min_payment_threshold: string;
+    network_name: string;
+    owner_email: string;
+    pay_day_of_month: number;
+    pay_day_of_week: number;
+    payment_frequency: string;
+    settings: any | null;
+    status: string;
+    support_email: string;
+    support_phone: string;
     [key: string]: any;
 } & BASE_PAYLOAD_TYPES;
 
@@ -457,7 +461,7 @@ export interface ReusableAlertModalProps {
         cancelText?: string;
         onConfirm?: () => void;
         onClose?: () => void;
-        variant?: "default" | "delete" | "update";
+        variant?: 'default' | 'delete' | 'update';
     };
 }
 
@@ -478,9 +482,7 @@ export type TAdvertiser = {
     verified_at: Date | null;
 } & BASE_PAYLOAD_TYPES;
 
-export type TPublisher = {
-
-} & BASE_PAYLOAD_TYPES;
+export type TPublisher = {} & BASE_PAYLOAD_TYPES;
 
 export interface ReusableSearchSelectProps {
     data: Array<{ value: string; label: string }>;
@@ -518,13 +520,13 @@ export type ReusableTextInputProps = {
     required?: boolean;
     placeholder?: string;
     error?: string;
-    type?: string
+    type?: string;
     onChange: (value: string) => void;
 };
 export interface ReusableFileInputProps {
     id: string;
     label?: string;
-    value?: File[];                     // controlled files
+    value?: File[]; // controlled files
     onChange: (files: File[]) => void;
     required?: boolean;
     error?: string;
@@ -678,11 +680,12 @@ export interface TermsPageProps {
 export type TTerms = {
     description: string;
     advertiser_id: number;
-    deleted_at:string;
+    deleted_at: string;
     [key: string]: any;
 } & BASE_PAYLOAD_TYPES;
 
 export type TCampaign = {
+    enrollment?: { status: string; rejection_reason?: string | null } | null;
     name: string;
     total_budget: string;
     daily_budget: string;
@@ -702,6 +705,7 @@ export type TCampaign = {
 } & BASE_PAYLOAD_TYPES;
 
 export type TOffers = {
+    currency?: string;
     campaign_id: number;
     network_id: number;
     name: string;
@@ -724,7 +728,7 @@ export type TOffers = {
     earnings_per_click: number;
     expires_at: string | null;
     commissions?: TOfferCommission[];
-    // Direct commission fields (stored on the offer itself)
+    // Display aliases derived from offer_commissions.
     commission_type_1?: number | string | null;
     commission_value_1?: number | string | null;
     commission_type_2?: number | string | null;
@@ -740,10 +744,10 @@ export type TOfferCommission = {
     commission_type?: CommissionType;
 } & BASE_PAYLOAD_TYPES;
 
-export type DrawerPosition = "left" | "right" | "top" | "bottom";
+export type DrawerPosition = 'left' | 'right' | 'top' | 'bottom';
 
 export interface ReusableSheetProps {
-    side?: "top" | "bottom" | "left" | "right";
+    side?: 'top' | 'bottom' | 'left' | 'right';
     open: boolean;
     onOpenChange: (open: boolean) => void;
     title: string;
@@ -776,42 +780,6 @@ export interface InfoCardProps {
     variant?: 'default' | 'elevated' | 'bordered';
 }
 
-export type Lead = {
-    first_name: string;
-    last_name: string;
-    email: string;
-    phone: string;
-    company: string;
-    status: string;
-    priority: string;
-    source: string;
-    lead_value: number;
-    campaign?: { name: string };
-    publisher?: { user?: { name: string } };
-    assigned_user?: { name: string };
-} & BASE_PAYLOAD_TYPES;
-
-export interface LeadsIndexProps {
-    leads: {
-        data: Lead[];
-        current_page: number;
-        last_page: number;
-        per_page: number;
-        total: number;
-    };
-    stats: LeadsStats;
-    campaigns: { id: number; name: string }[];
-    teamMembers: { id: number; name: string }[];
-}
-
-export interface LeadsStats {
-    total: number;
-    new: number;
-    contacted: number;
-    qualified: number;
-    converted: number;
-}
-
 export type StatCardProps = {
     title: string;
     value: ReactNode;
@@ -827,6 +795,10 @@ export type StatCardProps = {
 // ==================== Publisher Types ====================
 
 export interface PublisherEarning {
+    invoice_amount?: string;
+    currency: string | null;
+    network_id: number;
+    reversed_minor: number;
     id: number;
     amount: string;
     commission_type: string;
@@ -836,7 +808,6 @@ export interface PublisherEarning {
         campaign?: { name: string };
         offer?: { name: string };
     };
-    lead?: { email: string; first_name?: string; last_name?: string };
     invoice?: { invoice_number: string };
 }
 
@@ -848,6 +819,8 @@ export interface PublisherEarningSummary {
 }
 
 export interface PublisherInvoice {
+    invoice_details?: { recovery_minor?: number };
+    currency: string;
     id: number;
     invoice_number: string;
     amount: string;
@@ -872,9 +845,14 @@ export interface PublisherInvoiceSummary {
 
 export interface PublisherPayoutRequest {
     can_request: boolean;
-    available_amount: number;
-    min_payout: number;
-    remaining: number;
+    groups: {
+        network_id: number;
+        currency: string;
+        available_amount: string;
+        threshold: string;
+        remaining: string;
+        can_request: boolean;
+    }[];
 }
 
 export interface CampaignScript {
@@ -885,9 +863,10 @@ export interface CampaignScript {
     script_url: string;
     embed_tag: string;
     tracking_link: string;
-    form_config?: {
-        fields?: string[];
-        redirect_url?: string;
+    sdk_config?: {
+        sdk_version: number;
+        popup_supported: boolean;
+        methods: string[];
     };
 }
 
@@ -958,12 +937,24 @@ export interface ApplicationData {
     campaign_name: string;
     offer_id: number | null;
     offer_name: string | null;
+    requested_offer_name?: string | null;
     website_url: string;
     applied_at: string;
     created_at: string;
 }
 
 export interface ApplicationDetails extends ApplicationData {
+    currency: string;
+    commission_type_1?: string | null;
+    requested_offer_id?: number | null;
+    terms_accepted_at?: string | null;
+    terms_version?: string | null;
+    terms_snapshot?: {
+        campaign_terms: unknown;
+        offer_terms: unknown;
+        currency: string;
+        commissions: { type: string; value: string }[];
+    } | null;
     applied_notes: string | null;
     approved_at: string | null;
     approved_by: number | null;
@@ -1003,60 +994,6 @@ export interface RejectApplicationModalProps {
     handleDialogContextSwitch: (data: any) => void;
 }
 
-// ==================== Lead Types (Extended) ====================
-
-export interface LeadDetails extends Lead {
-    job_title: string;
-    address: string;
-    city: string;
-    state: string;
-    postal_code: string;
-    country: string;
-    notes: string;
-    lead_score: number;
-    is_converted: boolean;
-    converted_at: string;
-    conversion_value: number;
-    ip_address: string;
-    user_agent: string;
-    device_type: string;
-    browser: string;
-    operating_system: string;
-    country_iso: string;
-    region: string;
-    city_town: string;
-    updated_at: string;
-    last_contacted_at: string;
-    next_follow_up_at: string;
-    contact_attempts: number;
-    utm_source: string;
-    utm_medium: string;
-    utm_campaign: string;
-    offer?: { id: number; name: string };
-    creative?: { id: number; name: string };
-    click?: { id: number; clicked_at: string };
-}
-
-export interface LeadCaptureProps {
-    click_id: number;
-    campaign?: {
-        id: number;
-        name: string;
-    };
-    offer?: {
-        id: number;
-        name: string;
-        preview_url?: string;
-    };
-    [key: string]: any;
-}
-
-export interface ThankYouPageProps {
-    lead_token?: string;
-    redirect_url?: string;
-    [key: string]: any;
-}
-
 // ==================== Creative Types ====================
 
 export interface Creative {
@@ -1077,7 +1014,6 @@ export interface Creative {
     tracking_pixel: string;
     campaign?: { id: number; name: string };
     offer?: { id: number; name: string };
-    lead_form_embed_code?: string;
 }
 
 // ==================== Auth Types ====================
@@ -1130,6 +1066,7 @@ export interface AdminInvoiceStats {
 }
 
 export interface AdminInvoiceDetail {
+    invoice_details?: { recovery_minor?: number };
     id: number;
     invoice_number: string;
     amount: string;
@@ -1160,6 +1097,8 @@ export interface AdminInvoiceDetail {
         last_name: string;
     };
     earnings?: {
+        invoice_amount?: string;
+        currency: string | null;
         id: number;
         amount: string;
         commission_type: string;
@@ -1172,15 +1111,12 @@ export interface AdminInvoiceDetail {
                 name: string;
             };
         };
-        lead?: {
-            email: string;
-            first_name: string;
-            last_name: string;
-        };
     }[];
 }
 
-export type InvoiceEarning = NonNullable<AdminInvoiceDetail['earnings']>[number];
+export type InvoiceEarning = NonNullable<
+    AdminInvoiceDetail['earnings']
+>[number];
 
 export interface QrCodeModalProps {
     componentProps: {
@@ -1212,7 +1148,12 @@ export interface ConfirmationDialogProps {
 
 export interface UseConfirmationDialogReturn {
     isOpen: boolean;
-    confirm: (config: Omit<ConfirmationDialogProps, 'open' | 'onOpenChange' | 'onConfirm'> & { onConfirm: () => void | Promise<void> }) => void;
+    confirm: (
+        config: Omit<
+            ConfirmationDialogProps,
+            'open' | 'onOpenChange' | 'onConfirm'
+        > & { onConfirm: () => void | Promise<void> },
+    ) => void;
     ConfirmDialog: React.FC;
 }
 

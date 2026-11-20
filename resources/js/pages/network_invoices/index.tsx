@@ -1,32 +1,38 @@
+import FinanceErrorNotice from '@/components/finance-error-notice';
+import RecordPayment from '@/components/record-payment';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useReducer } from 'react';
-import { Head, router, usePage } from '@inertiajs/react';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
+import { useReducer, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { ReusablePageTitle } from '@/dev/core';
 import { CustomBaseTable, SearchTools } from '@/dev/table';
+import AppLayout from '@/layouts/app-layout';
 import {
     BreadcrumbItem,
+    SingleActionsHandler,
     TFilterOptions,
     TPaginationFilters,
-    SingleActionsHandler,
 } from '@/types';
 
-import {
-    FILTEROPTIONS,
-    ReusableReducer,
-} from '@/utils/constants';
-import { useDebounce } from '@/hooks';
 import { ActionColumn, NetworkInvoiceColumns } from '@/dev/columns/columns';
-import { Plus } from 'lucide-react';
+import { useDebounce } from '@/hooks';
 import networks from '@/routes/networks';
+import { FILTEROPTIONS, ReusableReducer } from '@/utils/constants';
+import { Plus } from 'lucide-react';
 
 const NetworkInvoiceIndex = () => {
     const { t } = useTranslation();
-    const { invoices, is_super_admin, is_network } = usePage<any>().props;
+    const { invoices, is_super_admin, is_network, currencies } =
+        usePage<any>().props;
+    const [currency, setCurrency] = useState<string>(currencies[0]);
+    const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
+    const [cancelId, setCancelId] = useState<number | null>(null);
+    const cancelForm = useForm({ reason: '' });
     const breadcrumbs: BreadcrumbItem[] = [
         {
             title: t('Network Invoices'),
@@ -35,45 +41,122 @@ const NetworkInvoiceIndex = () => {
     ];
     const [PageFilter, optionsDispatcher] = useReducer(
         ReusableReducer<TPaginationFilters & TFilterOptions>,
-        { ...FILTEROPTIONS, page: 1, pageSize: 25 }
+        { ...FILTEROPTIONS, page: 1, pageSize: 25 },
     );
     const optionsDispatcherDebounce = useDebounce({
         debounceCallback: optionsDispatcher,
     });
 
-    const markAsPaid = (id: number) => {
-        if (confirm(t('Are you sure you want to mark this invoice as paid? This will affect network earnings.'))) {
-            router.post(networks.invoices.markPaid.url(id), {
-                payment_method: 'Manual',
-                payment_reference: 'Admin Action'
-            })
-
-        }
-    };
     const ActionsHandlerMapping: SingleActionsHandler<any>[] = [
         {
-            label: (t('Mark as Paid')),
-            onSelect: (data: any) => markAsPaid(data?.id),
-            conditional: () => !!is_super_admin
-        }
+            label: t('Approve'),
+            onSelect: (data) =>
+                router.post(`/networks/invoices/${data.id}/approve`),
+            conditional: (data) =>
+                !!is_super_admin && data.status === 'pending',
+        },
+        {
+            label: t('Cancel invoice'),
+            onSelect: (data) => setCancelId(data.id),
+            conditional: (data) =>
+                !!is_super_admin &&
+                ['pending', 'approved'].includes(data.status),
+        },
+        {
+            label: t('Record payment'),
+            onSelect: (data) =>
+                setPaymentUrl(networks.invoices.markPaid.url(data.id)),
+            conditional: (data) =>
+                !!is_super_admin && data.status === 'approved',
+        },
     ];
     return (
         <AppLayout>
+            <FinanceErrorNotice />
+            <RecordPayment
+                url={paymentUrl}
+                onClose={() => setPaymentUrl(null)}
+            />
             <Head title={t('Network Invoices')} />
 
-            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
+            <div className="workspace-page flex h-full flex-1 flex-col gap-4">
                 <ReusablePageTitle
                     title={t('Network Invoices')}
                     description={t('Manage and track network payouts')}
                     breadcrumbs={breadcrumbs}
                     children={
                         is_network && (
-                            <Button onClick={() => router.post(networks.invoices.store.url())}>
-                                <Plus />
-                                <span>{t('Generate Invoice')}</span>
-                            </Button>
-                        )}
+                            <div className="flex flex-wrap items-center gap-3">
+                                <Label htmlFor="network-currency">
+                                    {t('Currency')}
+                                </Label>
+                                <select
+                                    id="network-currency"
+                                    className="rounded-md border bg-background p-2"
+                                    value={currency}
+                                    onChange={(e) =>
+                                        setCurrency(e.target.value)
+                                    }
+                                >
+                                    {currencies.map((code: string) => (
+                                        <option key={code}>{code}</option>
+                                    ))}
+                                </select>
+                                <Button
+                                    onClick={() =>
+                                        router.post(
+                                            networks.invoices.store.url(),
+                                            { currency },
+                                        )
+                                    }
+                                >
+                                    <Plus />
+                                    <span>{t('Generate Invoice')}</span>
+                                </Button>
+                            </div>
+                        )
+                    }
                 />
+                {cancelId && (
+                    <form
+                        className="space-y-3 rounded-xl border bg-card p-4"
+                        onSubmit={(event) => {
+                            event.preventDefault();
+                            cancelForm.post(
+                                `/networks/invoices/${cancelId}/reject`,
+                                { onSuccess: () => setCancelId(null) },
+                            );
+                        }}
+                    >
+                        <Label htmlFor="cancel-reason">
+                            {t('Cancellation reason')}
+                        </Label>
+                        <Input
+                            id="cancel-reason"
+                            required
+                            maxLength={500}
+                            value={cancelForm.data.reason}
+                            onChange={(e) =>
+                                cancelForm.setData('reason', e.target.value)
+                            }
+                        />
+                        {cancelForm.errors.reason && (
+                            <p role="alert" className="text-destructive">
+                                {cancelForm.errors.reason}
+                            </p>
+                        )}
+                        <Button disabled={cancelForm.processing}>
+                            {t('Cancel invoice')}
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setCancelId(null)}
+                        >
+                            {t('Keep invoice')}
+                        </Button>
+                    </form>
+                )}
                 <div className="w-full">
                     <CustomBaseTable
                         {...{

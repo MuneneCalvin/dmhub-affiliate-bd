@@ -57,7 +57,7 @@ const PublisherShowPage = () => {
     return (
         <AppLayout>
             <Head title={`${t('Publisher')} - ${publisher.user?.first_name} ${publisher.user?.last_name}`} />
-            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
+            <div className="workspace-page flex h-full flex-1 flex-col gap-4">
                 <ReusablePageTitle
                     title={t('Publisher Details')}
                     breadcrumbs={breadcrumbs}

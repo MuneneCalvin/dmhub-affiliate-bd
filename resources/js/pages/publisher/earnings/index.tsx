@@ -1,14 +1,20 @@
+import FinanceSummaryTable, {
+    FinanceSummary,
+} from '@/components/finance-summary';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { EarningsColumns } from '@/dev/columns/columns';
-import { ReusablePageTitle, StatCard } from '@/dev/core';
+import { ReusablePageTitle } from '@/dev/core';
 import { CustomBaseTable, SearchTools } from '@/dev/table';
 import { useDebounce } from '@/hooks';
 import AppLayout from '@/layouts/app-layout';
-import { BreadcrumbItem, PublisherEarning, PublisherEarningSummary, TFilterOptions, TPaginationFilters } from '@/types';
+import {
+    BreadcrumbItem,
+    PublisherEarning,
+    TFilterOptions,
+    TPaginationFilters,
+} from '@/types';
 import { FILTEROPTIONS, ReusableReducer } from '@/utils/constants';
-import { formatCurrency } from '@/utils/utils';
 import { Head, usePage } from '@inertiajs/react';
-import { DollarSign, TrendingUp, Clock, CheckCircle } from 'lucide-react';
 import { useReducer } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -19,16 +25,21 @@ const EarningsIndex = () => {
         {
             title: t('My Earnings'),
             href: '/publisher/earnings',
-        }
+        },
     ];
     const { earnings, summary } = usePage<{
-        earnings: { data: PublisherEarning[]; current_page: number; last_page: number; per_page: number };
-        summary: PublisherEarningSummary;
+        earnings: {
+            data: PublisherEarning[];
+            current_page: number;
+            last_page: number;
+            per_page: number;
+        };
+        summary: FinanceSummary;
     }>().props;
 
     const [, optionsDispatcher] = useReducer(
         ReusableReducer<TPaginationFilters & TFilterOptions>,
-        { ...FILTEROPTIONS, page: 1, pageSize: 50 }
+        { ...FILTEROPTIONS, page: 1, pageSize: 50 },
     );
     const optionsDispatcherDebounce = useDebounce({
         debounceCallback: optionsDispatcher,
@@ -36,38 +47,16 @@ const EarningsIndex = () => {
 
     return (
         <AppLayout>
-            <Head title={t("My Earnings")} />
-            <div className="flex h-full flex-1 flex-col gap-6 p-6">
+            <Head title={t('My Earnings')} />
+            <div className="workspace-page flex h-full flex-1 flex-col gap-6">
                 <ReusablePageTitle
-                    title={t("My Earnings")}
-                    description={t("Track your commission earnings from leads and conversions")}
+                    title={t('My Earnings')}
+                    description={t(
+                        'Track your commission earnings from conversions',
+                    )}
                     breadcrumbs={breadcrumbs}
                 />
-                <div className="grid gap-4 md:grid-cols-4">
-                    <StatCard
-                        title={t('Total Earnings')}
-                        value={formatCurrency(summary?.total_earnings || 0, 'USD')}
-                        icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
-                    />
-                    <StatCard
-                        title={t('Pending')}
-                        value={formatCurrency(summary?.pending_earnings || 0, 'USD')}
-                        icon={<Clock className="h-4 w-4 text-muted-foreground" />}
-                        valueClassName="text-yellow-600"
-                    />
-                    <StatCard
-                        title={t('Approved')}
-                        value={formatCurrency(summary?.approved_earnings || 0, 'USD')}
-                        icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
-                        valueClassName="text-blue-600"
-                    />
-                    <StatCard
-                        title={t('Paid')}
-                        value={formatCurrency(summary?.paid_earnings || 0, 'USD')}
-                        icon={<CheckCircle className="h-4 w-4 text-muted-foreground" />}
-                        valueClassName="text-green-600"
-                    />
-                </div>
+                <FinanceSummaryTable summary={summary} />
                 <div className="w-full">
                     <CustomBaseTable
                         {...{

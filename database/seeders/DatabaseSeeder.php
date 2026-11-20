@@ -26,21 +26,18 @@ class DatabaseSeeder extends Seeder
 
         if (app()->environment(['local', 'testing'])) {
             $this->seedDemoData();
+        } else {
+            $this->call(RolePermsSeeder::class);
         }
-
-        // Last: also attaches roles to any users created above.
-        $this->call(RolePermsSeeder::class);
     }
 
     private function seedDemoData(): void
     {
-        $this->call(NetworkSeeder::class);
-
         User::firstOrCreate(
             ['email' => 'test@test.com'],
             [
                 'first_name' => 'Admin',
-                'last_name' => 'BrandNewDay',
+                'last_name' => 'DM Hub',
                 'user_name' => 'AHTest',
                 'title' => 'Super Admin',
                 'is_super_admin' => true,
@@ -50,5 +47,7 @@ class DatabaseSeeder extends Seeder
                 'password_expiry_date' => now()->addMonths(1),
             ]
         );
+
+        $this->call(UsersSeeder::class);
     }
 }

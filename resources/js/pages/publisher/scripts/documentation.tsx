@@ -53,7 +53,7 @@ const DocumentationPage = () => {
     return (
         <AppLayout>
             <Head title={`${t("Documentation")} - ${campaign?.name}`} />
-            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4">
+            <div className="workspace-page flex h-full flex-1 flex-col gap-6">
                 <ReusablePageTitle
                     title={t('Integration Documentation')}
                     description={`${campaign?.name} - ${campaign?.offer}`}

@@ -1,23 +1,56 @@
+import { ResourceDirectory } from '@/components/resource-directory';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
-import { DateRange, TQueryFieldProps, TSearchToolProps, TTableReusableComponent } from "@/types";
+import {
+    DateRange,
+    TQueryFieldProps,
+    TSearchToolProps,
+    TTableReusableComponent,
+} from '@/types';
+import { router, usePage } from '@inertiajs/react';
 import { Table as TableType, flexRender } from '@tanstack/react-table';
-import { router, usePage } from "@inertiajs/react";
 
-import { getCoreRowModel, getFilteredRowModel, useReactTable, } from '@tanstack/react-table';
-import { ReusablePagination, TableComponentHeadings } from "./core";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { ArrowRightIcon, ChevronDownIcon, ListFilter, SearchIcon, XIcon } from "lucide-react";
-import { Separator } from "@radix-ui/react-separator";
-import { Input } from "@/components/ui/input";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { Input } from '@/components/ui/input';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
+import { cn } from '@/lib/utils';
+import { Separator } from '@radix-ui/react-separator';
+import {
+    getCoreRowModel,
+    getFilteredRowModel,
+    useReactTable,
+} from '@tanstack/react-table';
+import { format } from 'date-fns';
+import {
+    ArrowRightIcon,
+    ChevronDownIcon,
+    ListFilter,
+    SearchIcon,
+    XIcon,
+} from 'lucide-react';
+import React, {
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from 'react';
+import { useTranslation } from 'react-i18next';
+import { ReusablePagination, TableComponentHeadings } from './core';
 
 export const DataTable = ({
     showPagination,
@@ -42,40 +75,57 @@ export const DataTable = ({
     Required<Pick<TTableReusableComponent, 'page'>>) => {
     const { t } = useTranslation();
     return (
-        <div className='w-full shadow rounded-xl border overflow-clip'>
-            <Table className='px-6 py-2'>
-                <TableHeader className='select-none rounded-[8px] border'>
+        <div className="w-full overflow-hidden rounded-xl border bg-card">
+            <Table className="px-6 py-2">
+                <TableHeader className="bg-muted/60 select-none">
                     {table.getHeaderGroups().map((headerGroup, index) => (
                         <TableRow
                             key={`table-R-${index}`}
-                            className='h-11 overflow-auto font-medium text-[12px] leading-5'>
+                            className="h-11 overflow-auto text-[12px] leading-5 font-medium"
+                        >
                             {headerGroup.headers.map((header, index) => (
                                 <TableHead
                                     key={`tableH-${index}`}
                                     className={cn('text-left')}
-                                    align={'left'}>
+                                    align={'left'}
+                                >
                                     {header.isPlaceholder
                                         ? null
                                         : flexRender(
-                                            header.column.columnDef.header,
-                                            header.getContext()
-                                        )}
+                                              header.column.columnDef.header,
+                                              header.getContext(),
+                                          )}
                                 </TableHead>
                             ))}
                         </TableRow>
                     ))}
                 </TableHeader>
-                <TableBody className='px-6 py-5 select-none'>
+                <TableBody className="px-6 py-5">
                     {isLoading || isError ? (
                         <TableRow>
                             <TableCell
                                 colSpan={table.getAllColumns().length}
-                                className='h-24 text-center'>
-                                {/* <CustomLoader
-									{...{
-										...(isError ? { title: 'Error fetching data.' } : {}),
-									}}
-								/> */}
+                                className="h-24 text-center"
+                            >
+                                {isError ? (
+                                    <p
+                                        role="alert"
+                                        className="text-destructive"
+                                    >
+                                        {t(
+                                            'Unable to load data. Please refresh and try again.',
+                                        )}
+                                    </p>
+                                ) : (
+                                    <div
+                                        role="status"
+                                        className="mx-auto h-3 w-2/3 animate-pulse rounded bg-muted"
+                                    >
+                                        <span className="sr-only">
+                                            {t('Loading')}
+                                        </span>
+                                    </div>
+                                )}
                             </TableCell>
                         </TableRow>
                     ) : (
@@ -87,27 +137,38 @@ export const DataTable = ({
                                         {...{
                                             ...(onClick
                                                 ? {
-                                                    onClick: () => onClick(row),
-                                                }
+                                                      onClick: () =>
+                                                          onClick(row),
+                                                  }
                                                 : {}),
                                         }}
-                                        className='h-14 overflow-auto pb-1 border-b-1px border-table-border-color px-6 py-4'
-                                        data-state={row.getIsSelected() && 'selected'}>
-                                        {row.getVisibleCells().map((cell, index) => (
-                                            <TableCell key={`cell-index-${index}`} align={'left'}>
-                                                {flexRender(
-                                                    cell.column.columnDef.cell,
-                                                    cell.getContext()
-                                                )}
-                                            </TableCell>
-                                        ))}
+                                        className="border-b-1px border-table-border-color h-14 overflow-auto px-6 py-4 pb-1"
+                                        data-state={
+                                            row.getIsSelected() && 'selected'
+                                        }
+                                    >
+                                        {row
+                                            .getVisibleCells()
+                                            .map((cell, index) => (
+                                                <TableCell
+                                                    key={`cell-index-${index}`}
+                                                    align={'left'}
+                                                >
+                                                    {flexRender(
+                                                        cell.column.columnDef
+                                                            .cell,
+                                                        cell.getContext(),
+                                                    )}
+                                                </TableCell>
+                                            ))}
                                     </TableRow>
                                 ))
                             ) : (
                                 <TableRow>
                                     <TableCell
                                         colSpan={table.getAllColumns().length}
-                                        className='h-24 text-center'>
+                                        className="h-40 text-center text-muted-foreground"
+                                    >
                                         {t('No data to display.')}
                                     </TableCell>
                                 </TableRow>
@@ -117,42 +178,52 @@ export const DataTable = ({
                 </TableBody>
             </Table>
             {showPagination && table.getRowModel().rows?.length > 0 ? (
-                <div className='flex gap-5 justify-between p-5'>
+                <div className="flex flex-wrap justify-between gap-3 border-t px-4 py-4">
                     <Button
-                        className='flex gap-2 items-center'
+                        className="flex items-center gap-2"
                         {...{
-                            onClick: () => onPageChange(page > 1 ? page - 1 : page),
+                            onClick: () =>
+                                onPageChange(page > 1 ? page - 1 : page),
                             ...(page <= 1 ? { disabled: true } : {}),
                             variant: 'outline',
-                        }}>
+                        }}
+                    >
                         <ArrowRightIcon
                             {...{
-                                svgElementClassName: 'stroke-black hover:stroke-black/2',
+                                svgElementClassName:
+                                    'stroke-black hover:stroke-black/2',
                                 className: 'w-5 h-5 rotate-180',
                             }}
                         />
 
-                        <p className='text-sm font-semibold leading-5 text-filter-stroke-color'>
+                        <p className="text-filter-stroke-color text-sm leading-5 font-semibold">
                             {t('Previous')}
                         </p>
                     </Button>
 
-                    <ReusablePagination {...{ onPageChange, page, pageCount }} />
+                    <ReusablePagination
+                        {...{ onPageChange, page, pageCount }}
+                    />
 
                     <Button
-                        className='flex gap-2 items-center'
+                        className="flex items-center gap-2"
                         {...{
-                            onClick: () => onPageChange(page < pageCount ? page + 1 : page),
+                            onClick: () =>
+                                onPageChange(
+                                    page < pageCount ? page + 1 : page,
+                                ),
                             variant: 'outline',
                             ...(page >= pageCount ? { disabled: true } : {}),
-                        }}>
-                        <p className='text-sm font-semibold leading-5 text-filter-stroke-color'>
+                        }}
+                    >
+                        <p className="text-filter-stroke-color text-sm leading-5 font-semibold">
                             {t('Next')}
                         </p>
 
                         <ArrowRightIcon
                             {...{
-                                svgElementClassName: 'stroke-black hover:stroke-black/2',
+                                svgElementClassName:
+                                    'stroke-black hover:stroke-black/2',
                                 className: 'w-5 h-5',
                             }}
                         />
@@ -164,6 +235,7 @@ export const DataTable = ({
 };
 
 export const CustomBaseTable = <T,>({
+    presentation = 'table',
     onRowSelectionChange,
     showPagination = false,
     OtherToolsProps,
@@ -186,7 +258,7 @@ export const CustomBaseTable = <T,>({
     const [pathname, queryString = ''] = url.split('?');
     const existingParams = useMemo(
         () => Object.fromEntries(new URLSearchParams(queryString).entries()),
-        [queryString]
+        [queryString],
     );
 
     useEffect(() => {
@@ -195,7 +267,10 @@ export const CustomBaseTable = <T,>({
 
     const handlePageChange = useCallback(
         (nextPage: number) => {
-            const resolvedPage = Math.min(Math.max(1, nextPage), Math.max(1, pageCount));
+            const resolvedPage = Math.min(
+                Math.max(1, nextPage),
+                Math.max(1, pageCount),
+            );
             setInternalPage(resolvedPage);
             onPageChange(resolvedPage);
 
@@ -214,10 +289,17 @@ export const CustomBaseTable = <T,>({
                     preserveState: false,
                     preserveScroll: true,
                     replace: true,
-                }
+                },
             );
         },
-        [existingParams, onPageChange, pageCount, pageSize, pathname, showPagination]
+        [
+            existingParams,
+            onPageChange,
+            pageCount,
+            pageSize,
+            pathname,
+            showPagination,
+        ],
     );
 
     // eslint-disable-next-line react-hooks/incompatible-library
@@ -227,8 +309,8 @@ export const CustomBaseTable = <T,>({
         getCoreRowModel: getCoreRowModel(),
         ...(onRowSelectionChange
             ? {
-                onRowSelectionChange,
-            }
+                  onRowSelectionChange,
+              }
             : {}),
         columns,
         data,
@@ -236,24 +318,27 @@ export const CustomBaseTable = <T,>({
             ...(rowSelection ? { rowSelection } : {}),
         },
     });
+    if (presentation === 'cards') return <ResourceDirectory table={table} title={title} page={internalPage} pageCount={pageCount} onPageChange={handlePageChange} isLoading={isLoading} isError={isError} />;
     return (
-        <div className='md:col-span-6'>
+        <div className="md:col-span-6">
             {(title || OtherTools) && (
                 <TableComponentHeadings>
-                    <div className='flex justify-between items-center w-full gap-6 flex-wrap'>
+                    <div className="flex w-full flex-wrap items-center justify-between gap-6">
                         {title && (
-                            <div className='leading-7 text-label-text text-md md:text-md tracking-[-.5%] capitalize  py-3 font-semibold'>
+                            <div className="text-label-text text-md md:text-md py-3 leading-7 font-semibold tracking-[-.5%] capitalize">
                                 {title}
                             </div>
                         )}
-                        <div className='flex justify-end gap-2 items-center'>
+                        <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
                             {OtherTools && (
-                                <div className='w-fit'>
+                                <div className="w-full sm:w-fit">
                                     <OtherTools
                                         {...{
                                             ...(OtherToolsProps ?? {}),
                                             onChange:
-                                                OtherToolsProps?.onChange ?? ((data: any) => console.log(data)),
+                                                OtherToolsProps?.onChange ??
+                                                ((data: any) =>
+                                                    console.log(data)),
                                         }}
                                     />
                                 </div>
@@ -282,34 +367,30 @@ export const CustomBaseTable = <T,>({
 };
 
 export const SearchTools = ({
-    className = 'border-primary',
+    className = '',
     placeholder = 'Search',
     includeFilter = false,
     advancedHandler,
     onChange,
 }: TSearchToolProps) => {
     return (
-        <div className='flex gap-4 items-center select-none'>
+        <div className="flex flex-wrap items-center gap-3">
             <ProductQueryField {...{ onChange, placeholder, className }} />
             {includeFilter && <ReuseableDateFilters {...{ advancedHandler }} />}
         </div>
     );
 };
 
-
 export const ProductQueryField = ({
-    className = 'bg-secondary border-primary',
+    className = '',
     placeholder,
     onChange,
 }: TQueryFieldProps) => {
     const inputRef = useRef<HTMLInputElement>(null);
     return (
-        <div className='relative'>
+        <div className="relative min-w-0">
             <Input
-                className={cn(
-                    'rounded-lg w-55 h-8 pl-10 outline-accent border border-accent focus:border-primary focus:outline-primary',
-                    className
-                )}
+                className={cn('h-10 w-full pl-10 sm:w-64', className)}
                 {...{
                     onChange: (e) => onChange(e.currentTarget.value.trim()),
                     ref: inputRef,
@@ -318,7 +399,7 @@ export const ProductQueryField = ({
                 }}
             />
             <SearchIcon
-                className='absolute h-4 w-4 left-4 top-[calc(calc(100%-1rem)/2)] cursor-pointer stroke-gray-400'
+                className="absolute top-[calc(calc(100%-1rem)/2)] left-4 h-4 w-4 cursor-pointer stroke-gray-400"
                 {...{
                     onClick: () => inputRef.current?.focus(),
                 }}
@@ -332,16 +413,18 @@ export const ReusableFilterButton = ({
 }: Partial<Pick<TSearchToolProps, 'advancedHandler'>>) => {
     const { t } = useTranslation();
     return (
-        <div className='border border-neutral-300 bg-neutral-100 py-1 px-3 flex gap-2 items-center rounded-[8px] w-28 select-none cursor-pointer h-8'>
-            <ListFilter className='size-6' />
-            <p className='font-medium text-sm leading-4 text-gray-600'>{t('Filter')}</p>
+        <div className="flex h-8 w-28 cursor-pointer items-center gap-2 rounded-[8px] border border-neutral-300 bg-neutral-100 px-3 py-1 select-none">
+            <ListFilter className="size-6" />
+            <p className="text-sm leading-4 font-medium text-gray-600">
+                {t('Filter')}
+            </p>
             <Separator
-                className='w-4 h-4 my-4 bg-gray-300'
+                className="my-4 h-4 w-4 bg-gray-300"
                 {...{
                     orientation: 'vertical',
                 }}
             />
-            <XIcon className='size-6' />
+            <XIcon className="size-6" />
         </div>
     );
 };
@@ -353,13 +436,16 @@ export const ReuseableDateFilters = ({
     const [range, setRange] = React.useState<DateRange>();
     React.useEffect(() => {
         if (!advancedHandler) return;
-        (advancedHandler as (data: { startDate?: string; endDate?: string }) => void)({
+        (
+            advancedHandler as (data: {
+                startDate?: string;
+                endDate?: string;
+            }) => void
+        )({
             startDate: range?.from
                 ? format(range.from, 'yyyy-MM-dd')
                 : undefined,
-            endDate: range?.to
-                ? format(range.to, 'yyyy-MM-dd')
-                : undefined,
+            endDate: range?.to ? format(range.to, 'yyyy-MM-dd') : undefined,
         });
     }, [range, advancedHandler]);
 
@@ -368,12 +454,13 @@ export const ReuseableDateFilters = ({
             <PopoverTrigger asChild>
                 <Button
                     variant="outline"
-                    className="h-8 w-fit justify-between text-left font-normal">
+                    className="h-8 w-fit justify-between text-left font-normal"
+                >
                     {range?.from ? (
                         range.to ? (
                             `${format(range.from, 'PPP')} – ${format(
                                 range.to,
-                                'PPP'
+                                'PPP',
                             )}`
                         ) : (
                             format(range.from, 'PPP')

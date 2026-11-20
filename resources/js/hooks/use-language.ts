@@ -5,10 +5,14 @@ import { useTranslation } from 'react-i18next';
 interface LocaleData {
     current: string;
     fallback: string;
-    available: Record<string, { name: string; native: string; regional: string }>;
+    available: Record<
+        string,
+        { name: string; native: string; regional: string }
+    >;
 }
 
 interface PageProps {
+    [key: string]: unknown;
     locale?: LocaleData;
 }
 
@@ -48,10 +52,10 @@ export function useLanguage() {
                 {
                     preserveState: true,
                     preserveScroll: true,
-                }
+                },
             );
         },
-        [i18n]
+        [i18n],
     );
 
     // Get available locales as array for dropdowns
@@ -60,7 +64,7 @@ export function useLanguage() {
             code,
             name: data.name,
             native: data.native,
-        })
+        }),
     );
 
     return {

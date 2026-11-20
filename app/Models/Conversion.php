@@ -12,6 +12,7 @@ class Conversion extends Model
     protected $table = 'conversions';
 
     protected $fillable = [
+        'conversion_event_id',
         'click_id',
         'external_click_id',
         'publisher_id',
@@ -39,6 +40,11 @@ class Conversion extends Model
         'rejected_at',
     ];
 
+    protected function casts(): array
+    {
+        return ['metadata' => 'array', 'sale_amount' => 'decimal:2', 'commission_amount' => 'decimal:2'];
+    }
+
     /**
      * Relationships
      */
@@ -53,10 +59,12 @@ class Conversion extends Model
     {
         return $this->belongsTo(Publisher::class, 'publisher_id');
     }
+
     public function network()
     {
         return $this->belongsTo(Network::class, 'network_id');
     }
+
     public function campaign()
     {
         return $this->belongsTo(Campaign::class, 'campaign_id');
@@ -66,6 +74,7 @@ class Conversion extends Model
     {
         return $this->belongsTo(Offer::class, 'offer_id');
     }
+
     public function publisherCampaign()
     {
         return $this->belongsTo(PublisherCampaigns::class, 'publisher_campaign_id');

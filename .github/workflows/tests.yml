@@ -1,107 +1,122 @@
-name: tests
+name: release qualification
 
 on:
   push:
-    branches:
-      - develop
-      - main
+    branches: [develop, main]
   pull_request:
-    branches:
-      - develop
-      - main
+    branches: [develop, main]
+  workflow_call:
+    inputs:
+      revision:
+        description: Full immutable commit SHA resolved by the caller
+        required: true
+        type: string
+    outputs:
+      revision:
+        value: ${{ jobs.qualify.outputs.revision }}
 
 permissions:
   contents: read
 
 jobs:
-  ci:
-    runs-on: ubuntu-latest
-
-    # The migrations use PostgreSQL-only SQL (plpgsql), so tests must run on Postgres, not sqlite.
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      revision: ${{ steps.revision.outputs.sha }}
     services:
       postgres:
         image: postgres:16-alpine
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: dmhub_test
-        ports:
-          - 5432:5432
+          POSTGRES_DB: dmhub_qualification
+        ports: ['5432:5432']
         options: >-
           --health-cmd "pg_isready -U postgres"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-
+          --health-interval 5s --health-timeout 5s --health-retries 10
     env:
+      APP_ENV: testing
+      APP_URL: http://127.0.0.1:8765
       DB_CONNECTION: pgsql
       DB_HOST: 127.0.0.1
       DB_PORT: 5432
-      DB_DATABASE: dmhub_test
+      DB_DATABASE: dmhub_qualification
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
-
+      DB_URL: ''
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.revision || github.sha }}
+      - name: Record exact tested revision
+        id: revision
+        env:
+          REQUESTED_SHA: ${{ inputs.revision }}
+        run: |
+          SHA=$(git rev-parse HEAD)
+          if [ -n "$REQUESTED_SHA" ]; then test "$SHA" = "$REQUESTED_SHA"; fi
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+      - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: pdo_pgsql, pgsql
+          extensions: pdo_pgsql, pgsql, pdo_sqlite
           tools: composer:v2
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
+          cache: npm
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - run: cp .env.example .env && php artisan key:generate
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-16
+          echo '/usr/lib/postgresql/16/bin' >> "$GITHUB_PATH"
+      - name: Complete suite, types, build, merchant browser, restore drill and lifecycle gate
+        run: bash scripts/release/qualify.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qualification-${{ steps.revision.outputs.sha }}
+          path: |
+            release-evidence/
+            playwright-report/
+            test-results/
+          retention-days: 14
 
-      - name: Install PHP Dependencies
-        run: composer install --no-interaction --prefer-dist --no-progress
-
-      - name: Copy Environment File
-        run: cp .env.example .env
-
-      - name: Generate Application Key
-        run: php artisan key:generate
-
-      - name: Install Node Dependencies
-        run: npm ci
-
-      - name: Build Assets
-        run: npm run build
-
-      - name: Tests
-        run: ./vendor/bin/pest
-
-  # Catches Dockerfile/dependency changes that would break a deploy, before they reach main.
   docker:
     runs-on: ubuntu-latest
-
+    timeout-minutes: 30
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.revision || github.sha }}
+      - id: revision
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       - uses: docker/setup-buildx-action@v3
-
-      - name: Build app image
-        uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v6
         with:
           context: .
           file: docker/production/Dockerfile
           target: app
+          build-args: RELEASE_SHA=${{ steps.revision.outputs.sha }}
           push: false
           cache-from: type=gha,scope=app
           cache-to: type=gha,mode=max,scope=app
-
-      - name: Build web image
-        uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v6
         with:
           context: .
           file: docker/production/Dockerfile
           target: web
+          build-args: RELEASE_SHA=${{ steps.revision.outputs.sha }}
           push: false
           cache-from: type=gha,scope=web
           cache-to: type=gha,mode=max,scope=web
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/backup/Dockerfile
+          push: false

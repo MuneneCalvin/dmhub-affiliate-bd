@@ -64,7 +64,8 @@ export default function Login({
                                         <TextLink
                                             href={request()}
                                             className="ml-auto text-sm"
-                                            tabIndex={5}>
+                                            tabIndex={5}
+                                        >
                                             {__('Forgot your password?')}
                                         </TextLink>
                                     )}
@@ -73,9 +74,7 @@ export default function Login({
                                     <Input
                                         id="password"
                                         type={
-                                            showPassword
-                                                ? ('text')
-                                                : ('password')
+                                            showPassword ? 'text' : 'password'
                                         }
                                         name="password"
                                         required
@@ -85,10 +84,17 @@ export default function Login({
                                     />
                                     <button
                                         type="button"
-                                        className="absolute right-2"
+                                        className="absolute right-2 flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted"
+                                        aria-label={
+                                            showPassword
+                                                ? __('Hide password')
+                                                : __('Show password')
+                                        }
+                                        aria-pressed={showPassword}
                                         onClick={() =>
                                             setShowPassword((prev) => !prev)
-                                        }>
+                                        }
+                                    >
                                         {showPassword ? (
                                             <EyeOff className="h-4 w-4" />
                                         ) : (
@@ -133,6 +139,12 @@ export default function Login({
                     </>
                 )}
             </Form>
+            <a
+                href="/docs"
+                className="text-center text-sm text-muted-foreground underline underline-offset-4"
+            >
+                {__('Documentation')}
+            </a>
             {status && (
                 <div className="mb-4 text-center text-sm font-medium text-green-600">
                     {status}

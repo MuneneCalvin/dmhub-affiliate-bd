@@ -1,8 +1,9 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 test('profile page is displayed', function () {
     $user = User::factory()->create();
@@ -52,7 +53,7 @@ test('email verification status is unchanged when the email address is unchanged
     expect($user->refresh()->email_verified_at)->not->toBeNull();
 });
 
-test('user can delete their account', function () {
+test('user can close their account while retaining their record', function () {
     $user = User::factory()->create();
 
     $response = $this
@@ -66,7 +67,8 @@ test('user can delete their account', function () {
         ->assertRedirect(route('home'));
 
     $this->assertGuest();
-    expect($user->fresh())->toBeNull();
+    expect($user->fresh()->status)->toBe('C');
+    expect($user->fresh()->closed_at)->not->toBeNull();
 });
 
 test('correct password must be provided to delete account', function () {

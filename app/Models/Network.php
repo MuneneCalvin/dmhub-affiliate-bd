@@ -16,6 +16,7 @@ class Network extends Model
         'status',
         'owner_email',
         'default_currency',
+        'requires_prepaid_funding',
         'default_commission_model',
         'default_commission_value',
         'min_payment_threshold',
@@ -32,7 +33,9 @@ class Network extends Model
         'approved_at',
         'country_iso',
     ];
+
     protected $casts = [
+        'requires_prepaid_funding' => 'boolean',
         'settings' => 'array',
         'approved_at' => 'datetime',
         'default_commission_value' => 'decimal:2',

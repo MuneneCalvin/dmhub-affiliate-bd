@@ -128,7 +128,7 @@ const Roles_page = () => {
     return (
         <AppLayout>
             <Head title={t("Roles")} />
-            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
+            <div className="workspace-page flex h-full flex-1 flex-col gap-4">
                 <ReusablePageTitle
                     title={t("Roles")}
                     description={t("Manage user roles and access permissions")}
@@ -141,7 +141,7 @@ const Roles_page = () => {
                     }
                 />
                 <div className='w-full'>
-                    <CustomBaseTable
+                    <CustomBaseTable presentation="cards"
                         {...{
                             onPageChange: (page) =>
                                 optionsDispatcher({

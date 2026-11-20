@@ -4,10 +4,15 @@ import { CustomBaseTable, SearchTools } from '@/dev/table';
 import { useCustomDialogContextFactory, useDebounce } from '@/hooks';
 import AppLayout from '@/layouts/app-layout';
 import system from '@/routes/system';
-import { BreadcrumbItem, SingleActionsHandler, SystemUser, User } from '@/types';
+import {
+    BreadcrumbItem,
+    SingleActionsHandler,
+    SystemUser,
+    User,
+} from '@/types';
 import { FILTEROPTIONS, ReusableReducer } from '@/utils/constants';
 import { Head, router, usePage } from '@inertiajs/react';
-import { useReducer } from 'react'
+import { useReducer } from 'react';
 import { useTranslation } from 'react-i18next';
 import AssignRoles from './modals/assign_roles';
 
@@ -26,10 +31,11 @@ const SystemUsers = () => {
         },
     ];
 
-    const [, optionsDispatcher] = useReducer(
-        ReusableReducer,
-        { ...FILTEROPTIONS, page: 1, pageSize: 10 }
-    );
+    const [, optionsDispatcher] = useReducer(ReusableReducer, {
+        ...FILTEROPTIONS,
+        page: 1,
+        pageSize: 10,
+    });
 
     const optionsDispatcherDebounce = useDebounce({
         debounceCallback: optionsDispatcher,
@@ -37,13 +43,17 @@ const SystemUsers = () => {
 
     const { handleDialogContextSwitch, dialogContent, dialogOpen } =
         useCustomDialogContextFactory<{
-            users?: User,
+            users?: User;
         }>();
 
     const handleActivate = (user: User) => {
-        router.patch(system.settings.users.activate.url(Number(user.id)), {}, {
-            preserveScroll: true,
-        });
+        router.patch(
+            system.settings.users.activate.url(Number(user.id)),
+            {},
+            {
+                preserveScroll: true,
+            },
+        );
     };
     const handleAssignRoles = (user: User) => {
         handleDialogContextSwitch({
@@ -55,12 +65,21 @@ const SystemUsers = () => {
     };
 
     const handleDeactivate = (user: User) => {
-        router.patch(system.settings.users.deactivate.url(Number(user.id)), {}, {
-            preserveScroll: true,
-        });
+        router.patch(
+            system.settings.users.deactivate.url(Number(user.id)),
+            {},
+            {
+                preserveScroll: true,
+            },
+        );
     };
 
     const ActionsHandlerMapping: SingleActionsHandler<User>[] = [
+        {
+            label: t('Assign Roles'),
+            onSelect: handleAssignRoles,
+            conditional: (user) => user.status === 'A',
+        },
         {
             label: t('Activate'),
             onSelect: handleActivate,
@@ -71,23 +90,22 @@ const SystemUsers = () => {
             onSelect: handleDeactivate,
             conditional: (user) => user.status === 'A',
         },
-         {
-            label: t('Assign Roles'),
-            onSelect: handleAssignRoles,
-            conditional: (user) => user.status === 'A',
-        },
     ];
 
     return (
         <AppLayout>
-            <Head title={t("System Users")} />
-            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
+            <Head title={t('System Users')} />
+            <div className="workspace-page flex h-full flex-1 flex-col gap-4">
                 <ReusablePageTitle
-                    title={t("System Users")}
-                    description={t('Manage System Users here')}
-                    breadcrumbs={breadcrumbs}/>
-                <div className='w-full'>
+                    title={t('Team directory')}
+                    description={t(
+                        'The people behind your workspace. Open a profile to review access and responsibilities.',
+                    )}
+                    breadcrumbs={breadcrumbs}
+                />
+                <div className="w-full">
                     <CustomBaseTable
+                        presentation="cards"
                         {...{
                             onPageChange: (page) =>
                                 optionsDispatcher({
@@ -107,10 +125,10 @@ const SystemUsers = () => {
                                 ...SystemUsersColumns,
                                 ActionColumn({ ActionsHandlerMapping }),
                             ],
-                            OtherTools:SearchTools,
+                            OtherTools: SearchTools,
                             data: users?.data ?? [],
                             pageCount: users?.last_page ?? 1,
-                            title: t('System Users'),
+                            title: t('Your people'),
                             showPagination: true,
                             setPageSize: (pageSize) =>
                                 optionsDispatcher({
@@ -124,7 +142,8 @@ const SystemUsers = () => {
                 </div>
                 <CustomDialogComponent
                     {...{ handleDialogContextSwitch, dialogOpen }}
-                    className='sm:max-w-[700px]'>
+                    className="sm:max-w-[700px]"
+                >
                     {dialogContent?.Component && (
                         <dialogContent.Component
                             {...{
@@ -136,7 +155,7 @@ const SystemUsers = () => {
                 </CustomDialogComponent>
             </div>
         </AppLayout>
-    )
-}
+    );
+};
 
 export default SystemUsers;

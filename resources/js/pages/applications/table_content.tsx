@@ -37,7 +37,7 @@ const ApplicationTableContent = ({
 
     return (
         <div className='w-full'>
-            <CustomBaseTable
+            <CustomBaseTable presentation="cards"
                 {...{
                     onPageChange: (page) =>
                         optionsDispatcher({

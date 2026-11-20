@@ -1,5 +1,5 @@
-import type { LandingStepsProps } from '@/types/landing';
 import { cn } from '@/lib/utils';
+import type { LandingStepsProps } from '@/types/landing';
 
 export default function LandingSteps({
     title,
@@ -13,7 +13,11 @@ export default function LandingSteps({
     return (
         <section
             id={id}
-            className={cn('bg-gray-50/50 py-20 lg:py-32 dark:bg-gray-900/50', className)}>
+            className={cn(
+                'bg-gray-50/50 py-20 lg:py-32 dark:bg-gray-900/50',
+                className,
+            )}
+        >
             <div className="mx-auto max-w-7xl px-6">
                 {(title || subtitle) && (
                     <div className="mb-16 text-center">
@@ -36,7 +40,7 @@ export default function LandingSteps({
                                 <div className="absolute top-8 left-1/2 hidden h-0.5 w-full bg-linear-to-r from-[#FF6B35] to-transparent md:block" />
                             )}
                             <div className="relative rounded-2xl border border-gray-100 bg-white p-8 text-center dark:border-gray-800 dark:bg-gray-900">
-                                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-linear-to-br from-[#FF6B35] to-[#F7931E] text-2xl font-bold text-white">
+                                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-sidebar text-2xl font-bold text-white">
                                     {step.number}
                                 </div>
                                 <h3 className="mb-2 text-xl font-semibold text-gray-900 dark:text-white">

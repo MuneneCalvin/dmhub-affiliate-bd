@@ -2,7 +2,8 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Database\Factories\UserFactory;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -12,9 +13,9 @@ use Spatie\Permission\Models\Role;
 use Spatie\Permission\Traits\HasPermissions;
 use Spatie\Permission\Traits\HasRoles;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
+    /** @use HasFactory<UserFactory> */
     use HasFactory, HasPermissions, HasRoles, Notifiable, TwoFactorAuthenticatable;
 
     /**
@@ -62,13 +63,6 @@ class User extends Authenticatable
         'remember_token',
     ];
 
-    public $cast = [
-        'is_super_admin',
-        'is_publisher',
-        'is_advertiser',
-        'is_network',
-    ];
-
     /**
      * Get the attributes that should be cast.
      *
@@ -77,6 +71,11 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
+            'is_super_admin' => 'boolean',
+            'is_publisher' => 'boolean',
+            'is_advertiser' => 'boolean',
+            'is_network' => 'boolean',
+            'closed_at' => 'datetime',
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
@@ -84,6 +83,17 @@ class User extends Authenticatable
     }
 
     public $timestamps = false;
+
+    protected static function booted(): void
+    {
+        static::updating(function (User $user) {
+            // Closing an account is terminal; ordinary activation must never reopen it.
+            if ($user->getOriginal('closed_at') !== null) {
+                $user->status = 'C';
+                $user->closed_at = $user->getOriginal('closed_at');
+            }
+        });
+    }
 
     public function generateUsername(): string
     {
@@ -102,10 +112,22 @@ class User extends Authenticatable
 
     public function assignRoleById(int $roleId)
     {
-        UserRoles::create([
+        $role = Role::findOrFail($roleId);
+        UserRoles::firstOrCreate([
             'user_id' => $this->id,
             'role_id' => $roleId,
         ]);
+
+        $flag = [
+            'super_admin' => 'is_super_admin',
+            'network_owner' => 'is_network',
+            'advertiser' => 'is_advertiser',
+            'publisher' => 'is_publisher',
+        ][$role->name] ?? null;
+        if ($flag) {
+            $this->update([$flag => true]);
+        }
+        $this->unsetRelation('roles');
 
         return true;
     }
@@ -127,6 +149,7 @@ class User extends Authenticatable
             ->pluck('permissions')
             ->flatten()
             ->pluck('name')
+            ->merge($this->permissions()->pluck('name'))
             ->unique()
             ->values();
     }

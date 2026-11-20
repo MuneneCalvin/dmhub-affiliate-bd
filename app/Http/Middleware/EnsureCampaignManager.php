@@ -20,6 +20,10 @@ class EnsureCampaignManager
             return redirect()->route('dashboard')->with('error', 'Access denied.');
         }
 
+        if (! $user->is_super_admin && $user->is_network) {
+            abort_unless($user->userNetworks()->whereHas('network', fn ($q) => $q->where('status', 'A'))->exists(), 403, 'Active network membership required.');
+        }
+
         return $next($request);
     }
 }

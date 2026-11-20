@@ -134,7 +134,7 @@ const ShowNetwork = () => {
     return (
         <AppLayout>
             <Head title={network?.network_name} />
-            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
+            <div className="workspace-page flex h-full flex-1 flex-col gap-4">
                 <ReusablePageTitle
                     title={network?.network_name}
                     breadcrumbs={breadcrumbs}

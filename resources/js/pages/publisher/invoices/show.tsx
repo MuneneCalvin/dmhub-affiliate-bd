@@ -8,7 +8,16 @@ import publisher from '@/routes/publisher';
 import { BreadcrumbItem, PublisherInvoice } from '@/types';
 import { formatCurrency } from '@/utils/utils';
 import { Head, usePage } from '@inertiajs/react';
-import { DollarSign, Clock, CheckCircle, XCircle, FileText, User, Calendar, Hash } from 'lucide-react';
+import {
+    Calendar,
+    CheckCircle,
+    Clock,
+    DollarSign,
+    FileText,
+    Hash,
+    User,
+    XCircle,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 const InvoiceShow = () => {
@@ -23,18 +32,28 @@ const InvoiceShow = () => {
         {
             title: invoice.invoice_number,
             href: publisher.invoices.show.url(invoice.id),
-        }
+        },
     ];
 
     return (
         <AppLayout>
-            <Head title={`${t("Invoice")} ${invoice.invoice_number}`} />
-            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4">
+            <Head title={`${t('Invoice')} ${invoice.invoice_number}`} />
+            <div className="workspace-page flex h-full flex-1 flex-col gap-6">
                 <ReusablePageTitle
-                    title={`${t("Invoice")} ${invoice.invoice_number}`}
-                    description={t("View invoice details")}
-                    breadcrumbs={breadcrumbs}/>
+                    title={`${t('Invoice')} ${invoice.invoice_number}`}
+                    description={t('View invoice details')}
+                    breadcrumbs={breadcrumbs}
+                />
 
+                {!!invoice.invoice_details?.recovery_minor && (
+                    <p className="rounded-xl border bg-card p-4">
+                        {t('Prior refund recovery deducted')}:{' '}
+                        {formatCurrency(
+                            invoice.invoice_details.recovery_minor / 100,
+                            invoice.currency,
+                        )}
+                    </p>
+                )}
                 <div className="grid gap-6 lg:grid-cols-3">
                     <InfoCardSkeleton
                         icon={<FileText className="h-5 w-5" />}
@@ -42,14 +61,22 @@ const InvoiceShow = () => {
                         description={`${t('Created on')} ${new Date(invoice.created_at).toLocaleDateString()}`}
                         className="lg:col-span-2"
                     >
-                        <div className="flex items-center justify-between mb-4">
+                        <div className="mb-4 flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-muted-foreground">{t('Amount')}</p>
+                                <p className="text-sm text-muted-foreground">
+                                    {t('Amount')}
+                                </p>
                                 <p className="text-3xl font-bold text-green-600">
-                                    {formatCurrency(parseFloat(invoice.amount), 'USD')}
+                                    {formatCurrency(
+                                        parseFloat(invoice.amount),
+                                        invoice.currency,
+                                    )}
                                 </p>
                             </div>
-                            <StatusBadge status={invoice.status} className="text-lg px-4 py-2" />
+                            <StatusBadge
+                                status={invoice.status}
+                                className="px-4 py-2 text-lg"
+                            />
                         </div>
                         <Separator className="my-4" />
                         <div className="grid gap-4 md:grid-cols-2">
@@ -60,7 +87,9 @@ const InvoiceShow = () => {
                             />
                             <InfoRow
                                 label={t('Created')}
-                                value={new Date(invoice.created_at).toLocaleDateString()}
+                                value={new Date(
+                                    invoice.created_at,
+                                ).toLocaleDateString()}
                                 icon={Calendar}
                             />
                         </div>
@@ -75,9 +104,13 @@ const InvoiceShow = () => {
                             <div className="flex items-center gap-3">
                                 <CheckCircle className="h-5 w-5 text-green-500" />
                                 <div>
-                                    <p className="font-medium">{t('Created')}</p>
+                                    <p className="font-medium">
+                                        {t('Created')}
+                                    </p>
                                     <p className="text-sm text-muted-foreground">
-                                        {new Date(invoice.created_at).toLocaleString()}
+                                        {new Date(
+                                            invoice.created_at,
+                                        ).toLocaleString()}
                                     </p>
                                 </div>
                             </div>
@@ -86,12 +119,16 @@ const InvoiceShow = () => {
                                 <div className="flex items-center gap-3">
                                     <CheckCircle className="h-5 w-5 text-blue-500" />
                                     <div>
-                                        <p className="font-medium">{t('Approved')}</p>
+                                        <p className="font-medium">
+                                            {t('Approved')}
+                                        </p>
                                         <p className="text-sm text-muted-foreground">
-                                            {new Date(invoice.approved_at).toLocaleString()}
+                                            {new Date(
+                                                invoice.approved_at,
+                                            ).toLocaleString()}
                                         </p>
                                         {invoice.approved_by_user && (
-                                            <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                            <p className="flex items-center gap-1 text-xs text-muted-foreground">
                                                 <User className="h-3 w-3" />
                                                 {invoice.approved_by_user.name}
                                             </p>
@@ -104,9 +141,13 @@ const InvoiceShow = () => {
                                 <div className="flex items-center gap-3">
                                     <DollarSign className="h-5 w-5 text-green-500" />
                                     <div>
-                                        <p className="font-medium">{t('Paid')}</p>
+                                        <p className="font-medium">
+                                            {t('Paid')}
+                                        </p>
                                         <p className="text-sm text-muted-foreground">
-                                            {new Date(invoice.paid_at).toLocaleString()}
+                                            {new Date(
+                                                invoice.paid_at,
+                                            ).toLocaleString()}
                                         </p>
                                     </div>
                                 </div>
@@ -116,9 +157,13 @@ const InvoiceShow = () => {
                                 <div className="flex items-center gap-3">
                                     <XCircle className="h-5 w-5 text-red-500" />
                                     <div>
-                                        <p className="font-medium">{t('Rejected')}</p>
+                                        <p className="font-medium">
+                                            {t('Rejected')}
+                                        </p>
                                         {invoice.rejection_reason && (
-                                            <p className="text-sm text-red-600">{invoice.rejection_reason}</p>
+                                            <p className="text-sm text-red-600">
+                                                {invoice.rejection_reason}
+                                            </p>
                                         )}
                                     </div>
                                 </div>
@@ -126,11 +171,15 @@ const InvoiceShow = () => {
 
                             {invoice.status === 'pending' && (
                                 <div className="flex items-center gap-3">
-                                    <Clock className="h-5 w-5 text-yellow-500 animate-pulse" />
+                                    <Clock className="h-5 w-5 animate-pulse text-yellow-500" />
                                     <div>
-                                        <p className="font-medium">{t('Awaiting Approval')}</p>
+                                        <p className="font-medium">
+                                            {t('Awaiting Approval')}
+                                        </p>
                                         <p className="text-sm text-muted-foreground">
-                                            {t('Your invoice is being reviewed')}
+                                            {t(
+                                                'Your invoice is being reviewed',
+                                            )}
                                         </p>
                                     </div>
                                 </div>
@@ -142,7 +191,8 @@ const InvoiceShow = () => {
                 <InfoCardSkeleton
                     icon={<DollarSign className="h-5 w-5" />}
                     title={t('Included Earnings')}
-                    description={t('All earnings included in this invoice')}>
+                    description={t('All earnings included in this invoice')}
+                >
                     {invoice.earnings && invoice.earnings.length > 0 ? (
                         <CustomBaseTable
                             columns={PublisherEarningsColumn}
@@ -159,7 +209,9 @@ const InvoiceShow = () => {
                             }}
                         />
                     ) : (
-                        <p className="text-muted-foreground">{t('No earnings attached to this invoice')}</p>
+                        <p className="text-muted-foreground">
+                            {t('No earnings attached to this invoice')}
+                        </p>
                     )}
                 </InfoCardSkeleton>
 
