@@ -89,6 +89,7 @@ it('keeps the contact table separate from the financial tables', function () {
 
 // --- Leads screens -------------------------------------------------------------------------
 
+use App\Exports\LeadContactsExport;
 use App\Models\User;
 use Database\Seeders\RolePermsSeeder;
 use Maatwebsite\Excel\Facades\Excel;
@@ -164,4 +165,17 @@ it('exports only the contacts the viewer may see', function () {
     $this->actingAs(leadUser('advertiser', $mine))->get(route('leads.export'))->assertOk();
 
     Excel::assertDownloaded('leads.xlsx', fn ($export) => $export->collection()->pluck('email')->all() === ['mine@example.nl']);
+});
+
+it('exports international phone numbers unchanged but neutralises spreadsheet formulas', function () {
+    $f = conversionFixture();
+    $lead = leadFor($f);
+    $lead->update(['phone' => '+31 20 123 4567', 'company' => '=HYPERLINK("http://evil.example","x")', 'job_title' => '+cmd|\' /C calc\'!A0', 'city' => '@SUM(1+1)', 'country' => '-2+3']);
+    $row = (new LeadContactsExport($f['advertiser']->user))->map($lead->fresh());
+
+    expect($row[3])->toBe('+31 20 123 4567')           // phone
+        ->and($row[4])->toStartWith("'=")              // company
+        ->and($row[5])->toStartWith("'+cmd")           // job title
+        ->and($row[6])->toStartWith("'@")              // city
+        ->and($row[7])->toStartWith("'-2");            // country
 });

@@ -28,8 +28,9 @@ class LeadContactsExport implements FromCollection, ShouldAutoSize, WithHeadings
 
     public function map($lead): array
     {
-        // A leading formula character would be executed by spreadsheet software.
-        $safe = fn ($value) => is_string($value) && preg_match('/^[=+\-@\t\r]/', $value) ? "'".$value : $value;
+        // A leading formula character would be executed by spreadsheet software. A "+" or "-" followed only
+        // by digits, spaces and phone punctuation (e.g. "+31 20 123 4567") is a phone number, not a formula.
+        $safe = fn ($value) => is_string($value) && preg_match('/^[=@\t\r]|^[+\-](?![\d\s().\-]*$)/', $value) ? "'".$value : $value;
 
         return array_map($safe, [
             $lead->first_name, $lead->last_name, $lead->email, $lead->phone, $lead->company, $lead->job_title,
