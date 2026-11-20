@@ -577,7 +577,7 @@ const OfferEditPage = () => {
                                     />
                                     <p className="text-sm text-ink-muted">
                                         {t(
-                                            'Visitors are redirected here after a tracked click. Use the actual form or checkout landing page; DM Hub adds referral_id and click_id to this URL.',
+                                            'Visitors are redirected here after a tracked click. Use the actual form or checkout landing page; Brand New Day adds referral_id and click_id to this URL.',
                                         )}
                                     </p>
                                     <Controller

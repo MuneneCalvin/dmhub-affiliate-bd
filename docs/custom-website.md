@@ -4,7 +4,7 @@ Connect any website with a backend that can store referral attribution and send 
 
 ## 1. Capture the landing referral
 
-Set the offer's Preview URL to your landing page, then follow a publisher tracking link. DM Hub redirects with a UUID `referral_id` and numeric `click_id`.
+Set the offer's Preview URL to your landing page, then follow a publisher tracking link. Brand New Day redirects with a UUID `referral_id` and numeric `click_id`.
 
 From your backend, validate the referral with:
 

@@ -54,7 +54,7 @@ export function GeneratedTrackingTemplate({
                 className="text-sm leading-relaxed text-ink-muted"
             >
                 {t(
-                    'Generated from the landing page URL. DM Hub fills in click_id and referral_id for each tracked visit.',
+                    'Generated from the landing page URL. Brand New Day fills in click_id and referral_id for each tracked visit.',
                 )}
             </p>
         </div>

@@ -171,7 +171,7 @@ function RolesWorkspace({ roles, allPermissions, selectedRoleId }: Props) {
                 <PageHeader
                     title={t('Roles & permissions')}
                     description={t(
-                        'Choose what each role may see and do across DM Hub',
+                        'Choose what each role may see and do across Brand New Day',
                     )}
                     breadcrumbs={[
                         {

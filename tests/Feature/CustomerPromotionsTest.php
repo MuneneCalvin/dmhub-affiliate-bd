@@ -304,7 +304,7 @@ it('reports Shopify setup problems within the campaign and validates the canonic
     $this->store->update(['platform' => 'shopify', 'domain' => 'merchant.myshopify.com']);
     $this->get(route('integrations.shopify.install', ['store' => $this->store, 'campaign' => $this->f['campaign']->id]))
         ->assertRedirect(route('campaign.promotions.edit', $this->f['campaign']))
-        ->assertSessionHas('error', 'Shopify connection is not available yet. Contact your DM Hub administrator.');
+        ->assertSessionHas('error', 'Shopify connection is not available yet. Contact your Brand New Day administrator.');
 });
 
 it('supports configurable usage limits and unlimited redemption without hard-coded discount rules', function () {

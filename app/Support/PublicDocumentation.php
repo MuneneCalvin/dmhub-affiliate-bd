@@ -10,7 +10,7 @@ class PublicDocumentation
     public static function guides(): array
     {
         return [
-            'overview' => ['title' => 'Documentation', 'group' => 'Start here', 'description' => 'Set up campaigns and connect your website to DM Hub.'],
+            'overview' => ['title' => 'Documentation', 'group' => 'Start here', 'description' => 'Set up campaigns and connect your website to Brand New Day.'],
             'campaign-setup' => ['title' => 'Campaign setup', 'group' => 'Start here', 'description' => 'Configure offers, commissions, publishers and tracking.'],
             'form-campaigns' => ['title' => 'Form submission campaigns', 'group' => 'Campaigns', 'description' => 'Track successful submissions without storing customer data.'],
             'lead-submissions' => ['title' => 'Lead submissions', 'group' => 'Campaigns', 'description' => 'Report submissions together with the contact details you collected.'],

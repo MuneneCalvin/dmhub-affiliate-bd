@@ -8,7 +8,7 @@ it('serves the public guide library and exact markdown downloads without authent
     foreach (PublicDocumentation::guides() as $slug => $guide) {
         $this->get('/docs/'.$slug)
             ->assertOk()
-            ->assertSee($guide['title'].' · DM Hub guides')
+            ->assertSee($guide['title'].' · '.config('app.name').' guides')
             ->assertSee('Download Markdown')
             ->assertSee('aria-current="page"', false);
 

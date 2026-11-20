@@ -104,7 +104,7 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
             <PageHeader
                 title={t('Account settings')}
                 description={t(
-                    'Manage your profile, security and how DM Hub looks for you',
+                    'Manage your profile, security and how Brand New Day looks for you',
                 )}
                 breadcrumbs={[
                     { title: t('Account'), href: editProfile().url },

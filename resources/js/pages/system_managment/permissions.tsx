@@ -65,7 +65,7 @@ export default function Permissions({
                 <PageHeader
                     title={t('Permissions')}
                     description={t(
-                        'Every permission in DM Hub and the roles that grant it',
+                        'Every permission in Brand New Day and the roles that grant it',
                     )}
                     breadcrumbs={[
                         {
