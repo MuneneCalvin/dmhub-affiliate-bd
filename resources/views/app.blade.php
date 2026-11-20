@@ -31,9 +31,6 @@
         <link rel="icon" href="{{ $faviconUrl }}" type="image/svg+xml">
         <link rel="apple-touch-icon" href="{{ $faviconUrl }}">
 
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=plus-jakarta-sans:400,500,600,700,800|jetbrains-mono:500" rel="stylesheet" />
-
         @viteReactRefresh
         @vite(['resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
         @inertiaHead
