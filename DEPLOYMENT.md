@@ -247,13 +247,15 @@ The implementation includes OAuth installation, expiring token refresh, a signed
 
 The integration has not been certified against a live merchant store or submitted to Shopify review. Checkout-step custom UI, Functions-based eligibility, global redemption caps, strict customer identity limits, automatic reversals, emergency native-code revocation, subscriptions, free shipping, tiered benefits, buy-X-get-Y and catalogue-wide price rewriting are not included. Reporting currency must match the campaign/store; there is no FX conversion.
 
-#### Registered staging app (16 November 2026)
+#### Registered staging app (18 November 2026)
 
-- Organization: **Tami Wears**; app: **DM Hub Promotions**.
-- [Active Shopify version](https://dev.shopify.com/dashboard/246237109/apps/447901532161/versions/1224530755585): `dmhub-promotions-staging-20261116`.
+- Organization: **DM Consultants Limited**; app: **DM Hub Promotions**.
+- [Active Shopify version](https://dev.shopify.com/dashboard/248393909/apps/448859635713/versions/1235533430785): `dmhub-promotions-staging-20261118`.
+- Client ID: `cab55899e76c13e771c831afb04178c2`. This replacement app supersedes the staging configuration previously registered under Tami Wears; it does not migrate existing merchant installations.
 - Target: `https://affiliates-bnd.dmhub.cloud`.
 - Repeatable configuration: `integrations/shopify/shopify.app.staging.toml`; extension identity is retained in `shopify.extension.toml`.
 - The private local handoff file `.env.shopify` contains `SHOPIFY_CLIENT_ID`, `SHOPIFY_CLIENT_SECRET` and `SHOPIFY_API_VERSION`. It is Git-ignored and must not be committed or copied into a public artifact. It is not included in deployments automatically.
+- Level 1 customer-data development access is configured for app functionality, allowing the order webhook subscriptions. Names, email addresses, phone numbers and addresses are not requested. Production distribution and any required review remain separate.
 
 Copy the three environment values to the target application's secret/environment configuration, deploy the current backend code (including the `write_app_proxy` scope), rebuild Laravel's configuration cache and restart application/queue/scheduler processes according to the hosting setup. Then connect a merchant store through DM Hub and verify an order. Creating/releasing the Shopify app does not install it on a merchant store or activate the DM Hub backend by itself. Distribution/approval for unrelated merchant stores still needs to be completed through Shopify.
 

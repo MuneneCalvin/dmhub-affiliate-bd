@@ -1,18 +1,21 @@
+import { SearchSelect, SelectField } from '@/components/app/form-controls';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
+import {
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-    ReusableModalHeader,
-    ReusableNormalSelect,
-    ReusableSearchSelect,
-} from '@/dev/core';
 import { TCountry, TCurrency, TModalPropsW, TNetwork } from '@/types';
 import { TNetworkOnboardingTypes } from '@/types/schema_types';
 import { COMMISSION_MODELS, FREQUENCY } from '@/utils/enums';
 import { networkSchema } from '@/utils/form-schema';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router, usePage } from '@inertiajs/react';
+import { Network } from 'lucide-react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -21,6 +24,9 @@ export function EditNetworkModal({
     componentProps,
     handleDialogContextSwitch,
 }: Partial<TModalPropsW<TNetwork, { data?: TNetwork }>>) {
+    // React Hook Form mutates formState.errors in place, so React Compiler
+    // memoisation would hide new errors; opt this form out.
+    'use no memo';
     const { t } = useTranslation();
 
     const { currencies } = usePage<{ currencies: TCurrency[] }>().props;
@@ -75,10 +81,12 @@ export function EditNetworkModal({
 
     return (
         <div className="w-full">
-            <ReusableModalHeader
-                title={t('Edit A Network')}
-                className="text-left text-primary"
-            />
+            <DialogHeader icon={<Network />} tone="partners" className="mb-5">
+                <DialogTitle>{t('Edit A Network')}</DialogTitle>
+                <DialogDescription>
+                    {t('Update the network details and defaults.')}
+                </DialogDescription>
+            </DialogHeader>
             <form
                 className="flex flex-col gap-6"
                 onSubmit={handleSubmit(onSubmit)}
@@ -116,11 +124,11 @@ export function EditNetworkModal({
                             name="default_currency"
                             control={control}
                             render={({ field }) => (
-                                <ReusableSearchSelect
+                                <SearchSelect
                                     {...field}
                                     id="default_currency"
                                     label={t('Default Currency')}
-                                    data={currencies.map((c) => ({
+                                    options={currencies.map((c) => ({
                                         value: c.currency_code,
                                         label: c.currency_name,
                                     }))}
@@ -135,11 +143,11 @@ export function EditNetworkModal({
                             name="default_commission_model"
                             control={control}
                             render={({ field }) => (
-                                <ReusableNormalSelect
+                                <SelectField
                                     {...field}
                                     id="default_commission_model"
                                     label={t('Default Commission Model')}
-                                    data={COMMISSION_MODELS.map((model) => ({
+                                    options={COMMISSION_MODELS.map((model) => ({
                                         value: String(model.key),
                                         label: t(model.value),
                                     }))}
@@ -174,7 +182,7 @@ export function EditNetworkModal({
                         />
                         <span>
                             {t('Require prepaid advertiser funds')}
-                            <span className="block text-sm text-muted-foreground">
+                            <span className="block text-sm text-ink-muted">
                                 {t(
                                     'Off by default. Campaigns can run and accrue commissions before funding. Negative balances show amounts owed; payouts require recorded cash.',
                                 )}
@@ -203,11 +211,11 @@ export function EditNetworkModal({
                             name="payment_frequency"
                             control={control}
                             render={({ field }) => (
-                                <ReusableNormalSelect
+                                <SelectField
                                     {...field}
                                     id="payment_frequency"
                                     label={t('Payment Frequency')}
-                                    data={FREQUENCY.map((frequency) => ({
+                                    options={FREQUENCY.map((frequency) => ({
                                         value: String(frequency.key),
                                         label: t(frequency.value),
                                     }))}
@@ -294,11 +302,11 @@ export function EditNetworkModal({
                             name="country_iso"
                             control={control}
                             render={({ field }) => (
-                                <ReusableSearchSelect
+                                <SearchSelect
                                     {...field}
                                     id="country_iso"
                                     label={t('Country')}
-                                    data={countries.map(
+                                    options={countries.map(
                                         (country: TCountry) => ({
                                             value: String(country.country_iso),
                                             label: country.country_name,
@@ -310,24 +318,18 @@ export function EditNetworkModal({
                             )}
                         />
                     </div>
-                    <div className="flex w-full items-center justify-between gap-12">
+                    <DialogFooter>
                         <Button
-                            className="cursor-pointer border-red-100 text-red-600"
-                            {...{
-                                variant: 'outline',
-                                type: 'button',
-                                onClick: () =>
-                                    handleDialogContextSwitch?.({
-                                        state: false,
-                                    }),
-                            }}
+                            type="button"
+                            variant="secondary"
+                            onClick={() =>
+                                handleDialogContextSwitch?.({ state: false })
+                            }
                         >
                             {t('Cancel')}
                         </Button>
-                        <Button type="submit" className="mt-2 w-50">
-                            {t('Submit')}
-                        </Button>
-                    </div>
+                        <Button type="submit">{t('Save')}</Button>
+                    </DialogFooter>
                 </div>
             </form>
         </div>

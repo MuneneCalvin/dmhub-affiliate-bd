@@ -2,55 +2,60 @@ import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
     DropdownMenuContent,
-    DropdownMenuItem,
+    DropdownMenuRadioGroup,
+    DropdownMenuRadioItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useLanguage } from '@/context/language-context';
 import { cn } from '@/lib/utils';
 import { Globe } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
-interface LanguageSwitcherProps {
-    className?: string;
-    showLabel?: boolean;
-}
+const fallbackLocales = [
+    { code: 'en', name: 'English', native: 'English' },
+    { code: 'nl', name: 'Dutch', native: 'Nederlands' },
+];
 
-export function LanguageSwitcher({ className, showLabel = true }: LanguageSwitcherProps) {
+/** Top bar language menu: globe + current locale code. Names are shown in their own language. */
+export function LanguageSwitcher({ className }: { className?: string }) {
     const { currentLocale, setLanguage, availableLocales } = useLanguage();
-
-    const currentLanguage = availableLocales.find(
-        (locale) => locale.code === currentLocale
-    );
+    const { t } = useTranslation();
+    const locales = availableLocales.some((locale) => locale.code.length === 2)
+        ? availableLocales
+        : fallbackLocales;
+    const current =
+        locales.find((locale) => locale.code === currentLocale) ?? locales[0];
 
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className={cn('gap-2', className)}>
-                    <Globe className="h-4 w-4" />
-                    {showLabel && (
-                        <span className="hidden sm:inline">
-                            {currentLanguage?.native || currentLocale.toUpperCase()}
-                        </span>
-                    )}
+                <Button
+                    variant="secondary"
+                    className={cn('gap-1.5 px-3 font-bold', className)}
+                >
+                    <span className="sr-only">
+                        {t('Change language ({{language}})', {
+                            language: current.native,
+                        })}
+                    </span>
+                    <Globe className="text-analytics" aria-hidden="true" />
+                    <span>{current.code.toUpperCase()}</span>
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-                {availableLocales.map((locale) => (
-                    <DropdownMenuItem
-                        key={locale.code}
-                        onClick={() => setLanguage(locale.code)}
-                        className={cn(
-                            'cursor-pointer',
-                            locale.code === currentLocale && 'bg-accent'
-                        )}
-                    >
-                        <span className="font-medium">{locale.native}</span>
-                        {locale.name !== locale.native && (
-                            <span className="ml-2 text-muted-foreground text-sm">
-                                ({locale.name})
-                            </span>
-                        )}
-                    </DropdownMenuItem>
-                ))}
+            <DropdownMenuContent align="end" className="min-w-44">
+                <DropdownMenuRadioGroup
+                    value={current.code}
+                    onValueChange={setLanguage}
+                >
+                    {locales.map((locale) => (
+                        <DropdownMenuRadioItem
+                            key={locale.code}
+                            value={locale.code}
+                        >
+                            <span lang={locale.code}>{locale.native}</span>
+                        </DropdownMenuRadioItem>
+                    ))}
+                </DropdownMenuRadioGroup>
             </DropdownMenuContent>
         </DropdownMenu>
     );

@@ -113,73 +113,76 @@ try {
         page.locator('button[type=submit]').click(),
     ]);
     const url = `${base}/finance/fraud?network_id=${fixture.network_id}`;
-    const rule = (name) =>
-        page.locator('article').filter({
-            has: page.getByRole('heading', { name, exact: true }),
-        });
-    const ruleMode = (name, mode) =>
-        rule(name).getByRole('radio', { name: mode, exact: true });
-    const setRuleMode = (name, mode) =>
-        rule(name).getByText(mode, { exact: true }).click();
-    const openHistory = () =>
-        page.getByRole('tab', { name: /^History/ }).click();
-    const savePolicy = async () => {
-        await page
-            .getByRole('button', { name: 'Save new policy version' })
-            .click();
-        // A new policy version remounts the editor and resets its selected tab.
-        // Wait for that refresh before opening History.
-        await expect(page.getByLabel('Reason for policy change')).toHaveValue(
-            '',
+    // Phase 10 layout: one card per rule with an on/off switch and a
+    // Monitor / Enforce segmented control; history is its own region.
+    const rule = (name) => page.getByRole('article', { name, exact: true });
+    const ruleSwitch = (name) =>
+        rule(name).getByRole('switch', { name, exact: true });
+    const modeButton = (name, mode) =>
+        rule(name).getByRole('button', { name: mode, exact: true });
+    const setRuleMode = async (name, mode) => {
+        const on =
+            (await ruleSwitch(name).getAttribute('aria-checked')) === 'true';
+        if (mode === 'Off') {
+            if (on) await ruleSwitch(name).click();
+            await expect(ruleSwitch(name)).toHaveAttribute(
+                'aria-checked',
+                'false',
+            );
+            return;
+        }
+        if (!on) await ruleSwitch(name).click();
+        await modeButton(name, mode).click();
+        await expect(modeButton(name, mode)).toHaveAttribute(
+            'aria-pressed',
+            'true',
+        );
+    };
+    const expectRuleMode = async (name, mode) =>
+        mode === 'Off'
+            ? expect(ruleSwitch(name)).toHaveAttribute('aria-checked', 'false')
+            : expect(modeButton(name, mode)).toHaveAttribute(
+                  'aria-pressed',
+                  'true',
+              );
+    const history = page.getByRole('region', { name: 'Policy history' });
+    const savePolicy = async (reason) => {
+        await page.getByLabel('Reason for policy change').fill(reason);
+        await page.getByRole('button', { name: 'Save as new version' }).click();
+        await expect(history.getByRole('listitem').first()).toContainText(
+            reason,
         );
     };
     await page.goto(url);
     await expect(
-        page.getByRole('heading', { name: 'Fraud rules', exact: true }),
+        page.getByRole('heading', { level: 1, name: 'Fraud rules' }),
     ).toBeVisible();
-    await expect(page.locator('article')).toHaveCount(9);
+    await expect(page.getByRole('article')).toHaveCount(9);
     await setRuleMode('Filled honeypot', 'Off');
-    await page
-        .getByLabel('Reason for policy change')
-        .fill('Disable noisy honeypot during testing');
-    await savePolicy();
-    await openHistory();
-    await expect(page.getByText('Version 1', { exact: true })).toBeVisible();
+    await savePolicy('Disable noisy honeypot during testing');
+    await expect(history.getByRole('listitem').first()).toContainText('v1');
     await page.reload();
-    await expect(ruleMode('Filled honeypot', 'Off')).toBeChecked();
+    await expectRuleMode('Filled honeypot', 'Off');
     await setRuleMode('Filled honeypot', 'Enforce');
-    await expect(ruleMode('Filled honeypot', 'Enforce')).toBeChecked();
-    await page
-        .getByLabel('Reason for policy change')
-        .fill('Enforce tested honeypot rule');
-    await savePolicy();
-    await openHistory();
-    await expect(page.getByText('Version 2', { exact: true })).toBeVisible();
+    await savePolicy('Enforce tested honeypot rule');
+    await expect(history.getByRole('listitem').first()).toContainText('v2');
     php('tests/Support/fraud-browser-fixture.php', 'assess');
     await page.reload();
-    await page
-        .getByRole('button', { name: 'Preview on recorded assessments' })
-        .click();
-    await expect(
-        page.getByRole('heading', { name: 'Preview results' }),
-    ).toBeVisible();
+    const preview = page.getByRole('region', { name: 'Preview results' });
+    await preview.getByRole('button', { name: 'Run preview' }).click();
+    await expect(preview.getByText('Assessments compared')).toBeVisible();
     await page.goto(`${url}&campaign_id=${fixture.campaign_id}`);
     await expect(
         page.getByLabel('Override network approval settings'),
     ).not.toBeChecked();
-    await expect(ruleMode('Filled honeypot', 'Off')).toBeDisabled();
-    await rule('Filled honeypot').getByLabel('Override network rule').check();
+    await expect(ruleSwitch('Filled honeypot')).toBeDisabled();
+    await rule('Filled honeypot')
+        .getByRole('checkbox', { name: 'Override network rule' })
+        .check();
     await setRuleMode('Filled honeypot', 'Off');
-    await page
-        .getByLabel('Reason for policy change')
-        .fill('Campaign exception');
-    await savePolicy();
-    await openHistory();
-    await expect(
-        page.getByText('Campaign exception', { exact: true }),
-    ).toBeVisible();
+    await savePolicy('Campaign exception');
     await page.reload();
-    await expect(ruleMode('Filled honeypot', 'Off')).toBeChecked();
+    await expectRuleMode('Filled honeypot', 'Off');
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({ path: `${directory}/rules-desktop.png` });
     await page.setViewportSize({ width: 390, height: 844 });
@@ -194,9 +197,10 @@ try {
     await expect(
         page.getByRole('heading', { name: 'Record the verified outcome' }),
     ).toBeVisible();
+    await page.getByRole('combobox', { name: 'Outcome', exact: true }).click();
     await page
-        .getByLabel('Outcome', { exact: true })
-        .selectOption('legitimate');
+        .getByRole('option', { name: 'Confirmed legitimate', exact: true })
+        .click();
     await page
         .getByLabel('Evidence or reason')
         .fill('Verified during rule testing');

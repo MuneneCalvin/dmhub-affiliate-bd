@@ -1,21 +1,82 @@
-import * as React from "react"
+import * as React from 'react';
 
-import { cn } from "@/lib/utils"
+import { cn } from '@/lib/utils';
 
-function Input({ className, type, ...props }: React.ComponentProps<"input">) {
-  return (
-    <input
-      type={type}
-      data-slot="input"
-      className={cn(
-        "border-input file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground flex h-10 w-full min-w-0 rounded-lg border bg-card px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
-        "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
-        "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
-        className
-      )}
-      {...props}
-    />
-  )
+/** Shared control look for inputs, textareas and select triggers. */
+export const controlClasses = cn(
+    'w-full min-w-0 rounded-control border border-border-strong bg-surface-muted text-sm font-medium text-ink transition-[color,box-shadow,border-color,background-color] outline-none',
+    'placeholder:text-ink-muted/80 selection:bg-primary selection:text-primary-foreground',
+    'focus-visible:border-brand focus-visible:bg-surface focus-visible:shadow-[inset_0_0_0_1px_var(--brand-base),0_0_0_4px_var(--focus-halo)]',
+    'aria-invalid:border-danger-dot aria-invalid:bg-invalid-fill aria-invalid:shadow-[inset_0_0_0_1px_var(--danger-dot)]',
+    'disabled:cursor-not-allowed disabled:opacity-60',
+);
+
+function Input({ className, type, ...props }: React.ComponentProps<'input'>) {
+    return (
+        <input
+            type={type}
+            data-slot="input"
+            className={cn(
+                controlClasses,
+                'flex h-11 px-3.5 py-1',
+                'file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-semibold file:text-ink',
+                className,
+            )}
+            {...props}
+        />
+    );
 }
 
-export { Input }
+type InputGroupProps = React.ComponentProps<'div'> & {
+    /** Leading icon or adornment, e.g. a currency symbol. */
+    leading?: React.ReactNode;
+    /** Trailing adornment, e.g. a unit. */
+    trailing?: React.ReactNode;
+};
+
+/**
+ * Input with a leading/trailing adornment. Put an `<Input>` inside; the group
+ * draws the border and focus ring.
+ */
+function InputGroup({
+    className,
+    leading,
+    trailing,
+    children,
+    ...props
+}: InputGroupProps) {
+    return (
+        <div
+            data-slot="input-group"
+            className={cn(
+                controlClasses,
+                'flex h-11 items-center gap-2 px-3',
+                'focus-within:border-brand focus-within:bg-surface focus-within:shadow-[inset_0_0_0_1px_var(--brand-base),0_0_0_4px_var(--focus-halo)]',
+                'has-[[aria-invalid=true]]:border-danger-dot has-[[aria-invalid=true]]:bg-invalid-fill',
+                '[&_[data-slot=input]]:h-full [&_[data-slot=input]]:rounded-none [&_[data-slot=input]]:border-0 [&_[data-slot=input]]:bg-transparent [&_[data-slot=input]]:px-0 [&_[data-slot=input]]:shadow-none',
+                className,
+            )}
+            {...props}
+        >
+            {leading != null && (
+                <span
+                    data-slot="input-adornment"
+                    className="flex shrink-0 items-center font-extrabold text-brand [&_svg]:size-4"
+                >
+                    {leading}
+                </span>
+            )}
+            {children}
+            {trailing != null && (
+                <span
+                    data-slot="input-adornment"
+                    className="flex shrink-0 items-center text-ink-muted [&_svg]:size-4"
+                >
+                    {trailing}
+                </span>
+            )}
+        </div>
+    );
+}
+
+export { Input, InputGroup };

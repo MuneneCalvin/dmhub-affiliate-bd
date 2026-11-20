@@ -9,7 +9,7 @@
     margin-bottom: 28px;
 }
 .publishers-heading :is(h1, h2) {
-    font-size: 28px;
+    font-size: 20px;
     line-height: 1.2;
     font-weight: 750;
     letter-spacing: -0.5px;
@@ -22,7 +22,7 @@
 .publisher-tabs {
     display: inline-flex;
     border: 1px solid var(--border);
-    border-radius: 9px;
+    border-radius: 14px;
     margin-bottom: 18px;
     max-width: 100%;
     overflow-x: auto;
@@ -91,7 +91,7 @@
 }
 .publisher-table-wrap {
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: 14px;
     overflow-x: auto;
 }
 .publisher-table {
@@ -109,6 +109,11 @@
     color: var(--muted-foreground);
 }
 .publisher-table thead th {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
     font-weight: 550;
     white-space: nowrap;
 }
@@ -158,41 +163,41 @@ button.publisher-identity {
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    color: #4735a4;
-    background: #e6dffc;
+    color: var(--brand-ink);
+    background: var(--brand-soft);
     font-size: 13px;
     font-weight: 600;
 }
 .publisher-avatar.tone-1 {
-    color: #8b491c;
-    background: #ffead9;
+    color: var(--finance-ink);
+    background: var(--finance-soft);
 }
 .publisher-avatar.tone-2 {
-    color: #14582e;
-    background: #d9f0e2;
+    color: var(--success-ink);
+    background: var(--success-soft);
 }
 .publisher-avatar.tone-3 {
-    color: #2342a1;
-    background: #dae6ff;
+    color: var(--info-ink);
+    background: var(--info-soft);
 }
 .publisher-status {
     display: inline-block;
-    border-radius: 7px;
+    border-radius: var(--radius-control);
     padding: 3px 11px;
     font-size: 13px;
     white-space: nowrap;
 }
 .publisher-status.pending {
-    background: #dce9ff;
-    color: #193eaf;
+    background: var(--info-soft);
+    color: var(--info-ink);
 }
 .publisher-status.warning {
-    background: #ffe7b2;
-    color: #704509;
+    background: var(--warning-soft);
+    color: var(--warning-ink);
 }
 .publisher-status.active {
-    background: #def5e5;
-    color: #175b32;
+    background: var(--success-soft);
+    color: var(--success-ink);
 }
 .publisher-status.neutral {
     background: var(--muted);
@@ -233,7 +238,7 @@ button.publisher-identity {
     align-items: center;
     gap: 14px;
     border: 1px solid var(--border);
-    border-radius: 9px;
+    border-radius: 14px;
     padding: 15px 18px;
 }
 .publisher-notice > svg {
@@ -244,18 +249,18 @@ button.publisher-identity {
     flex: 1;
 }
 .publisher-notice.warning {
-    background: color-mix(in srgb, #fbbf24 12%, var(--card));
-    border-color: color-mix(in srgb, #fbbf24 40%, var(--border));
+    background: color-mix(in srgb, var(--warning-dot) 12%, var(--card));
+    border-color: color-mix(in srgb, var(--warning-dot) 40%, var(--border));
 }
 .publisher-notice.warning > svg {
-    color: #c58208;
+    color: var(--warning-ink);
 }
 .publisher-notice.success {
-    background: color-mix(in srgb, #22c55e 8%, var(--card));
-    border-color: color-mix(in srgb, #22c55e 45%, var(--border));
+    background: color-mix(in srgb, var(--success-dot) 8%, var(--card));
+    border-color: color-mix(in srgb, var(--success-dot) 45%, var(--border));
 }
 .publisher-notice.success > svg {
-    color: #21994e;
+    color: var(--success-ink);
 }
 .publisher-notice.info {
     background: color-mix(in srgb, var(--primary) 6%, var(--card));
@@ -368,7 +373,7 @@ button.publisher-identity {
     border-left: 1px solid var(--border);
 }
 .publisher-history-icon {
-    color: #21994e;
+    color: var(--success-ink);
     padding-top: 2px;
 }
 .publisher-history time,
@@ -425,14 +430,13 @@ button.publisher-identity {
     justify-content: center;
     border: 1px solid var(--border);
     padding: 8px 14px;
-    border-radius: 6px;
+    border-radius: var(--radius-control);
     font-weight: 550;
     background: var(--card);
     white-space: nowrap;
 }
 .campaign-publishers :is(button, a, input, summary):focus-visible,
-.publisher-drawer
-    :is(button, a, textarea, summary, select, input):focus-visible {
+.publisher-drawer :is(button, a, textarea, summary, input):focus-visible {
     outline: 2px solid var(--primary);
     outline-offset: 3px;
 }
@@ -443,7 +447,7 @@ button.publisher-identity {
 }
 .publisher-apply-summary {
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: 14px;
     padding: 22px;
     align-self: start;
 }
@@ -464,7 +468,7 @@ button.publisher-identity {
     gap: 14px;
     padding: 20px;
     border: 1px solid var(--border);
-    border-radius: 9px;
+    border-radius: 14px;
     margin-top: 16px;
 }
 .publisher-apply-offer h3 {
@@ -486,10 +490,10 @@ button.publisher-identity {
     gap: 8px;
     font-weight: 550;
 }
-.publisher-application-form select {
+.publisher-application-form [data-slot='select-trigger'] {
     height: 42px;
     border: 1px solid var(--border);
-    border-radius: 6px;
+    border-radius: var(--radius-control);
     padding: 8px;
     background: var(--card);
 }
@@ -509,7 +513,7 @@ button.publisher-identity {
     margin: 0;
     padding: 16px;
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 14px;
     max-height: 32svh;
     overflow-y: auto;
 }
@@ -548,7 +552,7 @@ button.publisher-identity {
         gap: 12px;
     }
     .publishers-heading :is(h1, h2) {
-        font-size: 25px;
+        font-size: 20px;
     }
     .publisher-apply-grid {
         grid-template-columns: 1fr;

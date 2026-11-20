@@ -6,50 +6,50 @@ use App\Http\Controllers\Controller;
 use App\Models\Network;
 use App\Models\NetworkInvoice;
 use App\Services\Finance\NetworkSettlementService;
-use Exception;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class NetworkInvoiceController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        try {
-            $user = Auth::user();
-            if (! $user->is_super_admin && ! $user->is_network) {
-                abort(403, 'You do not have permission to access network invoices.');
-            }
-            $query = NetworkInvoice::query();
-            if (! $user->is_super_admin) {
-                $userNetwork = DB::table('user_networks')
-                    ->where('user_id', $user->id)
-                    ->first();
-                if (! $userNetwork) {
-                    return inertia('network_invoices/index', [
-                        'invoices' => [],
-                        'is_super_admin' => $user->is_super_admin,
-                        'is_network' => $user->is_network,
-                        'currencies' => config('finance.currencies'),
-                    ]);
-                }
-                $query->where('network_id', $userNetwork->network_id);
-            }
-            $invoices = $query->orderBy('created_at', 'desc')
-                ->paginate(15);
-
-            return inertia('network_invoices/index', [
-                'invoices' => $invoices,
-                'is_super_admin' => $user->is_super_admin,
-                'is_network' => $user->is_network,
-                'currencies' => config('finance.currencies'),
-            ]);
-
-        } catch (Exception $e) {
-            return back()->withErrors([
-                'error' => 'An unexpected error occurred. Please try again later.',
-            ]);
+        $user = $request->user();
+        if (! $user->is_super_admin && ! $user->is_network) {
+            abort(403, 'You do not have permission to access network invoices.');
         }
+        $query = NetworkInvoice::query()->with('network:id,network_name');
+        if (! $user->is_super_admin) {
+            $networkId = DB::table('user_networks')->where('user_id', $user->id)->value('network_id');
+            // Without a network there is nothing to show; keep the page usable.
+            $query->where('network_id', $networkId ?? 0);
+        }
+
+        $status = in_array($request->query('status'), ['pending', 'approved', 'paid', 'rejected'], true) ? $request->query('status') : 'all';
+        $counts = (clone $query)->toBase()->selectRaw('status, COUNT(*) as total')->groupBy('status')->pluck('total', 'status')->map(fn ($n) => (int) $n);
+        // Open (unpaid) and paid totals per currency; never summed across currencies.
+        $totals = (clone $query)->toBase()->selectRaw('currency, status, SUM(amount) as amount, COUNT(*) as count')
+            ->groupBy('currency', 'status')->get()->groupBy('currency')->map(fn ($rows) => $rows->keyBy('status'));
+
+        $invoices = $query->when($status !== 'all', fn ($q) => $q->where('status', $status))
+            ->orderBy('created_at', 'desc')->paginate(15)->withQueryString();
+        $permissions = $user->permissionNames();
+
+        return inertia('network_invoices/index', [
+            'invoices' => $invoices,
+            'is_super_admin' => $user->is_super_admin,
+            'is_network' => $user->is_network,
+            'currencies' => config('finance.currencies'),
+            'status' => $status,
+            'statusCounts' => ['all' => (int) $counts->sum()] + $counts->all(),
+            'totals' => $totals,
+            // Settling network invoices is a platform-level action (super admin routes).
+            'can' => [
+                'generate' => (bool) $user->is_network && ($user->is_super_admin || $permissions->contains('request_payouts')),
+                'approve' => (bool) $user->is_super_admin,
+                'reject' => (bool) $user->is_super_admin,
+                'pay' => (bool) $user->is_super_admin,
+            ],
+        ]);
     }
 
     public function store(Request $request, NetworkSettlementService $settlements)

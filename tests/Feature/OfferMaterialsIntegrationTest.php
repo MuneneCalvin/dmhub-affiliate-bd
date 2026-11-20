@@ -63,7 +63,8 @@ it('returns material mutations to the offer and preserves existing tracking code
     $this->assertModelMissing($creative);
 });
 
-it('redirects legacy standalone material navigation to campaigns', function () {
-    $this->get(route('advertiser.creatives.index'))->assertRedirect(route('advertiser.campaign.index'));
-    $this->get(route('advertiser.creatives.create'))->assertRedirect(route('advertiser.campaign.index'));
+it('sends material creation without an offer to the creatives library', function () {
+    $this->get(route('advertiser.creatives.index'))->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->component('creatives/index'));
+    $this->get(route('advertiser.creatives.create'))->assertRedirect(route('advertiser.creatives.index'));
 });

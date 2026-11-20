@@ -1,30 +1,45 @@
+import { StatePanel } from '@/components/app';
+import { Button } from '@/components/ui/button';
+import AuthLayout from '@/layouts/auth-layout';
+import { dashboard } from '@/routes';
 import { Head, Link } from '@inertiajs/react';
+import { ArrowLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+
+/** 403 page (rendered by the exception handler, status code stays 403). */
 export default function Forbidden() {
     const { t } = useTranslation();
+
     return (
-        <main className="mx-auto max-w-xl space-y-5 px-6 py-20">
+        <AuthLayout width="wide">
             <Head title={t('Access unavailable')} />
-            <p className="text-sm text-muted-foreground">403</p>
-            <h1 className="text-3xl font-semibold">
-                {t('Access unavailable')}
-            </h1>
-            <p>
-                {t(
-                    'This account cannot open this page. Your role, network membership or account status may not allow this action. Ask your network operator to review your access.',
+
+            <StatePanel
+                variant="inverse"
+                tone="danger"
+                tileVariant="solid"
+                icon={<span aria-hidden="true">403</span>}
+                title={t("You don't have access to this page")}
+                description={t(
+                    'Your role, network membership or account status does not allow this. Ask your network owner for the right role, or head back to your workspace.',
                 )}
-            </p>
-            <div className="flex flex-wrap gap-5">
-                <Link className="text-primary underline" href="/dashboard">
-                    {t('Return to my dashboard')}
-                </Link>
-                <a
-                    className="text-primary underline"
-                    href="/docs/campaign-setup"
-                >
-                    {t('Campaign setup help')}
-                </a>
-            </div>
-        </main>
+                actions={
+                    <>
+                        <Button asChild variant="inverse">
+                            <Link href={dashboard()}>
+                                <ArrowLeft aria-hidden="true" />
+                                {t('Back to overview')}
+                            </Link>
+                        </Button>
+                        <a
+                            href="/docs/campaign-setup"
+                            className="inline-flex min-h-11 items-center rounded-control px-2 font-bold text-white underline-offset-4 hover:underline"
+                        >
+                            {t('Campaign setup help')}
+                        </a>
+                    </>
+                }
+            />
+        </AuthLayout>
     );
 }

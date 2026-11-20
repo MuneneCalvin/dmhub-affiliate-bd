@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Campaigns;
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
 use App\Models\PublisherCampaigns;
+use App\Support\TrackingUrl;
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
 use Illuminate\Http\Request;
@@ -31,7 +32,7 @@ class CampaignTrackingController extends Controller
         abort_unless($assignment->status === 'A' && ! $assignment->terminated_at && $assignment->offer?->campaign_id === $assignment->campaign_id
             && $assignment->tracking_link && $assignment->extractTrackingId(), 404);
         $png = (new QRCode(new QROptions(['outputType' => QRCode::OUTPUT_IMAGE_PNG,
-            'eccLevel' => QRCode::ECC_M, 'scale' => 5, 'imageBase64' => false])))->render(url('/t/'.$assignment->extractTrackingId()));
+            'eccLevel' => QRCode::ECC_M, 'scale' => 5, 'imageBase64' => false])))->render(TrackingUrl::to('/t/'.$assignment->extractTrackingId()));
 
         return response($png)->header('Content-Type', 'image/png')
             ->header('Content-Disposition', 'attachment; filename="tracking-'.$assignment->offer_id.'-'.$assignment->id.'.png"')

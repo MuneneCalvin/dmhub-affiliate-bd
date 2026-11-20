@@ -1,49 +1,73 @@
 import { FundingSheet } from '@/components/advertiser-funding-sheet';
 import { AdvertiserSettings } from '@/components/advertiser-settings';
+import {
+    ActionTile,
+    LinkTabs,
+    ProfileBanner,
+    StatCard,
+} from '@/components/app';
+import { Breadcrumbs } from '@/components/breadcrumbs';
+import { ChangeNetworkForm } from '@/components/change-network-form';
 import { advertiserCardEditors } from '@/components/partner-card-config';
 import {
     PartnerCardEditor,
     type CardEditorConfig,
 } from '@/components/partner-card-editor';
+import { PartnerProfile } from '@/components/partner-profile';
 import {
     Details,
     Empty,
     Paging,
     Panel,
 } from '@/components/partner-workspace-ui';
+import { ProfileCard, ProfileDetails } from '@/components/profile-ui';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { BreadCrumbComponent } from '@/dev/core';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { StatusBadge } from '@/components/ui/status-badge';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
 import type { AdvertiserWorkspaceProps } from '@/types/advertiser-workspace';
 import { Head, Link, usePage } from '@inertiajs/react';
 import {
-    ArrowRight,
+    ArrowLeftRight,
+    Building2,
     CheckCircle2,
+    FileText,
+    Image,
     Landmark,
     Megaphone,
+    Pencil,
     Plus,
+    ScrollText,
+    Settings,
+    ShieldCheck,
+    UsersRound,
     Wallet,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import '../../../css/campaign-workspace.css';
 
-function Status({ status }: { status: string }) {
-    const { t } = useTranslation();
-    return (
-        <span
-            className={`campaign-badge ${status === 'A' ? 'positive' : 'warning'}`}
-        >
-            {t(
-                status === 'A'
-                    ? 'Active'
-                    : status === 'P'
-                      ? 'Paused'
-                      : 'Inactive',
-            )}
-        </span>
-    );
-}
+/** Advertiser / campaign / material codes: A active, P paused, anything else inactive. */
+const statusKeyword = (status: string) =>
+    status === 'A' ? 'active' : status === 'P' ? 'paused' : 'inactive';
+
+const TAB_ICONS: Record<string, React.ReactNode> = {
+    overview: <Building2 />,
+    campaigns: <Megaphone />,
+    materials: <Image />,
+    terms: <ScrollText />,
+    funding: <Wallet />,
+    account: <UsersRound />,
+    settings: <Settings />,
+};
 
 export default function Show() {
     const props = usePage<AdvertiserWorkspaceProps>().props;
@@ -51,6 +75,7 @@ export default function Show() {
     const { permissions: can, activeTab: tab, summary } = w;
     const { t, i18n } = useTranslation();
     const [cardEditor, setCardEditor] = useState<CardEditorConfig | null>(null);
+    const [changingNetwork, setChangingNetwork] = useState(false);
     const editors = advertiserCardEditors(props);
     const editCard = (key: string) =>
         editors[key] ? () => setCardEditor(editors[key]) : undefined;
@@ -67,6 +92,11 @@ export default function Show() {
                   timeZone: 'UTC',
               }).format(new Date(value))
             : t('Not set');
+    const memberSince = new Intl.DateTimeFormat(i18n.language, {
+        month: 'short',
+        year: 'numeric',
+        timeZone: 'UTC',
+    }).format(new Date(a.advertiser_created_at));
     const yes = (value: unknown) => t(value ? 'Yes' : 'No');
     const website =
         a.website_name && /^https?:\/\//i.test(a.website_name) ? (
@@ -74,7 +104,7 @@ export default function Show() {
                 href={a.website_name}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-primary underline"
+                className="text-brand-ink hover:underline"
             >
                 {a.website_name}
             </a>
@@ -83,145 +113,148 @@ export default function Show() {
         );
     const campaignUrl = (id: number, key = 'overview') =>
         `/advertiser/campaigns/show/${id}?tab=${key}`;
+    const createButton = can.createCampaign && (
+        <Button asChild>
+            <Link href={createUrl}>
+                <Plus />
+                {t('Create campaign')}
+            </Link>
+        </Button>
+    );
+
     return (
         <AppLayout>
             <Head
                 title={`${a.business_name} · ${t(w.tabs.find((item) => item.key === tab)?.label ?? 'Overview')}`}
             />
-            <div className="workspace-page campaign-workspace">
-                <div className="campaign-heading">
-                    <div className="mb-4 text-xs">
-                        <BreadCrumbComponent
-                            breadcrumbs={[
-                                {
-                                    title: t(
-                                        can.directory
-                                            ? 'Advertisers'
-                                            : 'Dashboard',
-                                    ),
-                                    href: can.directory
-                                        ? '/advertisers/index'
-                                        : '/advertiser/dashboard',
-                                },
-                                { title: a.business_name, href: base },
-                            ]}
+            <div className="workspace-page flex flex-col gap-[22px]">
+                <Breadcrumbs
+                    breadcrumbs={[
+                        {
+                            title: t(
+                                can.directory ? 'Advertisers' : 'Dashboard',
+                            ),
+                            href: can.directory
+                                ? '/advertisers/index'
+                                : '/advertiser/dashboard',
+                        },
+                        { title: a.business_name, href: base },
+                    ]}
+                />
+                <ProfileBanner
+                    name={a.business_name}
+                    status={
+                        <StatusBadge
+                            status={statusKeyword(a.advertiser_status)}
                         />
-                    </div>
-                    <div className="campaign-title-row">
-                        <div className="campaign-title">
-                            <h1>{a.business_name}</h1>
-                            <Status status={a.advertiser_status} />
-                        </div>
-                        <span className="campaign-role">{t(w.role)}</span>
-                    </div>
-                    <div className="campaign-meta">
-                        <span>{t('Advertiser')}</span>
-                        <span>
-                            {a.network_name || t('No network assigned')}
-                        </span>
-                        <span>{a.advertiser_currency}</span>
-                        <span>{a.industry}</span>
-                    </div>
-                </div>
-                <nav
-                    className="campaign-tabs"
-                    aria-label={t('Advertiser navigation')}
-                >
-                    {w.tabs.map((item) => (
-                        <Link
-                            key={item.key}
-                            href={tabUrl(item.key)}
-                            preserveScroll
-                            aria-current={tab === item.key ? 'page' : undefined}
-                        >
-                            {t(item.label)}
-                        </Link>
-                    ))}
-                </nav>
+                    }
+                    chips={[
+                        { label: t('Advertiser'), tone: 'partners' },
+                        ...(a.industry
+                            ? [
+                                  {
+                                      label: a.industry,
+                                      tone: 'analytics' as const,
+                                  },
+                              ]
+                            : []),
+                        {
+                            label: a.network_name || t('No network assigned'),
+                        },
+                        { label: a.advertiser_currency },
+                        {
+                            label: t('Member since {{date}}', {
+                                date: memberSince,
+                            }),
+                        },
+                    ]}
+                    actions={
+                        <>
+                            <Badge variant="secondary" className="h-11 px-3.5">
+                                {t(w.role)}
+                            </Badge>
+                            {can.changeNetwork && (
+                                <Button
+                                    variant="secondary"
+                                    onClick={() => setChangingNetwork(true)}
+                                >
+                                    <ArrowLeftRight className="text-partners" />
+                                    {t('Change network')}
+                                </Button>
+                            )}
+                            {editors.profile && (
+                                <Button onClick={editCard('profile')}>
+                                    <Pencil />
+                                    {t('Edit profile')}
+                                </Button>
+                            )}
+                        </>
+                    }
+                />
+                <LinkTabs
+                    label={t('Advertiser navigation')}
+                    current={tab}
+                    tabs={w.tabs.map((item) => ({
+                        key: item.key,
+                        label: t(item.label),
+                        href: tabUrl(item.key),
+                        icon: TAB_ICONS[item.key],
+                    }))}
+                />
                 <div
-                    className="campaign-content"
+                    className="flex flex-col gap-[18px]"
                     id="advertiser-content"
                     tabIndex={-1}
                 >
                     {tab === 'overview' && (
                         <>
-                            <div className="campaign-overview-heading">
-                                <div>
-                                    <h2>{t('Advertiser overview')}</h2>
-                                    <p>
-                                        {t(
-                                            'Campaigns, funding and account details in one workspace.',
-                                        )}
-                                    </p>
-                                </div>
-                                {can.createCampaign && (
-                                    <Button asChild>
-                                        <Link href={createUrl}>
-                                            <Plus size={16} />
-                                            {t('Create campaign')}
-                                        </Link>
-                                    </Button>
+                            <section
+                                aria-label={t('Performance')}
+                                className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,200px),1fr))] gap-3.5"
+                            >
+                                {can.campaigns && (
+                                    <>
+                                        <StatCard
+                                            variant="solid"
+                                            tone="brand"
+                                            label={t('Campaigns')}
+                                            value={summary.campaigns ?? 0}
+                                            icon={<Megaphone />}
+                                        />
+                                        <StatCard
+                                            tone="success"
+                                            label={t('Active campaigns')}
+                                            value={summary.activeCampaigns ?? 0}
+                                            icon={<CheckCircle2 />}
+                                        />
+                                    </>
                                 )}
-                            </div>
-                            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                                {[
-                                    ...(can.campaigns
-                                        ? [
-                                              {
-                                                  label: 'Campaigns',
-                                                  value: summary.campaigns,
-                                                  icon: Megaphone,
-                                                  target: 'campaigns',
-                                              },
-                                              {
-                                                  label: 'Active campaigns',
-                                                  value: summary.activeCampaigns,
-                                                  icon: CheckCircle2,
-                                                  target: 'campaigns',
-                                              },
-                                          ]
-                                        : []),
-                                    ...(can.funding
-                                        ? [
-                                              {
-                                                  label: 'Available balance',
-                                                  value: money(
-                                                      summary.available ?? 0,
-                                                  ),
-                                                  icon: Wallet,
-                                                  target: 'funding',
-                                              },
-                                              {
-                                                  label: 'Net funded budget',
-                                                  value: money(
-                                                      summary.netFunded ?? 0,
-                                                  ),
-                                                  icon: Landmark,
-                                                  target: 'funding',
-                                              },
-                                          ]
-                                        : []),
-                                ].map(
-                                    ({ label, value, icon: Icon, target }) => (
-                                        <Link
-                                            href={tabUrl(target)}
-                                            key={label}
-                                            className="campaign-panel p-5 transition-colors hover:border-primary"
-                                        >
-                                            <div className="flex items-center justify-between text-muted-foreground">
-                                                <span>{t(label)}</span>
-                                                <Icon size={18} />
-                                            </div>
-                                            <div className="mt-3 text-2xl font-semibold tabular-nums">
-                                                {value}
-                                            </div>
-                                        </Link>
-                                    ),
+                                {can.funding && (
+                                    <>
+                                        <StatCard
+                                            tone="finance"
+                                            label={t('Available balance')}
+                                            value={money(
+                                                summary.available ?? 0,
+                                            )}
+                                            icon={<Wallet />}
+                                        />
+                                        <StatCard
+                                            tone="analytics"
+                                            label={t('Net funded budget')}
+                                            value={money(
+                                                summary.netFunded ?? 0,
+                                            )}
+                                            icon={<Landmark />}
+                                        />
+                                    </>
                                 )}
-                            </div>
-                            <div className="grid gap-5 lg:grid-cols-2">
+                            </section>
+                            <div className="grid gap-[18px] lg:grid-cols-2">
                                 <Panel
-                                    title={t('Business details')}
+                                    title={t('Company details')}
+                                    icon={<Building2 />}
+                                    tone="partners"
                                     onEdit={editCard('business')}
                                 >
                                     <Details
@@ -246,15 +279,19 @@ export default function Show() {
                                 </Panel>
                                 <Panel
                                     title={t('Account readiness')}
+                                    icon={<ShieldCheck />}
+                                    tone="success"
                                     onEdit={editCard('readiness')}
                                 >
                                     <Details
                                         rows={[
                                             [
                                                 t('Account status'),
-                                                <Status
+                                                <StatusBadge
                                                     key="status"
-                                                    status={a.status}
+                                                    status={statusKeyword(
+                                                        a.status,
+                                                    )}
                                                 />,
                                             ],
                                             [
@@ -279,453 +316,427 @@ export default function Show() {
                                             ],
                                         ]}
                                     />
-                                    <Link
-                                        className="mt-5 inline-flex items-center gap-2 text-primary"
-                                        href={tabUrl('account')}
-                                    >
-                                        {t('View account')}
-                                        <ArrowRight size={16} />
-                                    </Link>
                                 </Panel>
                             </div>
-                            <section className="campaign-panel p-5">
-                                <h2 className="mb-4 text-lg font-semibold">
-                                    {t('Advertiser tools')}
-                                </h2>
-                                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                                    {w.tabs
-                                        .filter(
-                                            (item) =>
-                                                ![
-                                                    'overview',
-                                                    'account',
-                                                ].includes(item.key),
-                                        )
-                                        .map((item) => (
-                                            <Link
-                                                key={item.key}
-                                                href={tabUrl(item.key)}
-                                                className="flex items-center justify-between rounded-lg border p-4 hover:bg-muted/50"
-                                            >
-                                                <span>{t(item.label)}</span>
-                                                <ArrowRight size={16} />
-                                            </Link>
-                                        ))}
-                                </div>
-                            </section>
+                            {w.tabs.some(
+                                (item) =>
+                                    !['overview', 'account'].includes(item.key),
+                            ) && (
+                                <section aria-labelledby="advertiser-tools">
+                                    <h2
+                                        id="advertiser-tools"
+                                        className="mb-3 text-base font-bold"
+                                    >
+                                        {t('Advertiser tools')}
+                                    </h2>
+                                    <div className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
+                                        {w.tabs
+                                            .filter(
+                                                (item) =>
+                                                    ![
+                                                        'overview',
+                                                        'account',
+                                                    ].includes(item.key),
+                                            )
+                                            .map((item) => (
+                                                <ActionTile
+                                                    key={item.key}
+                                                    href={tabUrl(item.key)}
+                                                    title={t(item.label)}
+                                                    icon={
+                                                        TAB_ICONS[item.key] ?? (
+                                                            <FileText />
+                                                        )
+                                                    }
+                                                    tone={
+                                                        item.key === 'funding'
+                                                            ? 'finance'
+                                                            : item.key ===
+                                                                'settings'
+                                                              ? 'admin'
+                                                              : 'brand'
+                                                    }
+                                                />
+                                            ))}
+                                    </div>
+                                </section>
+                            )}
                         </>
                     )}
                     {tab === 'campaigns' && w.campaigns && (
-                        <>
-                            <div className="campaign-overview-heading">
-                                <div>
-                                    <h2>{t('Campaigns')}</h2>
-                                    <p>
-                                        {t(
-                                            'Open a campaign to manage offers, publishers, tracking, analytics and finance.',
-                                        )}
-                                    </p>
-                                </div>
-                                {can.createCampaign && (
-                                    <Button asChild>
-                                        <Link href={createUrl}>
-                                            <Plus size={16} />
-                                            {t('Create campaign')}
-                                        </Link>
-                                    </Button>
-                                )}
-                            </div>
-                            <section className="campaign-panel overflow-hidden">
-                                {w.campaigns.data.length ? (
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-left text-sm">
-                                            <thead className="border-b bg-muted/40">
-                                                <tr>
-                                                    {[
-                                                        'Campaign',
-                                                        'Status',
-                                                        'Currency',
-                                                        'Schedule',
-                                                        'Workspace',
-                                                    ].map((label) => (
-                                                        <th
-                                                            key={label}
-                                                            className="px-5 py-3 font-medium text-muted-foreground"
-                                                        >
-                                                            {t(label)}
-                                                        </th>
-                                                    ))}
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y">
-                                                {w.campaigns.data.map((c) => (
-                                                    <tr key={c.id}>
-                                                        <td className="min-w-44 px-5 py-4">
-                                                            <Link
-                                                                className="font-semibold text-primary"
-                                                                href={campaignUrl(
-                                                                    c.id,
-                                                                )}
-                                                            >
-                                                                {c.name}
-                                                            </Link>
-                                                        </td>
-                                                        <td className="px-5 py-4">
-                                                            <Status
-                                                                status={
-                                                                    c.campaign_status
-                                                                }
-                                                            />
-                                                        </td>
-                                                        <td className="px-5 py-4">
-                                                            {c.currency}
-                                                        </td>
-                                                        <td className="min-w-40 px-5 py-4">
-                                                            {date(c.start_date)}{' '}
-                                                            – {date(c.end_date)}
-                                                        </td>
-                                                        <td className="min-w-72 px-5 py-4">
-                                                            <div className="flex flex-wrap gap-x-4 gap-y-2">
-                                                                {[
-                                                                    [
-                                                                        'offers',
-                                                                        'Offers & materials',
-                                                                    ],
-                                                                    [
-                                                                        'publishers',
-                                                                        'Publishers',
-                                                                    ],
-                                                                    [
-                                                                        'tracking',
-                                                                        'Tracking & integration',
-                                                                    ],
-                                                                    [
-                                                                        'analytics',
-                                                                        'Analytics',
-                                                                    ],
-                                                                    [
-                                                                        'finance',
-                                                                        'Finance',
-                                                                    ],
-                                                                ].map(
-                                                                    ([
+                        <Panel
+                            title={t('Campaigns')}
+                            description={t(
+                                'Open a campaign to manage offers, publishers, tracking, analytics and finance.',
+                            )}
+                            icon={<Megaphone />}
+                            action={createButton}
+                            flush
+                        >
+                            {w.campaigns.data.length ? (
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            {[
+                                                'Campaign',
+                                                'Status',
+                                                'Currency',
+                                                'Schedule',
+                                                'Workspace',
+                                            ].map((label) => (
+                                                <TableHead key={label}>
+                                                    {t(label)}
+                                                </TableHead>
+                                            ))}
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {w.campaigns.data.map((c) => (
+                                            <TableRow key={c.id}>
+                                                <TableCell className="min-w-44">
+                                                    <Link
+                                                        className="font-bold text-ink hover:text-brand-ink hover:underline"
+                                                        href={campaignUrl(c.id)}
+                                                    >
+                                                        {c.name}
+                                                    </Link>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <StatusBadge
+                                                        status={statusKeyword(
+                                                            c.campaign_status,
+                                                        )}
+                                                    />
+                                                </TableCell>
+                                                <TableCell>
+                                                    {c.currency}
+                                                </TableCell>
+                                                <TableCell className="min-w-40 text-ink-muted tabular-nums">
+                                                    {date(c.start_date)} –{' '}
+                                                    {date(c.end_date)}
+                                                </TableCell>
+                                                <TableCell className="min-w-72">
+                                                    <div className="flex flex-wrap gap-x-4 gap-y-2 text-[13px] font-semibold">
+                                                        {[
+                                                            [
+                                                                'offers',
+                                                                'Offers & materials',
+                                                            ],
+                                                            [
+                                                                'publishers',
+                                                                'Publishers',
+                                                            ],
+                                                            [
+                                                                'tracking',
+                                                                'Tracking & integration',
+                                                            ],
+                                                            [
+                                                                'analytics',
+                                                                'Analytics',
+                                                            ],
+                                                            [
+                                                                'finance',
+                                                                'Finance',
+                                                            ],
+                                                        ].map(
+                                                            ([key, label]) => (
+                                                                <Link
+                                                                    className="text-brand-ink hover:underline"
+                                                                    key={key}
+                                                                    href={campaignUrl(
+                                                                        c.id,
                                                                         key,
-                                                                        label,
-                                                                    ]) => (
-                                                                        <Link
-                                                                            className="text-primary hover:underline"
-                                                                            key={
-                                                                                key
-                                                                            }
-                                                                            href={campaignUrl(
-                                                                                c.id,
-                                                                                key,
-                                                                            )}
-                                                                        >
-                                                                            {t(
-                                                                                label,
-                                                                            )}
-                                                                        </Link>
-                                                                    ),
-                                                                )}
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                ) : (
-                                    <Empty message="No campaigns for this advertiser yet." />
-                                )}
-                                <Paging page={w.campaigns} />
-                            </section>
-                        </>
+                                                                    )}
+                                                                >
+                                                                    {t(label)}
+                                                                </Link>
+                                                            ),
+                                                        )}
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            ) : (
+                                <Empty
+                                    icon={<Megaphone />}
+                                    message="No campaigns for this advertiser yet."
+                                />
+                            )}
+                            <Paging page={w.campaigns} />
+                        </Panel>
                     )}
                     {tab === 'materials' && w.materials && (
-                        <>
-                            <div className="campaign-overview-heading">
-                                <div>
-                                    <h2>{t('Materials')}</h2>
-                                    <p>
-                                        {t(
-                                            'Promotional materials across this advertiser’s campaigns.',
-                                        )}
-                                    </p>
-                                </div>
-                            </div>
-                            <section className="campaign-panel overflow-hidden">
-                                {w.materials.data.length ? (
-                                    <div className="divide-y">
-                                        {w.materials.data.map((material) => (
-                                            <div
-                                                key={material.id}
-                                                className="flex flex-wrap items-center justify-between gap-3 p-5"
-                                            >
-                                                <div>
-                                                    <Link
-                                                        href={`/advertiser/creatives/show/${material.id}`}
-                                                        className="font-semibold text-primary"
-                                                    >
-                                                        {material.name}
-                                                    </Link>
-                                                    <p className="mt-1 text-sm text-muted-foreground">
-                                                        {
-                                                            material.campaign
-                                                                ?.name
-                                                        }{' '}
-                                                        · {t(material.type)}
-                                                    </p>
-                                                </div>
-                                                <Status
-                                                    status={material.status}
-                                                />
+                        <Panel
+                            title={t('Materials')}
+                            description={t(
+                                'Promotional materials across this advertiser’s campaigns.',
+                            )}
+                            icon={<Image />}
+                            tone="analytics"
+                            flush
+                        >
+                            {w.materials.data.length ? (
+                                <ul>
+                                    {w.materials.data.map((material) => (
+                                        <li
+                                            key={material.id}
+                                            className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-[22px] py-3.5"
+                                        >
+                                            <div className="min-w-0">
+                                                <Link
+                                                    href={`/advertiser/creatives/show/${material.id}`}
+                                                    className="font-bold hover:text-brand-ink hover:underline"
+                                                >
+                                                    {material.name}
+                                                </Link>
+                                                <p className="text-[13px] text-ink-muted">
+                                                    {material.campaign?.name} ·{' '}
+                                                    {t(material.type)}
+                                                </p>
                                             </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <Empty message="No materials yet. Add materials from a campaign’s offers workspace." />
-                                )}
-                                <Paging page={w.materials} />
-                            </section>
-                        </>
+                                            <StatusBadge
+                                                status={statusKeyword(
+                                                    material.status,
+                                                )}
+                                            />
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <Empty
+                                    icon={<Image />}
+                                    tone="analytics"
+                                    message="No materials yet. Add materials from a campaign’s offers workspace."
+                                />
+                            )}
+                            <Paging page={w.materials} />
+                        </Panel>
                     )}
                     {tab === 'terms' && w.terms && (
-                        <>
-                            <div className="campaign-overview-heading">
-                                <div>
-                                    <h2>{t('Campaign terms')}</h2>
-                                    <p>
-                                        {t(
-                                            'Advertiser-specific terms and shared platform terms.',
-                                        )}
-                                    </p>
-                                </div>
-                                {can.manageTerms && (
-                                    <Button variant="outline" asChild>
+                        <Panel
+                            title={t('Campaign terms')}
+                            description={t(
+                                'Advertiser-specific terms and shared platform terms.',
+                            )}
+                            icon={<ScrollText />}
+                            tone="neutral"
+                            action={
+                                can.manageTerms && (
+                                    <Button variant="secondary" asChild>
                                         <Link href="/advertiser/terms">
                                             {t('Manage terms')}
                                         </Link>
                                     </Button>
-                                )}
-                            </div>
-                            <section className="campaign-panel overflow-hidden">
-                                {w.terms.data.length ? (
-                                    <div className="divide-y">
-                                        {w.terms.data.map((term) => (
-                                            <article
-                                                className="p-5"
-                                                key={term.id}
-                                            >
-                                                <p className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                                                    {t(
-                                                        term.advertiser_id
-                                                            ? 'Advertiser terms'
-                                                            : 'Shared platform terms',
-                                                    )}
-                                                </p>
-                                                <p className="break-words whitespace-pre-wrap">
-                                                    {term.description}
-                                                </p>
-                                            </article>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <Empty message="No terms available for this advertiser." />
-                                )}
-                                <Paging page={w.terms} />
-                            </section>
-                        </>
+                                )
+                            }
+                            flush
+                        >
+                            {w.terms.data.length ? (
+                                <div>
+                                    {w.terms.data.map((term) => (
+                                        <article
+                                            className="border-t border-border px-[22px] py-4"
+                                            key={term.id}
+                                        >
+                                            <p className="mb-2 text-[11px] font-bold tracking-[0.08em] text-ink-muted uppercase">
+                                                {t(
+                                                    term.advertiser_id
+                                                        ? 'Advertiser terms'
+                                                        : 'Shared platform terms',
+                                                )}
+                                            </p>
+                                            <p className="text-sm break-words whitespace-pre-wrap">
+                                                {term.description}
+                                            </p>
+                                        </article>
+                                    ))}
+                                </div>
+                            ) : (
+                                <Empty
+                                    icon={<ScrollText />}
+                                    tone="neutral"
+                                    message="No terms available for this advertiser."
+                                />
+                            )}
+                            <Paging page={w.terms} />
+                        </Panel>
                     )}
                     {tab === 'funding' && w.funding && (
                         <>
-                            <div className="campaign-overview-heading">
-                                <div>
-                                    <h2>{t('Advertiser funding')}</h2>
-                                    <p>
-                                        {t(
-                                            'This balance is shared across all campaigns for this advertiser.',
-                                        )}
-                                    </p>
-                                </div>
-                                {can.recordFunding && (
-                                    <Button
-                                        onClick={() => setFundingOpen(true)}
-                                    >
-                                        <Landmark size={16} />
-                                        {t('Record funding')}
-                                    </Button>
-                                )}
-                            </div>
-                            <div className="grid gap-5 md:grid-cols-2">
-                                <Panel title={t('Available balance')}>
-                                    <p className="text-3xl font-semibold tabular-nums">
-                                        {money(summary.available ?? 0)}
-                                    </p>
-                                    <p className="mt-3 text-muted-foreground">
-                                        {t(
-                                            'Campaign budgets are spending limits. They do not add money to this balance.',
-                                        )}
-                                    </p>
-                                </Panel>
-                                <Panel title={t('Net funded budget')}>
-                                    <p className="text-3xl font-semibold tabular-nums">
-                                        {money(summary.netFunded ?? 0)}
-                                    </p>
-                                    <p className="mt-3 text-muted-foreground">
-                                        {t(
-                                            'Deposits after network fees, less returned unused funds.',
-                                        )}
-                                    </p>
-                                </Panel>
+                            <div className="grid gap-3.5 md:grid-cols-2">
+                                <StatCard
+                                    variant="solid"
+                                    tone="finance"
+                                    label={t('Available balance')}
+                                    value={money(summary.available ?? 0)}
+                                    icon={<Wallet />}
+                                    hint={t(
+                                        'Campaign budgets are spending limits. They do not add money to this balance.',
+                                    )}
+                                />
+                                <StatCard
+                                    tone="analytics"
+                                    label={t('Net funded budget')}
+                                    value={money(summary.netFunded ?? 0)}
+                                    icon={<Landmark />}
+                                    hint={t(
+                                        'Deposits after network fees, less returned unused funds.',
+                                    )}
+                                />
                             </div>
                             {!can.recordFunding && (
-                                <p className="text-sm text-muted-foreground">
+                                <p className="text-sm text-ink-muted">
                                     {t(
                                         'Contact your network operator to arrange funding. A platform administrator records verified deposits.',
                                     )}
                                 </p>
                             )}
-                            <section className="campaign-panel overflow-hidden">
-                                <h3 className="border-b px-5 py-4 font-semibold">
-                                    {t('Funding history')}
-                                </h3>
+                            <Panel
+                                title={t('Funding history')}
+                                description={t(
+                                    'This balance is shared across all campaigns for this advertiser.',
+                                )}
+                                icon={<Landmark />}
+                                tone="finance"
+                                action={
+                                    can.recordFunding && (
+                                        <Button
+                                            onClick={() => setFundingOpen(true)}
+                                        >
+                                            <Landmark />
+                                            {t('Record funding')}
+                                        </Button>
+                                    )
+                                }
+                                flush
+                            >
                                 {w.funding.data.length ? (
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-left text-sm">
-                                            <thead className="border-b bg-muted/40">
-                                                <tr>
-                                                    {[
-                                                        'Date',
-                                                        'Operation',
-                                                        'Reference',
-                                                        'Balance change',
-                                                    ].map((label) => (
-                                                        <th
-                                                            key={label}
-                                                            className="px-5 py-3 font-medium text-muted-foreground"
-                                                        >
-                                                            {t(label)}
-                                                        </th>
-                                                    ))}
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y">
-                                                {w.funding.data.map((entry) => (
-                                                    <tr key={entry.id}>
-                                                        <td className="px-5 py-4 whitespace-nowrap">
-                                                            {date(
-                                                                entry.created_at,
-                                                            )}
-                                                        </td>
-                                                        <td className="px-5 py-4">
-                                                            {t(
-                                                                entry.kind ===
-                                                                    'funding'
-                                                                    ? 'Verified deposit'
-                                                                    : 'Return unused funds',
-                                                            )}
-                                                        </td>
-                                                        <td className="max-w-sm px-5 py-4 break-words">
-                                                            {entry.reference.replace(
-                                                                /^funding(?:-refund)?:/,
-                                                                '',
-                                                            )}
-                                                        </td>
-                                                        <td className="px-5 py-4 font-medium whitespace-nowrap tabular-nums">
-                                                            {money(
-                                                                entry.amount_minor /
-                                                                    100,
-                                                                entry.currency,
-                                                            )}
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>
+                                                    {t('Date')}
+                                                </TableHead>
+                                                <TableHead>
+                                                    {t('Operation')}
+                                                </TableHead>
+                                                <TableHead>
+                                                    {t('Reference')}
+                                                </TableHead>
+                                                <TableHead className="text-right">
+                                                    {t('Balance change')}
+                                                </TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {w.funding.data.map((entry) => (
+                                                <TableRow key={entry.id}>
+                                                    <TableCell className="whitespace-nowrap text-ink-muted">
+                                                        {date(entry.created_at)}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {t(
+                                                            entry.kind ===
+                                                                'funding'
+                                                                ? 'Verified deposit'
+                                                                : 'Return unused funds',
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell className="max-w-sm break-words">
+                                                        {entry.reference.replace(
+                                                            /^funding(?:-refund)?:/,
+                                                            '',
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell className="text-right font-bold whitespace-nowrap tabular-nums">
+                                                        {money(
+                                                            entry.amount_minor /
+                                                                100,
+                                                            entry.currency,
+                                                        )}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
                                 ) : (
-                                    <Empty message="No funding has been recorded for this advertiser." />
+                                    <Empty
+                                        icon={<Landmark />}
+                                        tone="finance"
+                                        message="No funding has been recorded for this advertiser."
+                                    />
                                 )}
                                 <Paging page={w.funding} />
-                            </section>
+                            </Panel>
                         </>
                     )}
                     {tab === 'account' && (
-                        <div className="grid items-start gap-5 lg:grid-cols-2">
-                            <Panel
-                                title={t('User Information')}
-                                onEdit={editCard('profile')}
+                        <PartnerProfile
+                            account={a}
+                            kind="Advertiser"
+                            website={website}
+                            onEditProfile={editCard('profile')}
+                            onEditBusiness={editCard('business')}
+                        >
+                            <ProfileCard
+                                title={t('Verification & security')}
+                                icon={<ShieldCheck />}
+                                tone="success"
                             >
-                                <Details
+                                <ProfileDetails
                                     rows={[
                                         [
-                                            t('Name'),
-                                            `${a.first_name} ${a.last_name}`,
-                                        ],
-                                        [t('Username'), a.user_name],
-                                        [t('Email'), a.email],
-                                        [t('Title'), a.title],
-                                        [
                                             t('Status'),
-                                            <Status
+                                            <StatusBadge
                                                 key="user-status"
-                                                status={a.status}
+                                                status={statusKeyword(a.status)}
                                             />,
                                         ],
-                                        [t('Country'), a.country_iso],
-                                        [t('Timezone'), a.timezone],
-                                        [t('Language'), a.language],
+                                        [
+                                            t('Email verified'),
+                                            yes(a.email_verified_at),
+                                        ],
+                                        [
+                                            t('Two-factor authentication'),
+                                            yes(a.two_factor_confirmed_at),
+                                        ],
+                                        [
+                                            t('Verified advertiser'),
+                                            yes(a.is_verified),
+                                        ],
+                                        [t('Verified at'), date(a.verified_at)],
+                                        [
+                                            t('Updated'),
+                                            date(a.advertiser_updated_at),
+                                        ],
                                     ]}
                                 />
-                            </Panel>
-                            <div className="space-y-5">
-                                <Panel title={t('Verification & security')}>
-                                    <Details
-                                        rows={[
-                                            [
-                                                t('Email verified'),
-                                                yes(a.email_verified_at),
-                                            ],
-                                            [
-                                                t('Two-factor authentication'),
-                                                yes(a.two_factor_confirmed_at),
-                                            ],
-                                            [
-                                                t('Verified advertiser'),
-                                                yes(a.is_verified),
-                                            ],
-                                            [
-                                                t('Verified at'),
-                                                date(a.verified_at),
-                                            ],
-                                            [
-                                                t('Updated'),
-                                                date(a.advertiser_updated_at),
-                                            ],
-                                        ]}
-                                    />
-                                </Panel>
-                                <Panel title={t('Account roles')}>
-                                    <div className="flex flex-wrap gap-3">
-                                        {[
-                                            [a.is_advertiser, 'Advertiser'],
-                                            [a.is_publisher, 'Publisher'],
-                                            [a.is_super_admin, 'Super Admin'],
-                                        ].map(([enabled, label]) =>
-                                            enabled ? (
-                                                <span
-                                                    key={String(label)}
-                                                    className="campaign-role"
-                                                >
-                                                    {t(String(label))}
-                                                </span>
-                                            ) : null,
-                                        )}
-                                    </div>
-                                </Panel>
-                            </div>
-                        </div>
+                            </ProfileCard>
+                            <ProfileCard
+                                title={t('Account roles')}
+                                icon={<UsersRound />}
+                                tone="admin"
+                            >
+                                <div className="flex flex-wrap gap-2">
+                                    {[
+                                        [a.is_advertiser, 'Advertiser'],
+                                        [a.is_publisher, 'Publisher'],
+                                        [a.is_super_admin, 'Super Admin'],
+                                    ].map(([enabled, label]) =>
+                                        enabled ? (
+                                            <Badge
+                                                key={String(label)}
+                                                variant="secondary"
+                                            >
+                                                {t(String(label))}
+                                            </Badge>
+                                        ) : null,
+                                    )}
+                                </div>
+                            </ProfileCard>
+                        </PartnerProfile>
                     )}
                     {tab === 'settings' && <AdvertiserSettings {...props} />}
                 </div>
@@ -743,6 +754,21 @@ export default function Show() {
                         },
                     ]}
                 />
+            )}
+            {can.changeNetwork && (
+                <Dialog
+                    open={changingNetwork}
+                    onOpenChange={setChangingNetwork}
+                >
+                    <DialogContent className="sm:max-w-[600px]">
+                        <ChangeNetworkForm
+                            kind="advertiser"
+                            id={a.advertiser_id}
+                            currentNetworkId={a.network_id}
+                            onDone={() => setChangingNetwork(false)}
+                        />
+                    </DialogContent>
+                </Dialog>
             )}
             {cardEditor && (
                 <PartnerCardEditor

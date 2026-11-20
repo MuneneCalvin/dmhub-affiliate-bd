@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\Campaign;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class PartnerReportingService
@@ -50,5 +52,43 @@ class PartnerReportingService
     public function daily(Builder $assignments, string $currency = 'USD'): array
     {
         return app(DashboardRevenueService::class)->lastThirtyDays(DB::query()->fromSub($this->facts($assignments), 'facts'), $currency);
+    }
+
+    /** Click counts for the same thirty days as daily(), oldest first. */
+    public function dailyClicks(Builder $assignments): array
+    {
+        return app(DashboardRevenueService::class)->lastThirtyDaysCount(
+            DB::table('clicks')->whereIn('publisher_campaign_id', (clone $assignments)->select('publisher_campaigns.id')),
+            'clicked_at',
+        );
+    }
+
+    /**
+     * Network-wide earnings per click for each campaign, in the campaign's own currency.
+     *
+     * @param  Collection<int, Campaign>  $campaigns
+     * @return array<int, float|null> campaign id => EPC (null when there are no clicks yet)
+     */
+    public function campaignEpc($campaigns): array
+    {
+        $ids = $campaigns->pluck('id');
+        if ($ids->isEmpty()) {
+            return [];
+        }
+        $clicks = DB::table('clicks')->whereIn('campaign_id', $ids)
+            ->selectRaw('campaign_id, COUNT(*) as total')->groupBy('campaign_id')->pluck('total', 'campaign_id');
+        $commission = DB::query()
+            ->fromSub($this->facts(DB::table('publisher_campaigns')->whereIn('campaign_id', $ids)), 'facts')
+            ->join('publisher_campaigns as pc', 'pc.id', '=', 'facts.publisher_campaign_id')
+            ->selectRaw('pc.campaign_id, facts.currency, SUM(facts.commission_amount) as total')
+            ->groupBy('pc.campaign_id', 'facts.currency')
+            ->get();
+
+        return $campaigns->mapWithKeys(function ($campaign) use ($clicks, $commission) {
+            $count = (int) ($clicks[$campaign->id] ?? 0);
+            $earned = (float) ($commission->first(fn ($row) => (int) $row->campaign_id === $campaign->id && $row->currency === $campaign->currency)->total ?? 0);
+
+            return [$campaign->id => $count > 0 ? round($earned / $count, 2) : null];
+        })->all();
     }
 }

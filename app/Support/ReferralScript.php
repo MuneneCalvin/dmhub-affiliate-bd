@@ -8,7 +8,7 @@ class ReferralScript
     public static function forOffer(int $campaignId, int $offerId): string
     {
         $config = json_encode(['campaignId' => $campaignId, 'offerId' => $offerId,
-            'url' => url('/api/v1/referrals').'/'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+            'url' => TrackingUrl::to('/api/v1/referrals').'/'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
 
         return <<<JS
 const getReferral = (function() {

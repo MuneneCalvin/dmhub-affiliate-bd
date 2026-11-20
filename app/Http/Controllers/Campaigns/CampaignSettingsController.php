@@ -64,6 +64,16 @@ class CampaignSettingsController extends Controller
         return to_route('advertiser.campaign.show', ['id' => $campaign, 'tab' => 'settings'])->with('success', 'Campaign settings saved.');
     }
 
+    /** Pause or resume a campaign from the workspace header. */
+    public function status(Request $request, int $campaign)
+    {
+        $data = $request->validate(['campaign_status' => ['required', Rule::in(['A', 'P'])]]);
+        $model = Campaign::visibleTo($request->user())->findOrFail($campaign);
+        $model->update(['campaign_status' => $data['campaign_status']]);
+
+        return back()->with('success', __($data['campaign_status'] === 'A' ? 'messages.campaigns.resumed' : 'messages.campaigns.paused'));
+    }
+
     public function storeTerms(Request $request, int $campaign)
     {
         $model = Campaign::visibleTo($request->user())->findOrFail($campaign);

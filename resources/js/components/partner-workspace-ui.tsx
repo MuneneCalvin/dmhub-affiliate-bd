@@ -1,96 +1,117 @@
+import { DetailList, EmptyState, SectionCard } from '@/components/app';
 import { Button } from '@/components/ui/button';
+import type { Tone } from '@/lib/tones';
 import type { WorkspacePage } from '@/types/partner-workspace';
-import { Link } from '@inertiajs/react';
-import { ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
+import { router } from '@inertiajs/react';
+import { ChevronLeft, ChevronRight, Inbox, Pencil } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+/** Workspace card: SectionCard with an optional pencil "Edit {{section}}" button. */
 export function Panel({
     title,
     children,
     onEdit,
+    icon,
+    tone = 'brand',
+    description,
+    action,
+    flush,
 }: {
     title: string;
     children: ReactNode;
     onEdit?: () => void;
+    icon?: ReactNode;
+    tone?: Tone;
+    description?: ReactNode;
+    action?: ReactNode;
+    flush?: boolean;
 }) {
     const { t } = useTranslation();
     return (
-        <section className="campaign-panel p-5">
-            <div className="mb-4 flex items-center justify-between gap-3">
-                <h2 className="text-lg font-semibold">{title}</h2>
-                {onEdit && (
+        <SectionCard
+            title={title}
+            icon={icon}
+            tone={tone}
+            description={description}
+            flush={flush}
+            action={
+                action ??
+                (onEdit && (
                     <Button
                         type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="size-8 shrink-0"
+                        variant="secondary"
+                        size="icon-sm"
                         aria-label={t('Edit {{section}}', { section: title })}
                         title={t('Edit {{section}}', { section: title })}
                         onClick={onEdit}
                     >
-                        <Pencil size={16} aria-hidden="true" />
+                        <Pencil aria-hidden="true" />
                     </Button>
-                )}
-            </div>
+                ))
+            }
+        >
             {children}
-        </section>
+        </SectionCard>
     );
 }
+
 export function Details({ rows }: { rows: [string, ReactNode][] }) {
     return (
-        <dl className="divide-y">
-            {rows.map(([label, value]) => (
-                <div
-                    key={label}
-                    className="flex flex-wrap justify-between gap-2 py-3 first:pt-0 last:pb-0"
-                >
-                    <dt className="text-muted-foreground">{label}</dt>
-                    <dd className="max-w-full text-right font-medium break-words">
-                        {value ?? '—'}
-                    </dd>
-                </div>
-            ))}
-        </dl>
+        <DetailList rows={rows.map(([label, value]) => ({ label, value }))} />
     );
 }
+
+/** "Showing x–y of n" + previous/next for the workspace's simple paginators. */
 export function Paging({ page }: { page: WorkspacePage<unknown> }) {
     const { t } = useTranslation();
+    if (!page.prev_page_url && !page.next_page_url && !page.total) return null;
+    const go = (url: string | null) =>
+        url && router.visit(url, { preserveScroll: true });
     return (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t p-4 text-sm">
-            <span className="text-muted-foreground">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-[18px] py-3.5 text-[13px]">
+            <span role="status" className="text-ink-muted">
                 {t('Showing {{from}}–{{to}} of {{total}}', {
                     from: page.from ?? 0,
                     to: page.to ?? 0,
                     total: page.total,
                 })}
             </span>
-            <div className="flex gap-2">
-                {page.prev_page_url && (
-                    <Button variant="outline" size="sm" asChild>
-                        <Link href={page.prev_page_url} preserveScroll>
-                            <ChevronLeft size={16} />
-                            {t('Previous')}
-                        </Link>
+            {(page.prev_page_url || page.next_page_url) && (
+                <nav aria-label={t('Pagination')} className="flex gap-1.5">
+                    <Button
+                        variant="secondary"
+                        size="icon-sm"
+                        aria-label={t('Previous page')}
+                        disabled={!page.prev_page_url}
+                        onClick={() => go(page.prev_page_url)}
+                    >
+                        <ChevronLeft />
                     </Button>
-                )}
-                {page.next_page_url && (
-                    <Button variant="outline" size="sm" asChild>
-                        <Link href={page.next_page_url} preserveScroll>
-                            {t('Next')}
-                            <ChevronRight size={16} />
-                        </Link>
+                    <Button
+                        variant="secondary"
+                        size="icon-sm"
+                        aria-label={t('Next page')}
+                        disabled={!page.next_page_url}
+                        onClick={() => go(page.next_page_url)}
+                    >
+                        <ChevronRight />
                     </Button>
-                )}
-            </div>
+                </nav>
+            )}
         </div>
     );
 }
-export function Empty({ message }: { message: string }) {
+
+export function Empty({
+    message,
+    icon = <Inbox />,
+    tone = 'brand',
+}: {
+    message: string;
+    icon?: ReactNode;
+    tone?: Tone;
+}) {
     const { t } = useTranslation();
-    return (
-        <p className="px-5 py-12 text-center text-muted-foreground">
-            {t(message)}
-        </p>
-    );
+    return <EmptyState icon={icon} tone={tone} title={t(message)} />;
 }

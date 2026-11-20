@@ -14,13 +14,19 @@ use App\Models\User;
 
 class CampaignOffersService
 {
+    public function stores(Campaign $campaign)
+    {
+        return StoreConnection::where('advertiser_id', $campaign->advertiser_id)->where('network_id', $campaign->network_id)->get(['id', 'public_id', 'name', 'platform', 'domain', 'currency', 'status', 'last_seen_at']);
+    }
+
     public function build(Campaign $campaign, User $user, ?PublisherCampaigns $assignment = null): array
     {
         $permissions = $user->permissionNames();
         $can = fn (string $permission) => ! $assignment && ($user->is_super_admin || $permissions->contains($permission));
         $offers = Offer::where('campaign_id', $campaign->id)
             ->when($assignment, fn ($q) => $q->whereKey($assignment->offer_id ?? 0))
-            ->with(['customerPromotion.stores', 'commissions.commissionType', 'creatives' => function ($q) use ($assignment) {
+            ->when(! $assignment, fn ($q) => $q->with(['customerPromotion.stores', 'customerPromotion.latestPublishedVersion']))
+            ->with(['commissions.commissionType', 'creatives' => function ($q) use ($assignment) {
                 $q->when($assignment, fn ($q) => $q->where('status', 'A'))->orderBy('id');
                 if ($assignment) {
                     $q->withCount(['clickRecords as assignment_clicks' => fn ($q) => $q->where('publisher_campaign_id', $assignment->id)]);
@@ -30,7 +36,7 @@ class CampaignOffersService
             ->where('status', 'A')->whereNull('terminated_at')->selectRaw('offer_id, COUNT(DISTINCT publisher_id) as aggregate')->groupBy('offer_id')->pluck('aggregate', 'offer_id');
 
         return [
-            'stores' => $assignment ? [] : StoreConnection::where('advertiser_id', $campaign->advertiser_id)->where('network_id', $campaign->network_id)->get(['id', 'public_id', 'name', 'platform', 'domain', 'currency', 'status', 'last_seen_at']),
+            'stores' => $assignment ? [] : $this->stores($campaign),
             'store_webhooks' => $assignment ? [] : StoreWebhookDelivery::whereIn('store_connection_id', StoreConnection::where('advertiser_id', $campaign->advertiser_id)->select('id'))->where('status', '!=', 'processed')->latest()->limit(20)->get(['id', 'topic', 'status']),
             'promotion_orders' => $assignment ? [] : PromotionOrder::whereHas('grant.click', fn ($q) => $q->where('campaign_id', $campaign->id))->latest()->limit(20)->get(['id', 'external_id', 'status', 'review_reason', 'conversion_event_id', 'created_at']),
             'promotion_adjustments' => $assignment ? [] : PromotionAdjustment::whereIn('store_connection_id', StoreConnection::where('advertiser_id', $campaign->advertiser_id)->select('id'))->latest()->limit(20)->get(['id', 'order_external_id', 'status', 'payload']),
@@ -45,8 +51,7 @@ class CampaignOffersService
                     'allowed_traffic_sources', 'prohibited_traffic_sources', 'preview_url', 'thumbnail_url']);
                 $data['customer_promotion'] = ! $assignment ? $offer->customerPromotion : null;
                 $data['tracking_guide_url'] = ! $assignment || ($assignment->status === 'A' && ! $assignment->terminated_at)
-                    ? ($assignment ? route('publishers.my.campaign.show', ['id' => $assignment->id, 'tab' => 'tracking', 'offer' => $offer->id])
-                        : route('advertiser.campaign.show', ['id' => $offer->campaign_id, 'tab' => 'tracking', 'offer' => $offer->id])) : null;
+                    ? CampaignTrackingService::offerUrl($offer->campaign_id, $offer->id, $assignment?->id) : null;
                 $data['rates'] = $assignment
                     ? ($assignment->commission_type !== null ? [['id' => null, 'type' => $assignment->commission_type, 'value' => $assignment->commission_value]] : [])
                     : $offer->commissions->map(fn ($rate) => ['id' => $rate->commission_type_id, 'type' => $rate->commissionType?->name, 'value' => $rate->commission_value === null ? null : (string) $rate->commission_value])->all();

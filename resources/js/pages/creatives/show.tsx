@@ -1,346 +1,293 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import { Textarea } from '@/components/ui/textarea';
 import {
-    CopyButton,
-    InfoCardSkeleton,
-    InfoRow,
-    ReusablePageTitle,
-} from '@/dev/core';
-import { StatusBadge } from '@/dev/statusBadge';
+    CopyField,
+    DetailList,
+    PageHeader,
+    SectionCard,
+    StatCard,
+} from '@/components/app';
+import { useConfirmationDialog } from '@/components/app/confirm-dialog';
+import {
+    CreativePreview,
+    CreativeTypePill,
+    creativeSize,
+} from '@/components/creatives';
+import { Button } from '@/components/ui/button';
+import { StatusBadge } from '@/components/ui/status-badge';
 import AppLayout from '@/layouts/app-layout';
 import advertiser from '@/routes/advertiser';
-import { BreadcrumbItem, Creative } from '@/types';
-import { Head, router, usePage } from '@inertiajs/react';
+import type { Creative, SharedData } from '@/types';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
-    BarChart3,
-    Code,
+    Code2,
     ExternalLink,
     Eye,
     Image,
     Info,
-    Link2,
     MousePointerClick,
     Pencil,
+    Percent,
+    Trash2,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-const CreativeShow = () => {
-    const { t } = useTranslation();
-    const { creative, auth } = usePage<any>().props as {
-        creative: Creative;
-        auth: { user: { is_super_admin: boolean }; permissions: string[] };
-    };
-    const canManage =
-        auth.user.is_super_admin ||
-        auth.permissions?.includes('manage_creatives');
+type Props = SharedData & {
+    creative: Creative;
+    trackingBase: string;
+    can?: { manage: boolean };
+};
 
-    const breadcrumbs: BreadcrumbItem[] = [
-        {
-            title: creative.offer?.name ?? t('Offer'),
-            href: advertiser.offers.show.url(creative.offer!.id),
-        },
-        {
-            title: t('Promotional materials'),
-            href:
-                advertiser.offers.show.url(creative.offer!.id) +
-                '?tab=materials',
-        },
-        {
-            title: creative?.name,
-            href: advertiser.creatives.show(creative?.id).url,
-        },
-    ];
+export default function CreativeShow() {
+    const { t, i18n } = useTranslation();
+    const { creative, trackingBase, can } = usePage<Props>().props;
+    const { confirm, ConfirmDialog } = useConfirmationDialog();
+    const canManage = Boolean(can?.manage);
+    const number = (value: number | null | undefined) =>
+        new Intl.NumberFormat(i18n.language).format(Number(value ?? 0));
 
-    const trackingUrl = creative?.tracking_code
-        ? `${window.location.origin}/c/${creative?.tracking_code}`
+    const trackingUrl = creative.tracking_code
+        ? `${trackingBase}c/${creative.tracking_code}`
         : '';
-    const impressionUrl = creative?.tracking_code
-        ? `${window.location.origin}/i/${creative?.tracking_code}`
+    const impressionUrl = creative.tracking_code
+        ? `${trackingBase}i/${creative.tracking_code}`
         : '';
+    const impressions = Number(creative.impressions ?? 0);
+    const clicks = Number(creative.clicks ?? 0);
+    const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
+    const completeCode = [creative.embed_code, creative.tracking_pixel]
+        .filter(Boolean)
+        .join('\n');
+    const image =
+        creative.preview_url ||
+        (['banner', 'image', 'email'].includes(creative.type)
+            ? creative.file_url
+            : '');
 
-    const getCtr = () => {
-        if (!creative?.impressions || creative?.impressions === 0)
-            return '0.00';
-        return ((creative?.clicks / creative?.impressions) * 100).toFixed(2);
-    };
+    const remove = () =>
+        confirm({
+            title: t('Delete promotional material'),
+            description: t(
+                'Are you sure you want to delete this promotional material? Existing embeds for it will stop working.',
+            ),
+            confirmLabel: t('Delete'),
+            cancelLabel: t('Cancel'),
+            variant: 'destructive',
+            onConfirm: () =>
+                router.delete(advertiser.creatives.delete.url(creative.id), {
+                    data: { return_to: 'library' },
+                }),
+        });
 
     return (
         <AppLayout>
-            <Head title={`${creative?.name} - Material details`} />
-            <div className="workspace-page flex h-full flex-1 flex-col gap-4">
-                <ReusablePageTitle
-                    title={creative?.name}
-                    description={t('Promotional material details and tracking')}
-                    breadcrumbs={breadcrumbs}
-                    children={
-                        <div className="flex gap-2">
-                            {canManage && (
-                                <Button
-                                    variant="outline"
-                                    onClick={() =>
-                                        router.visit(
-                                            advertiser.creatives.edit(
-                                                creative?.id,
-                                            ),
-                                        )
-                                    }
-                                >
-                                    <Pencil className="mr-2 h-4 w-4" />
-                                    {t('Edit promotional material')}
+            <Head title={creative.name} />
+            <div className="workspace-page flex flex-col gap-6">
+                <PageHeader
+                    title={creative.name}
+                    description={
+                        <span className="inline-flex flex-wrap items-center gap-2">
+                            <CreativeTypePill type={creative.type} />
+                            {[creative.campaign?.name, creative.offer?.name]
+                                .filter(Boolean)
+                                .join(' · ')}
+                        </span>
+                    }
+                    breadcrumbs={[
+                        {
+                            title: t('Creatives'),
+                            href: advertiser.creatives.index.url(),
+                        },
+                        {
+                            title: creative.name,
+                            href: advertiser.creatives.show.url(creative.id),
+                        },
+                    ]}
+                    icon={<Image />}
+                    tone="admin"
+                    actions={
+                        canManage ? (
+                            <>
+                                <Button variant="secondary" onClick={remove}>
+                                    <Trash2 className="text-danger-dot" />
+                                    {t('Delete')}
                                 </Button>
-                            )}
-                        </div>
+                                <Button asChild>
+                                    <Link
+                                        href={advertiser.creatives.edit.url(
+                                            creative.id,
+                                            { query: { from: 'library' } },
+                                        )}
+                                    >
+                                        <Pencil />
+                                        {t('Edit creative')}
+                                    </Link>
+                                </Button>
+                            </>
+                        ) : undefined
                     }
                 />
-                <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-                    <div className="space-y-6 lg:col-span-2">
-                        <InfoCardSkeleton
-                            title={t('Direct Tracking URL')}
-                            description={t(
-                                'Use this URL to track clicks directly to this creative',
-                            )}
-                            icon={<Link2 className="h-5 w-5" />}
-                            children={
-                                <div className="flex gap-2">
-                                    <Input
-                                        value={trackingUrl}
-                                        readOnly
-                                        className="font-mono text-sm"
-                                    />
-                                    <CopyButton
-                                        text={trackingUrl}
-                                        label={t('Copy URL')}
-                                    />
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() =>
-                                            window.open(trackingUrl, '_blank')
-                                        }
+
+                <div className="grid gap-[18px] sm:grid-cols-3">
+                    <StatCard
+                        label={t('Impressions')}
+                        value={number(impressions)}
+                        icon={<Eye />}
+                        tone="analytics"
+                    />
+                    <StatCard
+                        label={t('Clicks')}
+                        value={number(clicks)}
+                        icon={<MousePointerClick />}
+                        tone="brand"
+                    />
+                    <StatCard
+                        label={t('CTR')}
+                        value={`${ctr.toFixed(2)}%`}
+                        icon={<Percent />}
+                        tone="partners"
+                    />
+                </div>
+
+                <div className="grid items-start gap-[18px] lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+                    <SectionCard
+                        title={t('Embed code')}
+                        description={t(
+                            'Give publishers this code. Clicks and impressions are tracked automatically.',
+                        )}
+                        icon={<Code2 />}
+                        tone="analytics"
+                        bodyClassName="flex flex-col gap-5"
+                    >
+                        {trackingUrl && (
+                            <div className="flex items-end gap-2">
+                                <CopyField
+                                    className="flex-1"
+                                    label={t('Direct tracking URL')}
+                                    value={trackingUrl}
+                                    copiedMessage={t('Tracking URL copied')}
+                                />
+                                <Button
+                                    asChild
+                                    variant="secondary"
+                                    size="icon"
+                                    aria-label={t('Open tracking URL')}
+                                >
+                                    <a
+                                        href={trackingUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
                                     >
-                                        <ExternalLink className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            }
+                                        <ExternalLink />
+                                    </a>
+                                </Button>
+                            </div>
+                        )}
+                        <CopyField
+                            label={t('Embed code (click tracking)')}
+                            value={creative.embed_code || ''}
+                            copiedMessage={t('Embed code copied')}
+                            multiline
+                            variant="code"
                         />
-                        <InfoCardSkeleton
-                            title={t('Embed Code (Click Tracking)')}
-                            description={t(
-                                'Copy this HTML code to embed the creative with click tracking',
-                            )}
-                            icon={<MousePointerClick className="h-5 w-5" />}
-                            children={
-                                <div className="space-y-4">
-                                    <Textarea
-                                        value={creative?.embed_code || ''}
-                                        readOnly
-                                        rows={6}
-                                        className="font-mono text-sm"
-                                    />
-                                    <CopyButton
-                                        text={creative?.embed_code || ''}
-                                        label={t('Copy Embed Code')}
-                                    />
-                                </div>
-                            }
-                        />
-                        <InfoCardSkeleton
-                            title={t('Impression Tracking Pixel')}
-                            description={t(
-                                'Add this invisible pixel to track impressions (views)',
-                            )}
-                            icon={<Eye className="h-5 w-5" />}
-                            children={
-                                <div className="space-y-4">
-                                    <div className="space-y-2">
-                                        <Label>{t('Pixel URL')}</Label>
-                                        <div className="flex gap-2">
-                                            <Input
-                                                value={impressionUrl}
-                                                readOnly
-                                                className="font-mono text-sm"
-                                            />
-                                            <CopyButton
-                                                text={impressionUrl}
-                                                label={t('Copy')}
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>{t('HTML Pixel Code')}</Label>
-                                        <Textarea
-                                            value={
-                                                creative?.tracking_pixel || ''
-                                            }
-                                            readOnly
-                                            rows={2}
-                                            className="font-mono text-sm"
-                                        />
-                                        <CopyButton
-                                            text={
-                                                creative?.tracking_pixel || ''
-                                            }
-                                            label={t('Copy Pixel Code')}
-                                        />
-                                    </div>
-                                </div>
-                            }
-                        />
-                        <InfoCardSkeleton
-                            title={t('Complete Code (Embed + Pixel)')}
-                            description={t(
-                                'Use this code to track both clicks and impressions',
-                            )}
-                            icon={<Code className="h-5 w-5" />}
-                            children={
-                                <div className="space-y-4">
-                                    <Textarea
-                                        value={`${creative.embed_code || ''}\n${creative.tracking_pixel || ''}`}
-                                        readOnly
-                                        rows={8}
-                                        className="font-mono text-sm"
-                                    />
-                                    <CopyButton
-                                        text={`${creative.embed_code || ''}\n${creative.tracking_pixel || ''}`}
-                                        label={t('Copy Complete Code')}
-                                    />
-                                </div>
-                            }
-                        />
-                    </div>
-                    <div className="space-y-6">
-                        <InfoCardSkeleton
+                        {impressionUrl && (
+                            <CopyField
+                                label={t('Impression pixel URL')}
+                                value={impressionUrl}
+                            />
+                        )}
+                        {creative.tracking_pixel && (
+                            <CopyField
+                                label={t('HTML pixel code')}
+                                value={creative.tracking_pixel}
+                                multiline
+                            />
+                        )}
+                        {creative.tracking_pixel && (
+                            <CopyField
+                                label={t('Complete code (embed + pixel)')}
+                                value={completeCode}
+                                multiline
+                                variant="code"
+                            />
+                        )}
+                    </SectionCard>
+
+                    <div className="flex min-w-0 flex-col gap-[18px]">
+                        <SectionCard
                             title={t('Preview')}
-                            icon={<Image className="h-5 w-5" />}
-                            children={
-                                <>
-                                    {creative?.file_url && (
-                                        <div className="rounded-lg border bg-muted/50 p-4">
-                                            {creative?.type === 'video' ? (
-                                                <video
-                                                    src={creative?.file_url}
-                                                    poster={
-                                                        creative?.preview_url ||
-                                                        undefined
-                                                    }
-                                                    controls
-                                                    className="h-auto max-w-full"
-                                                />
-                                            ) : (
-                                                <img
-                                                    src={creative?.file_url}
-                                                    alt={
-                                                        creative?.alt_text ||
-                                                        creative?.name
-                                                    }
-                                                    className="h-auto max-w-full"
-                                                />
-                                            )}
-                                        </div>
-                                    )}
-                                </>
-                            }
-                        />
-                        <InfoCardSkeleton
+                            icon={<Image />}
+                            tone="admin"
+                        >
+                            <CreativePreview
+                                size="panel"
+                                type={creative.type}
+                                name={creative.name}
+                                imageUrl={image}
+                                videoUrl={
+                                    creative.type === 'video'
+                                        ? creative.file_url
+                                        : undefined
+                                }
+                                altText={creative.alt_text}
+                                badge={creativeSize(creative)}
+                            />
+                        </SectionCard>
+                        <SectionCard
                             title={t('Material details')}
-                            icon={<Info className="h-5 w-5" />}
-                            children={
-                                <>
-                                    <InfoRow
-                                        label={t('Type')}
-                                        value={
-                                            <StatusBadge
-                                                status={creative?.type}
+                            icon={<Info />}
+                            tone="brand"
+                        >
+                            <DetailList
+                                rows={[
+                                    {
+                                        label: t('Type'),
+                                        value: (
+                                            <CreativeTypePill
+                                                type={creative.type}
                                             />
-                                        }
-                                    />
-                                    <Separator />
-                                    <InfoRow
-                                        label={t('Dimensions')}
-                                        value={
-                                            creative?.width && creative?.height
-                                                ? `${creative?.width} x ${creative?.height}`
-                                                : '-'
-                                        }
-                                    />
-                                    <Separator />
-                                    <InfoRow
-                                        label={t('Campaign')}
-                                        value={creative?.campaign?.name || '-'}
-                                    />
-                                    <Separator />
-                                    <InfoRow
-                                        label={t('Offer')}
-                                        value={creative?.offer?.name || '-'}
-                                    />
-                                    <Separator />
-                                    <InfoRow
-                                        label={t('Status')}
-                                        value={
+                                        ),
+                                    },
+                                    {
+                                        label: t('Dimensions'),
+                                        value: creativeSize(creative),
+                                    },
+                                    {
+                                        label: t('Campaign'),
+                                        value: creative.campaign?.name,
+                                    },
+                                    {
+                                        label: t('Offer'),
+                                        value: creative.offer ? (
+                                            <Link
+                                                href={`${advertiser.offers.show.url(creative.offer.id)}?tab=materials`}
+                                                className="font-semibold text-brand-ink hover:underline"
+                                            >
+                                                {creative.offer.name}
+                                            </Link>
+                                        ) : null,
+                                    },
+                                    {
+                                        label: t('Status'),
+                                        value: (
                                             <StatusBadge
-                                                status={creative?.status}
+                                                status={creative.status}
                                             />
-                                        }
-                                    />
-                                </>
-                            }
-                        />
-
-                        <InfoCardSkeleton
-                            title={t('Performance')}
-                            icon={<BarChart3 className="h-5 w-5" />}
-                            children={
-                                <>
-                                    <InfoRow
-                                        label={t('Impressions')}
-                                        value={
-                                            <span className="font-semibold">
-                                                {creative?.impressions?.toLocaleString() ||
-                                                    0}
-                                            </span>
-                                        }
-                                    />
-                                    <Separator />
-                                    <InfoRow
-                                        label={t('Clicks')}
-                                        value={
-                                            <span className="font-semibold">
-                                                {creative?.clicks?.toLocaleString() ||
-                                                    0}
-                                            </span>
-                                        }
-                                    />
-                                    <Separator />
-                                    <InfoRow
-                                        label={t('CTR')}
-                                        value={
-                                            <span className="font-semibold">
-                                                {getCtr()}%
-                                            </span>
-                                        }
-                                    />
-                                </>
-                            }
-                        />
-
-                        <InfoCardSkeleton
-                            title={t('Tracking Code')}
-                            icon={<Link2 className="h-5 w-5" />}
-                            children={
-                                <code className="rounded bg-muted px-2 py-1 text-sm">
-                                    {creative?.tracking_code || '-'}
-                                </code>
-                            }
-                        />
+                                        ),
+                                    },
+                                    {
+                                        label: t('Tracking code'),
+                                        value: creative.tracking_code ? (
+                                            <code className="font-mono text-[13px]">
+                                                {creative.tracking_code}
+                                            </code>
+                                        ) : null,
+                                    },
+                                ]}
+                            />
+                        </SectionCard>
                     </div>
                 </div>
+                <ConfirmDialog />
             </div>
         </AppLayout>
     );
-};
-
-export default CreativeShow;
+}

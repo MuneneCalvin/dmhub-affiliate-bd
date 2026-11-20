@@ -20,7 +20,23 @@ export interface CampaignOverview {
         currency: string;
         start_date: string | null;
         end_date: string | null;
+        /** Targeted country codes; empty = all countries. */
+        countries?: string[];
+        tags?: string[];
     };
+    counts?: { offers: number; publishers: number | null };
+    /** Confirmed conversions per offer id in the 30-day period. */
+    offer_conversions?: Record<string, number>;
+    tracking?: {
+        last_click_at: string | null;
+        last_outcome_at: string | null;
+    };
+    can?: { manage: boolean; create_offers: boolean; fund: boolean };
+    funding_advertiser?: {
+        id: number;
+        business_name: string;
+        currency: string;
+    } | null;
     period: { start: string; end: string };
     configured: boolean;
     traffic_eligible: boolean;

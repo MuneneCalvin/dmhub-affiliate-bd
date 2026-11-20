@@ -1,133 +1,240 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { Head, router, usePage } from '@inertiajs/react';
-import { Plus } from 'lucide-react';
-import { useReducer } from 'react';
+import {
+    MutedCell,
+    PageHeader,
+    ProgressBar,
+    ResourceDirectory,
+} from '@/components/app';
+import { campaignStatusKey } from '@/components/campaigns';
+import { Button } from '@/components/ui/button';
+import {
+    useDirectoryQuery,
+    type LaravelPage,
+} from '@/hooks/use-directory-query';
+import AppLayout from '@/layouts/app-layout';
+import { useDate } from '@/lib/format';
+import advertiser from '@/routes/advertiser';
+import type { SharedData } from '@/types';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import {
+    Ban,
+    CheckCircle2,
+    LayoutGrid,
+    Megaphone,
+    Pause,
+    Pencil,
+    Plus,
+    Tag,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Button } from '@/components/ui/button';
-import { ReusablePageTitle } from '@/dev/core';
-import { CustomBaseTable, SearchTools } from '@/dev/table';
-import AppLayout from '@/layouts/app-layout';
-import advertiser from '@/routes/advertiser';
-import {
-    BreadcrumbItem,
-    campaignsPageProps,
-    SingleActionsHandler,
-    TCampaign,
-    TFilterOptions,
-    TPaginationFilters,
-} from '@/types';
+type CampaignRow = {
+    id: number;
+    name: string;
+    advertiser_name: string;
+    network_name: string;
+    campaign_status: string;
+    currency: string;
+    total_budget: string | number;
+    spent_amount: string | number;
+    start_date: string | null;
+    end_date: string | null;
+    offers_count: number;
+};
 
-import {
-    ActionColumn,
-    AdvertiserCampaignsColumns,
-} from '@/dev/columns/columns';
-import { useDebounce } from '@/hooks';
-import { FILTEROPTIONS, ReusableReducer } from '@/utils/constants';
+type Props = SharedData & {
+    campaigns: { results: LaravelPage<CampaignRow> };
+    status: string;
+    statusCounts: { all: number; A: number; P: number; I: number };
+};
 
-const AdvertiserIndex = () => {
+function BudgetCell({ row }: { row: CampaignRow }) {
+    const { t, i18n } = useTranslation();
+    const total = Number(row.total_budget);
+    const spent = Number(row.spent_amount ?? 0);
+    const money = (value: number) =>
+        new Intl.NumberFormat(i18n.language, {
+            style: 'currency',
+            currency: row.currency,
+            notation: 'compact',
+            maximumFractionDigits: 1,
+        }).format(value);
+    if (!(total > 0)) {
+        return (
+            <MutedCell>
+                {t('{{spent}} spent · no limit', { spent: money(spent) })}
+            </MutedCell>
+        );
+    }
+    return (
+        <ProgressBar
+            className="min-w-[150px]"
+            value={Math.min(spent, total)}
+            max={total}
+            tone="finance"
+            size="sm"
+            label={t('Budget spent for {{name}}', { name: row.name })}
+            caption={`${money(spent)} / ${money(total)}`}
+        />
+    );
+}
+
+export default function AdvertiserCampaignsIndex() {
     const { t } = useTranslation();
-    const { auth } = usePage<any>().props;
+    const { auth, campaigns, status, statusCounts } = usePage<Props>().props;
+    const formatDate = useDate();
+    const query = useDirectoryQuery();
     const can = (permission: string) =>
         Boolean(
             auth.user.is_super_admin || auth.permissions?.includes(permission),
         );
-    const { campaigns } = usePage<campaignsPageProps>().props;
-    const breadcrumbs: BreadcrumbItem[] = [
-        {
-            title: t('Campaigns'),
-            href: advertiser.campaign.index.url(),
-        },
-    ];
+    const page = campaigns?.results;
+    const ended = (row: CampaignRow) =>
+        !row.end_date || row.end_date.startsWith('2100')
+            ? t('No end date')
+            : formatDate(row.end_date);
 
-    const [PageFilter, optionsDispatcher] = useReducer(
-        ReusableReducer<TPaginationFilters & TFilterOptions>,
-        { ...FILTEROPTIONS, page: 1, pageSize: 25 },
-    );
-    const optionsDispatcherDebounce = useDebounce({
-        debounceCallback: optionsDispatcher,
-    });
-
-    const ActionsHandlerMapping: SingleActionsHandler<TCampaign>[] = [
-        {
-            label: t('View'),
-            href: (data) => advertiser.campaign.show.url(data.id),
-            onSelect: (data: any) => {
-                router.visit(advertiser.campaign.show(data?.id));
-            },
-        },
-    ];
     return (
         <AppLayout>
             <Head title={t('Campaigns')} />
-            <div className="workspace-page flex h-full flex-1 flex-col gap-4">
-                <ReusablePageTitle
+            <div className="workspace-page flex flex-col gap-6">
+                <PageHeader
                     title={t('Campaigns')}
                     description={t(
-                        'Explore your campaigns, offers, and next opportunities.',
+                        'Campaigns, their offers and how much of each budget is used.',
                     )}
-                    breadcrumbs={breadcrumbs}
-                    children={
-                        <div className="flex items-center gap-4">
-                            {can('create_campaigns') && (
-                                <Button
-                                    className="cursor-pointer rounded-xl px-4 py-2"
-                                    onClick={() =>
-                                        router.visit(
-                                            advertiser.campaign.create(),
-                                        )
-                                    }
-                                >
-                                    <Plus size="medium" />
-                                    <p className="text-lg leading-6 font-medium">
-                                        {t('Create Campaign')}
-                                    </p>
-                                </Button>
-                            )}
-                        </div>
+                    breadcrumbs={[
+                        {
+                            title: t('Campaigns'),
+                            href: advertiser.campaign.index.url(),
+                        },
+                    ]}
+                    icon={<Megaphone />}
+                    tone="brand"
+                    actions={
+                        can('create_campaigns') ? (
+                            <Button asChild>
+                                <Link href={advertiser.campaign.create.url()}>
+                                    <Plus />
+                                    {t('Create campaign')}
+                                </Link>
+                            </Button>
+                        ) : undefined
                     }
                 />
-                <div className="campaigns-directory w-full">
-                    <CustomBaseTable
-                        presentation="cards"
-                        onPageChange={(page) =>
-                            optionsDispatcher({
-                                payload: { page },
-                                type: 'page',
-                            })
-                        }
-                        OtherToolsProps={{
-                            onChange: (term: any) =>
-                                optionsDispatcherDebounce({
-                                    payload: { term },
-                                    type: 'term',
-                                }),
-                            placeholder: t('Search'),
-                            includeFilter: true,
-                        }}
-                        columns={[
-                            ...AdvertiserCampaignsColumns,
-                            ActionColumn({ ActionsHandlerMapping }),
-                        ]}
-                        OtherTools={SearchTools}
-                        data={campaigns?.results?.data ?? []}
-                        pageCount={campaigns?.results?.last_page ?? 1}
-                        title={t('Campaigns')}
-                        showPagination
-                        setPageSize={(pageSize) =>
-                            optionsDispatcher({
-                                payload: { pageSize },
-                                type: 'pageSize',
-                            })
-                        }
-                        pageSize={campaigns?.results?.per_page}
-                        page={campaigns?.results?.current_page}
-                    />
-                </div>
+                <ResourceDirectory<CampaignRow>
+                    label={t('Campaign list')}
+                    tone="brand"
+                    rows={page?.data ?? []}
+                    rowKey={(row) => row.id}
+                    nameHeader={t('Campaign')}
+                    name={(row) => row.name}
+                    subtitle={(row) => row.advertiser_name}
+                    status={(row) => campaignStatusKey(row.campaign_status)}
+                    statusTiles={[
+                        {
+                            value: 'all',
+                            label: t('All campaigns'),
+                            count: statusCounts?.all,
+                            tone: 'brand',
+                            icon: <LayoutGrid />,
+                        },
+                        {
+                            value: 'A',
+                            label: t('Active'),
+                            count: statusCounts?.A,
+                            tone: 'success',
+                            icon: <CheckCircle2 />,
+                        },
+                        {
+                            value: 'P',
+                            label: t('Paused'),
+                            count: statusCounts?.P,
+                            tone: 'warning',
+                            icon: <Pause />,
+                        },
+                        {
+                            value: 'I',
+                            label: t('Inactive'),
+                            count: statusCounts?.I,
+                            tone: 'neutral',
+                            icon: <Ban />,
+                        },
+                    ]}
+                    statusValue={status ?? 'all'}
+                    onStatusChange={query.setStatus}
+                    columns={[
+                        {
+                            id: 'offers',
+                            header: t('Offers'),
+                            cell: (row) => (
+                                <span className="inline-flex items-center gap-1.5 tabular-nums">
+                                    <Tag
+                                        className="size-3.5 text-brand"
+                                        aria-hidden="true"
+                                    />
+                                    {row.offers_count ?? 0}
+                                </span>
+                            ),
+                        },
+                        {
+                            id: 'budget',
+                            header: t('Budget'),
+                            cell: (row) => <BudgetCell row={row} />,
+                        },
+                        {
+                            id: 'dates',
+                            header: t('Dates'),
+                            cell: (row) => (
+                                <MutedCell>
+                                    {`${formatDate(row.start_date)} – ${ended(row)}`}
+                                </MutedCell>
+                            ),
+                        },
+                        ...(auth.user.is_super_admin
+                            ? [
+                                  {
+                                      id: 'network',
+                                      header: t('Network'),
+                                      cell: (row: CampaignRow) =>
+                                          row.network_name || '—',
+                                  },
+                              ]
+                            : []),
+                    ]}
+                    href={(row) => advertiser.campaign.show.url(row.id)}
+                    actions={() =>
+                        can('manage_campaigns')
+                            ? [
+                                  {
+                                      label: t('Edit'),
+                                      icon: <Pencil />,
+                                      onSelect: (row) =>
+                                          router.visit(
+                                              advertiser.campaign.edit.url(
+                                                  row.id,
+                                              ),
+                                          ),
+                                  },
+                              ]
+                            : []
+                    }
+                    pagination={query.pagination(page)}
+                    emptyTitle={t('No campaigns yet')}
+                    emptyDescription={t(
+                        'Create a campaign, then add offers for publishers to promote.',
+                    )}
+                    emptyAction={
+                        can('create_campaigns') ? (
+                            <Button asChild>
+                                <Link href={advertiser.campaign.create.url()}>
+                                    <Plus />
+                                    {t('Create campaign')}
+                                </Link>
+                            </Button>
+                        ) : undefined
+                    }
+                />
             </div>
         </AppLayout>
     );
-};
-
-export default AdvertiserIndex;
+}

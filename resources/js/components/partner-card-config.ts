@@ -44,7 +44,7 @@ export function advertiserCardEditors({
 }: AdvertiserWorkspaceProps): Record<string, CardEditorConfig | null> {
     const url = (card: string) => `/advertisers/show/${a.id}/cards/${card}`;
     return {
-        business: can.edit
+        business: can.editProfile
             ? {
                   title: 'Business details',
                   url: url('business'),
@@ -127,14 +127,18 @@ export function publisherCardEditors({
     const url = (card: string) =>
         `/publishers/show/${p.publisher_id}/cards/${card}`;
     const site: CardField[] = [
-        {
-            name: 'website_url',
-            label: 'Website URL',
-            value: p.website_url ?? '',
-            type: 'url',
-            maxLength: 255,
-        },
-        ...(can.edit
+        ...(can.editSites
+            ? [
+                  {
+                      name: 'website_url',
+                      label: 'Website URL',
+                      value: p.website_url ?? '',
+                      type: 'url',
+                      maxLength: 255,
+                  } satisfies CardField,
+              ]
+            : []),
+        ...(can.editProfile
             ? [
                   {
                       name: 'business_name',
@@ -168,14 +172,14 @@ export function publisherCardEditors({
                           label: 'First name',
                           value: p.first_name,
                           required: true,
-                          maxLength: 255,
+                          maxLength: 30,
                       },
                       {
                           name: 'last_name',
                           label: 'Last name',
                           value: p.last_name,
                           required: true,
-                          maxLength: 255,
+                          maxLength: 30,
                       },
                       {
                           name: 'business_name',
@@ -201,9 +205,14 @@ export function publisherCardEditors({
                   ],
               }
             : null,
-        site: can.editSites
-            ? { title: 'Website & business', url: url('site'), fields: site }
-            : null,
+        site:
+            can.editSites || can.editProfile
+                ? {
+                      title: 'Website & business',
+                      url: url('site'),
+                      fields: site,
+                  }
+                : null,
         traffic: can.editSites
             ? {
                   title: 'Traffic profile',

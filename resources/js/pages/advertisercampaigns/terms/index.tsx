@@ -1,130 +1,155 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import { MutedCell, PageHeader, ResourceDirectory } from '@/components/app';
+import { useConfirmationDialog } from '@/components/app/confirm-dialog';
+import { FormDialog } from '@/components/app/form-dialog';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ActionColumn, AdvertiserCampaignTermsColumns } from '@/dev/columns/columns';
-import { CustomDialogComponent, ReusablePageTitle } from '@/dev/core';
-import { CustomBaseTable, SearchTools } from '@/dev/table';
-import { useCustomDialogContextFactory, useDebounce } from '@/hooks';
-import AppLayout from '@/layouts/app-layout'
+import { useCustomDialogContextFactory } from '@/hooks';
+import {
+    useDirectoryQuery,
+    type LaravelPage,
+} from '@/hooks/use-directory-query';
+import AppLayout from '@/layouts/app-layout';
+import { useDate } from '@/lib/format';
 import advertiser from '@/routes/advertiser';
-import { BreadcrumbItem, SingleActionsHandler, TermsPageProps, TFilterOptions, TPaginationFilters, TTerms } from '@/types';
-import { FILTEROPTIONS, ReusableReducer } from '@/utils/constants';
-import { Head, router, usePage } from '@inertiajs/react'
-import { Plus } from 'lucide-react';
-import React, { useReducer } from 'react'
+import type { SharedData } from '@/types';
+import { Head, router, usePage } from '@inertiajs/react';
+import { FileText, Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import CreateTerms from './create';
 
-const TermsIndexPage = () => {
+type TermsRow = {
+    id: number;
+    description: string;
+    advertiser_id: number | null;
+    created_at: string;
+};
+
+type Props = SharedData & { terms: LaravelPage<TermsRow> };
+
+export default function TermsIndexPage() {
     const { t } = useTranslation();
-    const { terms } = usePage<TermsPageProps>().props;
-    const breadcrumbs: BreadcrumbItem[] = [
-        {
-            title: t('Campaigns'),
-            href: advertiser.terms.url(),
-        },
-    ];
-    const [PageFilter, optionsDispatcher] = useReducer(
-        ReusableReducer<TPaginationFilters & TFilterOptions>,
-        { ...FILTEROPTIONS, page: 1, pageSize: 10 }
-    );
-    const optionsDispatcherDebounce = useDebounce({
-        debounceCallback: optionsDispatcher,
-    });
-
+    const { terms, auth } = usePage<Props>().props;
+    const query = useDirectoryQuery();
+    const formatDate = useDate();
+    const { confirm, ConfirmDialog } = useConfirmationDialog();
     const { handleDialogContextSwitch, dialogContent, dialogOpen } =
-        useCustomDialogContextFactory<{
-            terms?: any,
-        }>();
-
-    const ActionsHandlerMapping: SingleActionsHandler<TTerms>[] = [
-        {
-            label: t('Delete'),
-            onSelect: (data: any) => {
-                router.delete(advertiser.terms.delete(data?.id));
-                router.get(advertiser.terms.url());
-            },
-        }
-    ];
+        useCustomDialogContextFactory<Record<string, never>>();
+    const isSuperAdmin = Boolean(auth.user?.is_super_admin);
+    const canDelete = (row: TermsRow) =>
+        isSuperAdmin || row.advertiser_id !== null;
+    const openCreate = () =>
+        handleDialogContextSwitch({ Component: CreateTerms });
 
     return (
         <AppLayout>
-            <Head title={t('My Terms')} />
-            <div className="workspace-page flex h-full flex-1 flex-col gap-4">
-                <ReusablePageTitle
-                    title={t('My Terms')}
-                    description={t('Manage Your Campaigns Terms')}
-                    breadcrumbs={breadcrumbs}
-                    children={
-                        <div className="flex items-center gap-4">
-                            <Button
-                                className="rounded-xl px-4 py-2 cursor-pointer "
-                                onClick={() =>
-                                    handleDialogContextSwitch({
-                                        Component: CreateTerms,
-                                    })
-                                }>
-                                <Plus size="medium" />
-                                <p className="font-medium leading-6 text-lg">
-                                    {t('Create Terms')}
-                                </p>
-                            </Button>
-                        </div>
+            <Head title={t('Campaign terms')} />
+            <div className="workspace-page flex flex-col gap-6">
+                <PageHeader
+                    title={t('Campaign terms')}
+                    description={t(
+                        'Agreements you can attach to campaigns. Publishers accept them when they apply.',
+                    )}
+                    breadcrumbs={[
+                        {
+                            title: t('Campaigns'),
+                            href: advertiser.campaign.index.url(),
+                        },
+                        {
+                            title: t('Campaign terms'),
+                            href: advertiser.terms.url(),
+                        },
+                    ]}
+                    icon={<FileText />}
+                    tone="brand"
+                    actions={
+                        <Button onClick={openCreate}>
+                            <Plus />
+                            {t('Create terms')}
+                        </Button>
                     }
                 />
-
-                <div className="w-full">
-                    <CustomBaseTable presentation="cards"
-                        onPageChange={(page) =>
-                            optionsDispatcher({
-                                payload: { page },
-                                type: 'page',
-                            })
-                        }
-                        OtherToolsProps={{
-                            onChange: (term: any) =>
-                                optionsDispatcherDebounce({
-                                    payload: { term },
-                                    type: 'term',
+                <ResourceDirectory<TermsRow>
+                    label={t('Campaign terms list')}
+                    tone="brand"
+                    rows={terms?.data ?? []}
+                    rowKey={(row) => row.id}
+                    nameHeader={t('Terms')}
+                    name={(row) => row.description}
+                    columns={[
+                        {
+                            id: 'scope',
+                            header: t('Available to'),
+                            cell: (row) =>
+                                row.advertiser_id === null ? (
+                                    <Badge variant="info">
+                                        {t('All advertisers')}
+                                    </Badge>
+                                ) : (
+                                    <Badge variant="brand">
+                                        {t('Your campaigns')}
+                                    </Badge>
+                                ),
+                        },
+                        {
+                            id: 'created',
+                            header: t('Created'),
+                            cell: (row) => (
+                                <MutedCell>
+                                    {formatDate(row.created_at)}
+                                </MutedCell>
+                            ),
+                        },
+                    ]}
+                    actions={() => [
+                        {
+                            label: t('Delete'),
+                            icon: <Trash2 />,
+                            destructive: true,
+                            hidden: (row) => !canDelete(row),
+                            onSelect: (row) =>
+                                confirm({
+                                    title: t('Delete terms'),
+                                    description: t(
+                                        'Campaigns that already use these terms keep their copy. Delete them for new campaigns?',
+                                    ),
+                                    confirmLabel: t('Delete'),
+                                    cancelLabel: t('Cancel'),
+                                    variant: 'destructive',
+                                    onConfirm: () =>
+                                        router.delete(
+                                            advertiser.terms.delete.url(row.id),
+                                            { preserveScroll: true },
+                                        ),
                                 }),
-                            placeholder: t('Search'),
-                            includeFilter: true,
-                        }}
-                        columns={[
-                            ...AdvertiserCampaignTermsColumns,
-                            ActionColumn({ ActionsHandlerMapping }),
-                        ]}
-                        OtherTools={SearchTools}
-                        data={terms?.data ?? []}
-                        pageCount={terms?.last_page ?? 1  }
-                        title={t('Campaign Terms')}
-                        showPagination
-                        setPageSize={(pageSize) =>
-                            optionsDispatcher({
-                                payload: { pageSize },
-                                type: 'pageSize',
-                            })
-                        }
-                        pageSize={terms?.per_page ?? 10}
-                        page={terms?.current_page ?? 1}
-                    />
-                </div>
-                <CustomDialogComponent
-                    {...{ handleDialogContextSwitch, dialogOpen }}
-                    className='sm:max-w-[700px]'>
-                    {dialogContent?.Component && (
-                        <dialogContent.Component
-                            {...{
-                                componentProps: dialogContent.componentProps,
-                                handleDialogContextSwitch,
-                            }}
-                        />
+                        },
+                    ]}
+                    pagination={query.pagination(terms)}
+                    emptyTitle={t('No terms yet')}
+                    emptyDescription={t(
+                        'Create terms such as “No brand bidding” to attach them to campaigns.',
                     )}
-                </CustomDialogComponent>
-
+                    emptyAction={
+                        <Button onClick={openCreate}>
+                            <Plus />
+                            {t('Create terms')}
+                        </Button>
+                    }
+                />
             </div>
+            <FormDialog
+                {...{ handleDialogContextSwitch, dialogOpen }}
+                className="sm:max-w-[640px]"
+            >
+                {dialogContent?.Component && (
+                    <dialogContent.Component
+                        {...{
+                            componentProps: dialogContent.componentProps,
+                            handleDialogContextSwitch,
+                        }}
+                    />
+                )}
+            </FormDialog>
+            <ConfirmDialog />
         </AppLayout>
-    )
+    );
 }
-
-export default TermsIndexPage

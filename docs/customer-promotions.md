@@ -5,7 +5,7 @@ Customer promotions are available in DM Hub Affiliate by default. An authorized 
 ## Connect your store in DM Hub
 
 1. Open your campaign and select **Offers**.
-2. Expand **Customer promotions & stores**.
+2. In **Customer promotions & stores**, select **Manage stores**.
 3. Under **Connected stores**, enter a store name, select **Shopify** or **WooCommerce**, and enter the store domain without `https://` or a path.
 4. Select **Add store**, then complete the platform steps below. The store currency must match the campaign currency shown in DM Hub.
 5. Confirm the store status is **connected** before publishing a promotion.
@@ -42,7 +42,7 @@ See the [Shopify guide](shopify.md) for supported discount rules and checkout ch
 
 ## Configure an offer
 
-Select an offer in **Customer promotions & stores**, then configure:
+In **Customer promotions & stores**, select **Set up promotion** or **Edit promotion** beside the offer. The publish checklist shows which sections are complete. Configure the following settings.
 
 - **Savings:** percentage or fixed amount, with an explicit discount value.
 - **Eligibility:** all products or selected products/categories, minimum spend or quantity, and supported exclusions. Enter the product/category IDs from your store. Scoped offers must select a single store; entire-catalogue offers can use multiple stores in the same currency.

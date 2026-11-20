@@ -44,6 +44,7 @@ class AdvertiserCampaignController extends Controller
                 'campaigns.name',
                 'campaigns.total_budget',
                 'campaigns.daily_budget',
+                'campaigns.spent_amount',
                 'campaigns.currency',
                 'campaigns.start_date',
                 'campaigns.end_date',
@@ -51,11 +52,24 @@ class AdvertiserCampaignController extends Controller
                 'campaigns.target_conversions',
                 'campaigns.target_roi',
                 'campaigns.created_at',
-                'networks.network_name'
-            );
+                'networks.network_name',
+                'advertisers.business_name as advertiser_name'
+            )
+            ->selectSub(DB::table('offers')->selectRaw('COUNT(*)')->whereColumn('offers.campaign_id', 'campaigns.id'), 'offers_count')
+            ->orderByDesc('campaigns.created_at')->orderByDesc('campaigns.id');
         Tenancy::campaigns($query, $user);
-        $campaigns = $query->paginate(25);
-        $campaigns->getCollection()->each(fn ($campaign) => $this->serializeDates($campaign));
+        // select() replaces the list columns: PostgreSQL rejects ungrouped columns.
+        $statusCounts = (clone $query)->reorder()->select('campaigns.campaign_status as status')->selectRaw('COUNT(*) as total')
+            ->groupBy('campaigns.campaign_status')->pluck('total', 'status');
+        $status = in_array($request->query('status'), ['A', 'P', 'I'], true) ? $request->query('status') : 'all';
+        if ($status !== 'all') {
+            $query->where('campaigns.campaign_status', $status);
+        }
+        $campaigns = $query->paginate(25)->withQueryString();
+        $campaigns->getCollection()->each(function ($campaign) {
+            $this->serializeDates($campaign);
+            $campaign->offers_count = (int) $campaign->offers_count;
+        });
 
         return inertia('advertisercampaigns/index', [
             'campaigns' => [
@@ -66,6 +80,13 @@ class AdvertiserCampaignController extends Controller
                 'currentPage' => $campaigns->currentPage(),
                 'from' => $campaigns->firstItem(),
                 'to' => $campaigns->lastItem(),
+            ],
+            'status' => $status,
+            'statusCounts' => [
+                'all' => (int) $statusCounts->sum(),
+                'A' => (int) ($statusCounts['A'] ?? 0),
+                'P' => (int) ($statusCounts['P'] ?? 0),
+                'I' => (int) ($statusCounts['I'] ?? 0),
             ],
         ]);
     }
@@ -174,7 +195,7 @@ class AdvertiserCampaignController extends Controller
         }
     }
 
-    public function show($id)
+    public function show($id, ?int $offerId = null)
     {
         $query = DB::table('campaigns')
             ->join('networks', 'networks.id', '=', 'campaigns.network_id')
@@ -196,6 +217,12 @@ class AdvertiserCampaignController extends Controller
             );
         $campaign = Tenancy::campaigns($query, Auth::user())->where('campaigns.id', $id)->first();
         abort_if($campaign === null, 404);
+        if ($offerId !== null || (request('tab') === 'tracking' && request()->anyFilled(['offer', 'publisher']))) {
+            return inertia('campaigns/offer-tracking', [
+                'trackingWorkspace' => fn () => app(CampaignTrackingService::class)->detail(Campaign::findOrFail($campaign->id), request(), $offerId),
+            ]);
+        }
+
         $this->serializeDates($campaign);
         $offers = Offer::with(['commissions.commissionType'])
             ->where('campaign_id', $campaign->id)
@@ -215,7 +242,7 @@ class AdvertiserCampaignController extends Controller
             'financeWorkspace' => fn () => request('tab') === 'finance' ? app(CampaignFinanceService::class)->build(Campaign::findOrFail($campaign->id), request()) : null,
             'analyticsWorkspace' => fn () => request('tab') === 'analytics' ? app(CampaignAnalyticsService::class)->build(Campaign::findOrFail($campaign->id), request()) : null,
             'settingsWorkspace' => fn () => request('tab') === 'settings' ? app(CampaignSettingsService::class)->build(Campaign::findOrFail($campaign->id), Auth::user()) : null,
-            'trackingWorkspace' => fn () => request('tab') === 'tracking' ? app(CampaignTrackingService::class)->build(Campaign::findOrFail($campaign->id), request()) : null,
+            'trackingHub' => fn () => request('tab') === 'tracking' ? app(CampaignTrackingService::class)->hub(Campaign::findOrFail($campaign->id)) : null,
             'offerWorkspace' => fn () => app(CampaignOffersService::class)->build(Campaign::findOrFail($campaign->id), Auth::user()),
             'funding' => Advertiser::whereKey(Campaign::findOrFail($campaign->id)->advertiser_id)->first(['available_budget', 'currency']),
         ]);
@@ -239,6 +266,7 @@ class AdvertiserCampaignController extends Controller
             'currencies' => Currency::all(),
             'countries' => Country::where('status', 'A')->get(['country_iso', 'country_name']),
             'campaign' => $campaign,
+            'advertiserName' => $campaign->advertiser?->business_name,
             'terms' => $terms,
             'funding' => $campaign->advertiser()->first(['available_budget', 'currency']),
         ]);

@@ -2,6 +2,13 @@ import { OfferThumbnailUpload } from '@/components/offer-thumbnail-upload';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useFilePreview } from '@/hooks/use-file-preview';
 import advertiser from '@/routes/advertiser';
@@ -34,7 +41,7 @@ function Field({
                 <p
                     role="alert"
                     id={`${id}-error`}
-                    className="text-sm text-destructive"
+                    className="text-sm text-danger-ink"
                 >
                     {error}
                 </p>
@@ -71,9 +78,9 @@ export function CampaignOfferForm({
         offer_status: offer?.offer_status ?? 'A',
         preview_url: offer?.preview_url ?? '',
         commission_type_1: String(offer?.rates[0]?.id ?? ''),
-        commission_value_1: String(offer?.rates[0]?.value ?? ''),
+        commission_value_1: offer?.rates[0]?.value ?? '',
         commission_type_2: String(offer?.rates[1]?.id ?? ''),
-        commission_value_2: String(offer?.rates[1]?.value ?? ''),
+        commission_value_2: offer?.rates[1]?.value ?? '',
         click_cookie_lifetime_hours: String(
             offer ? (offer.click_cookie_lifetime_hours ?? '') : 168,
         ),
@@ -180,17 +187,23 @@ export function CampaignOfferForm({
                         label={t('Status')}
                         error={form.errors.offer_status}
                     >
-                        <select
-                            id="offer-status"
+                        <Select
                             value={form.data.offer_status}
-                            onChange={(e) =>
-                                form.setData('offer_status', e.target.value)
+                            onValueChange={(value) =>
+                                form.setData('offer_status', value)
                             }
                         >
-                            <option value="A">{t('Active')}</option>
-                            <option value="I">{t('Inactive')}</option>
-                            <option value="P">{t('Paused')}</option>
-                        </select>
+                            <SelectTrigger id="offer-status">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="A">{t('Active')}</SelectItem>
+                                <SelectItem value="I">
+                                    {t('Inactive')}
+                                </SelectItem>
+                                <SelectItem value="P">{t('Paused')}</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </Field>
                 </div>
                 {textarea('description', 'Description')}
@@ -223,23 +236,34 @@ export function CampaignOfferForm({
                                     )}
                                     error={form.errors[typeKey]}
                                 >
-                                    <select
-                                        id={`offer-${typeKey}`}
-                                        value={form.data[typeKey]}
-                                        onChange={(e) =>
+                                    <Select
+                                        value={form.data[typeKey] || '__none__'}
+                                        onValueChange={(value) =>
                                             form.setData(
                                                 typeKey,
-                                                e.target.value,
+                                                value === '__none__'
+                                                    ? ''
+                                                    : value,
                                             )
                                         }
                                     >
-                                        <option value="">{t('None')}</option>
-                                        {commissionTypes.map((c) => (
-                                            <option key={c.id} value={c.id}>
-                                                {c.name} · {c.nice_name}
-                                            </option>
-                                        ))}
-                                    </select>
+                                        <SelectTrigger id={`offer-${typeKey}`}>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="__none__">
+                                                {t('None')}
+                                            </SelectItem>
+                                            {commissionTypes.map((c) => (
+                                                <SelectItem
+                                                    key={c.id}
+                                                    value={String(c.id)}
+                                                >
+                                                    {c.name} · {c.nice_name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </Field>
                                 {input(
                                     valueKey,
@@ -293,7 +317,7 @@ export function CampaignOfferForm({
                 </details>
             </fieldset>
             {Object.keys(form.errors).length > 0 && (
-                <p role="alert" className="text-sm text-destructive">
+                <p role="alert" className="text-sm text-danger-ink">
                     {t('Please correct the highlighted fields before saving.')}
                 </p>
             )}
@@ -393,13 +417,12 @@ export function CampaignMaterialForm({
                         label={t('Format')}
                         error={form.errors.type}
                     >
-                        <select
-                            id="material-type"
+                        <Select
                             value={form.data.type}
-                            onChange={(e) =>
+                            onValueChange={(value) =>
                                 form.setData({
                                     ...form.data,
-                                    type: e.target.value,
+                                    type: value,
                                     asset: null,
                                     preview_image: null,
                                     width: '',
@@ -407,28 +430,33 @@ export function CampaignMaterialForm({
                                 })
                             }
                         >
-                            {[
-                                'image',
-                                'banner',
-                                'text',
-                                'html',
-                                'video',
-                                'email',
-                            ].map((type) => (
-                                <option key={type} value={type}>
-                                    {t(
-                                        {
-                                            image: 'Image',
-                                            banner: 'Banner',
-                                            text: 'Text',
-                                            html: 'HTML',
-                                            video: 'Video',
-                                            email: 'Email',
-                                        }[type] ?? type,
-                                    )}
-                                </option>
-                            ))}
-                        </select>
+                            <SelectTrigger id="material-type">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {[
+                                    'image',
+                                    'banner',
+                                    'text',
+                                    'html',
+                                    'video',
+                                    'email',
+                                ].map((type) => (
+                                    <SelectItem key={type} value={type}>
+                                        {t(
+                                            {
+                                                image: 'Image',
+                                                banner: 'Banner',
+                                                text: 'Text',
+                                                html: 'HTML',
+                                                video: 'Video',
+                                                email: 'Email',
+                                            }[type] ?? type,
+                                        )}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </Field>
                 </div>
                 {(isImage || form.data.type === 'video') && (
@@ -460,7 +488,7 @@ export function CampaignMaterialForm({
                                 }
                                 required={!fileUrl}
                             />
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-sm text-ink-muted">
                                 {t(
                                     form.data.type === 'video'
                                         ? 'MP4 or WebM, up to 50 MB.'
@@ -526,7 +554,7 @@ export function CampaignMaterialForm({
                                 form.setData('html_code', e.target.value)
                             }
                         />
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-ink-muted">
                             {t(
                                 'Use {{tracking_url}} for the tracked destination.',
                             )}
@@ -563,7 +591,7 @@ export function CampaignMaterialForm({
                     <p
                         key={key}
                         role="alert"
-                        className="text-sm text-destructive"
+                        className="text-sm text-danger-ink"
                     >
                         {error}
                     </p>

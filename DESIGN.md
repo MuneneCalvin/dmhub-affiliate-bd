@@ -1,79 +1,107 @@
 # DM Hub workspace design
 
-The dashboard uses a consistent business workspace across administrators, network
-owners, advertisers, publishers, and account settings. Shared components carry the
-visual system into list, detail, finance, form, modal, and authentication screens.
+DM Hub uses one vibrant workspace system across administrators, network owners,
+advertisers, publishers and account settings. The full redesign plan lives in
+[`docs/redesign/`](docs/redesign/README.md); exact values are in
+[`docs/redesign/tokens.md`](docs/redesign/tokens.md).
 
 ## Foundation
 
-The source of truth is `resources/css/app.css`.
+The source of truth is `resources/css/app.css`. Every token has a light (`:root`)
+and dark (`.dark`) value; `resources/css/tokens.test.ts` fails if one is missing.
 
-| Token | Light | Dark |
-| --- | --- | --- |
-| Background | `#f5f7fb` | `#0e1625` |
-| Surface | `#ffffff` | `#162135` |
-| Text | `#18243b` | `#e7edf7` |
-| Secondary text | `#64738b` | `#a0aec5` |
-| Primary action | `#305cde` | `#91adff` |
-| Border | `#e2e8f1` | `#2c3a52` |
-| Sidebar | `#142039` | `#101a2d` |
+- **Neutrals:** `canvas` (page), `surface` (cards), `surface-muted` (inputs,
+  table heads, row hover), `surface-tint` (segmented tracks, chips), `ink`,
+  `ink-muted`, `border`, `border-strong`. Navy `sidebar` with `sidebar-text` /
+  `sidebar-label`.
+- **Domains:** `brand` (campaigns, primary actions), `partners`, `finance`,
+  `admin`, `analytics`, each as `-base`, `-soft`, `-ink`, `-nav`
+  (e.g. `bg-finance-soft text-finance-ink`, `bg-brand`).
+- **Status tones:** `success`, `warning`, `danger`, `info`, `neutral` as
+  `-soft`, `-ink`, `-dot`. One status → tone map is used everywhere.
+- **Strong fills:** every domain and status also has `-strong`, a darker fill
+  that keeps white text at 4.5:1 in both themes. The bright `-base` fills only
+  carry icons; anything with white **text** on it (initials, solid stat cards,
+  filled segmented options, destructive/success buttons) uses `-strong`
+  (`toneClasses[tone].strong` in `@/lib/tones`).
+- **Shape:** controls `rounded-control` (12px), cards `rounded-card` (18px),
+  hero cards `rounded-hero` (22px), badges and chips fully rounded.
+- **Elevation:** `shadow-card`, `shadow-primary` (primary buttons),
+  `shadow-overlay` (dialogs, menus).
+- The shadcn variables (`--background`, `--primary`, `--muted`, …) map onto
+  these tokens so the primitives in `components/ui` follow the palette. Pages
+  and app components use the token names (`text-ink-muted`, `bg-surface-muted`,
+  `text-danger-ink`) rather than the shadcn aliases.
 
-Use Inter with system fallbacks. Page titles are 28–32px; section titles are
-14–16px; body and form text are 14px. Labels and table headers are 11–12px.
-Use tabular numerals for metrics and money. Do not communicate status by color
-alone: retain the text in status badges.
+Type is Plus Jakarta Sans (JetBrains Mono for code), 14px/1.5 body. Page titles
+30px/800, metrics 28px/800 with tabular numerals, card titles 16px/700, labels
+11px/700 uppercase. Focus is a 2px brand ring with a soft halo.
 
-## Workspace structure
+## Components
 
-- A 256px navy sidebar groups visible, permission-filtered destinations under
-  Campaigns, Partners, Finance, and Administration. Empty groups do not render.
-- The active destination uses a blue surface and a left indicator. Listing,
-  detail, and creation routes belong to the same navigation destination.
-- The sidebar supports compact icon mode and a scrollable mobile drawer. Links
-  close the mobile drawer. Account and documentation controls live in the top right header.
-- A 72px surface header contains the sidebar control, tenant identity, role,
-  language, appearance, notifications, documentation, and the account dropdown.
-  The account dropdown includes account settings and campaign terms.
-- Publisher and advertiser hubs offer discovery dialogs with server-backed search
-  suggestions and links to partner profiles and full pool results. It reduces to 64px on mobile.
-- Content has a 1680px maximum width, 36px desktop horizontal padding, and 16px
-  mobile horizontal padding. Sections use 24–28px gaps.
-- Standard pages use a shared heading with breadcrumbs, title, description, and
-  wrapping actions. A divider separates the page identity from its content.
+- `@/components/ui` — restyled primitives (Button, Badge, Input, Select,
+  Tabs, SegmentedControl, Dialog, AlertDialog, Sheet, DropdownMenu,
+  StatusBadge, …). Overlays return focus to whatever opened them, even when
+  opened from state without a `*Trigger`.
+- `@/components/app` — building blocks (PageHeader, SectionCard, StatCard,
+  ResourceDirectory, ProfileBanner, EmptyState, FormField, form fields,
+  ConfirmDialog, FormDialog, …). Import from the barrel `@/components/app`.
+- Domain folders (`campaigns`, `creatives`, `scripts`, `finance`, `fraud`,
+  `marketplace`, `dashboard`, `applications`) hold page-specific pieces built
+  from the two sets above.
 
-## Dashboard hierarchy
+## How to build a new page
 
-Show the role-specific overview first, then live headline metrics. Revenue and
-supporting operational or budget metrics share a two-column area on wide screens
-and stack on smaller screens. Compact quick actions follow the metrics; pending
-work and recent activity follow those actions.
+1. **Shell.** Wrap the page in `AppLayout` and a `<div className="workspace-page">`
+   (max 1680px, page padding, 16px sides on phones). Add the page to
+   `resources/js/navigation/config.ts` (and a row to its test) if it belongs in
+   the sidebar.
+2. **Header.** One `PageHeader` per page — it renders the only `h1`:
 
-The publisher starts with the campaign marketplace, its filters, and access to
-owned campaigns. Do not substitute fabricated performance data for empty states.
-Revenue charts retain currency selection, accessible daily inspection, and the
-30-day reporting period. Other summary values retain their existing definitions.
+    ```tsx
+    <PageHeader
+        title={t('Advertisers')}
+        description={t('Brands running campaigns in {{network}}', { network })}
+        breadcrumbs={[
+            { title: t('Partners'), href: advertisers.index.url() },
+            { title: t('Advertisers'), href: advertisers.index.url() },
+        ]}
+        icon={<Building2 />}
+        tone="partners"
+        actions={<Button>{t('Add advertiser')}</Button>}
+    />
+    ```
 
-## Lists, details, and forms
+3. **Content in cards.** Group content in `SectionCard`s (`title`, `icon`,
+   `tone`, `action`, `flush` for tables). Use `StatCard`s for headline numbers
+   and `DetailList` for label/value pairs.
+4. **Lists.** Use `ResourceDirectory` for any list of records: identity column,
+   `status` (→ `StatusBadge`), extra `columns`, row `href`, row `actions` menu,
+   `statusTiles` or a `SegmentedControl` filter, `pagination` from
+   `useDirectoryQuery().pagination(page)`, and empty / loading / error states.
+5. **Status.** Always `<StatusBadge status={code} />` — never a coloured span.
+   Add new codes to `STATUS_MAP` (and its test).
+6. **Forms.** `FormField` around each control (label, hint and error wired
+   with `aria-describedby`), or the value-based `TextField` / `SelectField` /
+   `SearchSelect` / `MultiSelect` in state-driven dialogs. Dialogs use
+   `DialogHeader` (icon + tone) and `DialogFooter`; confirmations use
+   `useConfirmationDialog()`.
+7. **Copy.** Every string through `t('English source')`, with entries in
+   `resources/js/i18n/locales/en.json` and `nl.json`.
+   `resources/js/i18n/translations.test.ts` fails on a missing key.
+8. **Check.** Add the page to `targets` in `tests/e2e/a11y.spec.ts`: it is then
+   audited with axe in light and dark and checked for horizontal scroll at
+   375 / 768 / 1280 / 1680px.
 
-Resource directories use compact tables with an identity cell, status, useful
-record fields, and an explicit details action. Local search is labeled “Search
-this page”; it does not imply searching unloaded server pages. Status filters,
-pagination, loading, errors, and empty states remain available. Detail drawers
-expose all original fields and permission-controlled actions.
+## Rules
 
-Use 10px surface corners and 6–8px controls. Keep borders subtle and shadows
-minimal. Forms use surface backgrounds and shared input tokens. Financial tables
-retain currency separation and existing actions. Editable overviews use a clear
-Edit action and a focused dialog. Drawers use short transitions, with reduced
-motion honored globally.
-
-## Behavior and accessibility
-
-Keep Laravel/Inertia routes, authorization, financial calculations, tenant logos,
-and forms intact. Use semantic controls, visible keyboard focus, and descriptive
-names for icon-only actions. Tables scroll horizontally inside their own surfaces
-on narrow screens. Navigation and form actions remain usable without hover.
-
-The server-provided locale is applied before the first client render. All new
-visible copy has English and Dutch translations. Theme changes affect every
-shared surface, including modals and authentication.
+- Use the tokens, never raw hex, in components and pages.
+- Status is always text plus colour; never colour alone.
+- Real `<button>`/`<a>`/`<label>`, `aria-label` on icon-only buttons, 44px touch
+  targets, 4.5:1 text contrast in both themes. When a control has visible
+  text, its accessible name must contain that text (add hidden context with an
+  `sr-only` span instead of an `aria-label` that replaces it).
+- No page-level horizontal scroll; wide tables scroll inside their card.
+- Keep Laravel/Inertia routes, authorization, financial calculations, currency
+  separation and tenant logos intact. All visible copy has English and Dutch
+  translations.

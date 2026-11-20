@@ -1,5 +1,12 @@
 import { Button } from '@/components/ui/button';
 import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import {
     Sheet,
     SheetContent,
     SheetDescription,
@@ -859,23 +866,26 @@ function RefundAdjustment({
                         </label>
                         <label className="finance-field">
                             {t('Reason')}
-                            <select
+                            <Select
                                 value={reason}
                                 disabled={reviewing || busy}
-                                onChange={(event) =>
-                                    setReason(event.target.value)
-                                }
+                                onValueChange={(value) => setReason(value)}
                             >
-                                <option value="Partial refund (return)">
-                                    {t('Partial refund (return)')}
-                                </option>
-                                <option value="Order cancelled">
-                                    {t('Order cancelled')}
-                                </option>
-                                <option value="Price adjustment">
-                                    {t('Price adjustment')}
-                                </option>
-                            </select>
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Partial refund (return)">
+                                        {t('Partial refund (return)')}
+                                    </SelectItem>
+                                    <SelectItem value="Order cancelled">
+                                        {t('Order cancelled')}
+                                    </SelectItem>
+                                    <SelectItem value="Price adjustment">
+                                        {t('Price adjustment')}
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
                         </label>
                     </div>
                     {reviewing && preview && (

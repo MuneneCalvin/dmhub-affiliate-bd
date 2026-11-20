@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\PublisherInvoice;
 use App\Services\InvoiceService;
+use App\Support\Pdf\PublisherInvoicePdf;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -37,6 +38,21 @@ class AdminInvoiceController extends Controller
         return $query->where('network_id', $networkId);
     }
 
+    /**
+     * What the caller may do with invoices. Approving, cancelling and recording
+     * payments share the `approve_network_invoices` permission (see the routes).
+     *
+     * @return array{approve: bool, reject: bool, pay: bool, export: bool, all_networks: bool}
+     */
+    private function abilities(Request $request): array
+    {
+        $user = $request->user();
+        $canSettle = $user->is_super_admin || $user->permissionNames()->contains('approve_network_invoices');
+
+        return ['approve' => $canSettle, 'reject' => $canSettle, 'pay' => $canSettle, 'export' => true,
+            'all_networks' => (bool) $user->is_super_admin];
+    }
+
     public function index(Request $request)
     {
         $query = $this->invoiceQuery($request)->with(['publisher.user', 'network', 'approvedByUser']);
@@ -65,16 +81,20 @@ class AdminInvoiceController extends Controller
             });
         }
 
-        $invoices = $query->orderBy('requested_at', 'desc')->paginate(20);
+        $invoices = $query->orderBy('requested_at', 'desc')->paginate(20)->withQueryString();
 
         // Get summary stats
         $stats = $this->invoiceQuery($request)->selectRaw('currency, status, SUM(amount) as amount, COUNT(*) as count')
             ->groupBy('currency', 'status')->get()->groupBy('currency')->map(fn ($rows) => $rows->keyBy('status'));
+        $statusCounts = $this->invoiceQuery($request)->toBase()->selectRaw('status, COUNT(*) as total')->groupBy('status')
+            ->pluck('total', 'status')->map(fn ($total) => (int) $total);
 
         return Inertia::render('admin/invoices/index', [
             'invoices' => $invoices,
             'stats' => $stats,
+            'statusCounts' => ['all' => (int) $statusCounts->sum()] + $statusCounts->all(),
             'filters' => $request->only(['status', 'network_id', 'search']),
+            'can' => $this->abilities($request),
         ]);
     }
 
@@ -91,6 +111,17 @@ class AdminInvoiceController extends Controller
 
         return Inertia::render('admin/invoices/show', [
             'invoice' => $invoice->attachLineAmounts(),
+            'can' => $this->abilities($request),
+        ]);
+    }
+
+    public function pdf(Request $request, int $id)
+    {
+        $invoice = $this->invoiceQuery($request)->findOrFail($id);
+
+        return response((new PublisherInvoicePdf($invoice))->render(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="'.PublisherInvoicePdf::filename($invoice).'"',
         ]);
     }
 

@@ -93,7 +93,7 @@ export function CountryTargeting({
                                         : t('Select regions...')}
                                 </span>
                                 <ChevronDown
-                                    className="size-4 shrink-0 text-muted-foreground"
+                                    className="size-4 shrink-0 text-ink-muted"
                                     aria-hidden="true"
                                 />
                             </Button>
@@ -105,7 +105,7 @@ export function CountryTargeting({
                         >
                             <div className="flex items-center gap-2 border-b p-3">
                                 <Search
-                                    className="size-4 shrink-0 text-muted-foreground"
+                                    className="size-4 shrink-0 text-ink-muted"
                                     aria-hidden="true"
                                 />
                                 <Input
@@ -130,9 +130,9 @@ export function CountryTargeting({
                                         <div
                                             key={region.id}
                                             className={cn(
-                                                'flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-muted',
+                                                'flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-surface-muted',
                                                 region.depth === 0 &&
-                                                    'bg-muted/40 font-semibold',
+                                                    'bg-surface-muted/40 font-semibold',
                                             )}
                                             style={{
                                                 paddingLeft: `${12 + region.depth * 16}px`,
@@ -169,7 +169,7 @@ export function CountryTargeting({
                                                 />
                                                 {partial && (
                                                     <Minus
-                                                        className="pointer-events-none absolute size-3 text-primary"
+                                                        className="pointer-events-none absolute size-3 text-brand-ink"
                                                         aria-hidden="true"
                                                     />
                                                 )}
@@ -179,7 +179,7 @@ export function CountryTargeting({
                                                 className="mb-0! flex-1 cursor-pointer justify-between gap-3 leading-snug"
                                             >
                                                 <span>{t(region.name)}</span>
-                                                <span className="shrink-0 text-xs font-normal text-muted-foreground tabular-nums">
+                                                <span className="shrink-0 text-xs font-normal text-ink-muted tabular-nums">
                                                     {count} /{' '}
                                                     {region.countries.length}
                                                 </span>
@@ -188,12 +188,12 @@ export function CountryTargeting({
                                     );
                                 })}
                                 {!matchingRegions.length && (
-                                    <p className="p-3 text-sm text-muted-foreground">
+                                    <p className="p-3 text-sm text-ink-muted">
                                         {t('No results found.')}
                                     </p>
                                 )}
                             </div>
-                            <p className="border-t px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+                            <p className="border-t px-3 py-2 text-xs leading-relaxed text-ink-muted">
                                 {t(
                                     'Selecting a region selects all its available countries. You can adjust individual countries below.',
                                 )}
@@ -229,7 +229,7 @@ export function CountryTargeting({
                                         : t('All countries')}
                                 </span>
                                 <ChevronDown
-                                    className="size-4 shrink-0 text-muted-foreground"
+                                    className="size-4 shrink-0 text-ink-muted"
                                     aria-hidden="true"
                                 />
                             </Button>
@@ -241,7 +241,7 @@ export function CountryTargeting({
                         >
                             <div className="flex items-center gap-2 border-b p-3">
                                 <Search
-                                    className="size-4 shrink-0 text-muted-foreground"
+                                    className="size-4 shrink-0 text-ink-muted"
                                     aria-hidden="true"
                                 />
                                 <Input
@@ -258,7 +258,7 @@ export function CountryTargeting({
                                 {matchingCountries.map((country) => (
                                     <div
                                         key={country.country_iso}
-                                        className="flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-muted"
+                                        className="flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-surface-muted"
                                     >
                                         <Checkbox
                                             id={`${id}-country-${country.country_iso}`}
@@ -284,7 +284,7 @@ export function CountryTargeting({
                                     </div>
                                 ))}
                                 {!matchingCountries.length && (
-                                    <p className="p-3 text-sm text-muted-foreground">
+                                    <p className="p-3 text-sm text-ink-muted">
                                         {t('No results found.')}
                                     </p>
                                 )}
@@ -295,7 +295,7 @@ export function CountryTargeting({
             </div>
             <p
                 id={`${id}-hint`}
-                className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground"
+                className="flex items-start gap-2 text-xs leading-relaxed text-ink-muted"
             >
                 <Globe2 className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
                 {t(
@@ -303,7 +303,7 @@ export function CountryTargeting({
                 )}
             </p>
             {value.length > 0 && (
-                <div className="rounded-lg border bg-muted/20 p-3">
+                <div className="rounded-lg border bg-surface-muted/20 p-3">
                     <div className="mb-2 flex items-center justify-between gap-3">
                         <p className="text-sm font-medium" aria-live="polite">
                             {t('{{count}} countries selected', {
@@ -323,7 +323,7 @@ export function CountryTargeting({
                         {selectedCountries.slice(0, 6).map((country) => (
                             <span
                                 key={country.country_iso}
-                                className="inline-flex items-center gap-1 rounded-md border bg-card px-2 py-1 text-xs"
+                                className="inline-flex items-center gap-1 rounded-md border bg-surface px-2 py-1 text-xs"
                             >
                                 {country.country_name}
                                 <button
@@ -340,14 +340,14 @@ export function CountryTargeting({
                                             ),
                                         )
                                     }
-                                    className="rounded-sm p-0.5 text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                                    className="rounded-sm p-0.5 text-ink-muted hover:text-ink focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                                 >
                                     <X className="size-3" aria-hidden="true" />
                                 </button>
                             </span>
                         ))}
                         {selectedCountries.length > 6 && (
-                            <span className="self-center px-1 text-xs text-muted-foreground">
+                            <span className="self-center px-1 text-xs text-ink-muted">
                                 {t('+{{count}} more', {
                                     count: selectedCountries.length - 6,
                                 })}
@@ -357,7 +357,7 @@ export function CountryTargeting({
                 </div>
             )}
             {error && (
-                <p id={`${id}-error`} className="text-sm text-destructive">
+                <p id={`${id}-error`} className="text-sm text-danger-ink">
                     {error}
                 </p>
             )}

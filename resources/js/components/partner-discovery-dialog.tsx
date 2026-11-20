@@ -142,7 +142,7 @@ export function PartnerDiscoveryDialog({
                             {loading ? (
                                 <div
                                     role="status"
-                                    className="flex items-center justify-center gap-2 p-6 text-sm text-muted-foreground"
+                                    className="flex items-center justify-center gap-2 p-6 text-sm text-ink-muted"
                                 >
                                     <Loader2 className="size-4 animate-spin" />
                                     {t('Searching partners...')}
@@ -171,7 +171,7 @@ export function PartnerDiscoveryDialog({
                             ) : suggestions.length === 0 ? (
                                 <p
                                     role="status"
-                                    className="p-6 text-center text-sm text-muted-foreground"
+                                    className="p-6 text-center text-sm text-ink-muted"
                                 >
                                     {t('No matching partners found.')}
                                 </p>
@@ -190,7 +190,7 @@ export function PartnerDiscoveryDialog({
                                             <span className="block font-medium break-words">
                                                 {suggestion.name}
                                             </span>
-                                            <span className="block text-xs break-words text-muted-foreground">
+                                            <span className="block text-xs break-words text-ink-muted">
                                                 {suggestion.description}
                                             </span>
                                         </span>

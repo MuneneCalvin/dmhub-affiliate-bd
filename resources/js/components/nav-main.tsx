@@ -6,68 +6,143 @@ import {
     SidebarMenuItem,
     useSidebar,
 } from '@/components/ui/sidebar';
-import { resolveUrl } from '@/lib/utils';
-import { type NavItem } from '@/types';
+import { type DomainTone } from '@/lib/tones';
+import { cn } from '@/lib/utils';
+import {
+    findActiveKey,
+    type NavCounts,
+    type NavGroup,
+    type NavItem,
+} from '@/navigation/config';
 import { Link, usePage } from '@inertiajs/react';
+import { useTranslation } from 'react-i18next';
 
-export function NavMain({ items = [] }: { items: NavItem[] }) {
-    const { url } = usePage();
+/** Icon colour on the navy sidebar, per domain. */
+const navText: Record<DomainTone, string> = {
+    brand: 'text-brand-nav',
+    partners: 'text-partners-nav',
+    finance: 'text-finance-nav',
+    admin: 'text-admin-nav',
+    analytics: 'text-analytics-nav',
+};
+
+const navDot: Record<DomainTone, string> = {
+    brand: 'bg-brand-nav',
+    partners: 'bg-partners-nav',
+    finance: 'bg-finance-nav',
+    admin: 'bg-admin-nav',
+    analytics: 'bg-analytics-nav',
+};
+
+const badgeClasses: Record<string, string> = {
+    pendingApplications: 'bg-admin text-white',
+    fraudFlags: 'bg-finance-nav text-sidebar',
+};
+
+function NavLink({
+    item,
+    active,
+    count,
+}: {
+    item: NavItem;
+    active: boolean;
+    count?: number | null;
+}) {
+    const { t } = useTranslation();
     const { setOpenMobile } = useSidebar();
-    const normalize = (path: string) =>
-        path
-            .split('?')[0]
-            .replace(/\/index\/?$/, '')
-            .replace(/\/$/, '');
-    const currentUrl = normalize(url);
-    const allLinks: NavItem[] = items.flatMap((item) =>
-        item.children?.length ? item.children : [item],
-    );
-    // Prefer the most specific match, so /campaigns and /campaigns/terms do not both highlight.
-    const activeHref = allLinks
-        .map((item) => resolveUrl(item.href))
-        .filter(
-            (href) =>
-                href &&
-                (currentUrl === normalize(href) ||
-                    currentUrl.startsWith(`${normalize(href)}/`)),
-        )
-        .sort((a, b) => b.length - a.length)[0];
-    const renderLink = (item: NavItem) => (
-        <SidebarMenuItem key={resolveUrl(item.href)}>
+    const title = t(item.titleKey);
+    const showCount = typeof count === 'number' && count > 0;
+    const countLabel = showCount
+        ? t('{{count}} waiting', { count: count as number })
+        : undefined;
+    return (
+        <SidebarMenuItem>
             <SidebarMenuButton
                 asChild
-                tooltip={item.title}
-                isActive={resolveUrl(item.href) === activeHref}
+                isActive={active}
+                tooltip={showCount ? `${title} · ${count}` : title}
             >
                 <Link
                     href={item.href}
                     prefetch
                     onClick={() => setOpenMobile(false)}
-                    aria-current={
-                        resolveUrl(item.href) === activeHref
-                            ? 'page'
-                            : undefined
-                    }
+                    aria-current={active ? 'page' : undefined}
+                    data-nav-key={item.key}
                 >
-                    {item.icon && <item.icon className="size-4 shrink-0" />}
-                    <span>{item.title}</span>
+                    <span
+                        aria-hidden="true"
+                        className={cn(
+                            'flex size-[30px] shrink-0 items-center justify-center rounded-[9px] [&_svg]:size-4',
+                            active
+                                ? 'bg-white/20 text-white'
+                                : cn('bg-white/6', navText[item.domain]),
+                        )}
+                    >
+                        <item.icon />
+                    </span>
+                    <span className="min-w-0 flex-1 truncate group-data-[collapsible=icon]:sr-only">
+                        {title}
+                    </span>
+                    {showCount && (
+                        <span
+                            className={cn(
+                                'rounded-full px-2 py-px text-[11px] font-extrabold tabular-nums group-data-[collapsible=icon]:sr-only',
+                                item.badgeKey && badgeClasses[item.badgeKey],
+                            )}
+                        >
+                            <span aria-hidden="true">{count}</span>
+                            <span className="sr-only">{countLabel}</span>
+                        </span>
+                    )}
                 </Link>
             </SidebarMenuButton>
         </SidebarMenuItem>
     );
+}
+
+/** Grouped sidebar navigation; the item owning the current URL is highlighted. */
+export function NavMain({
+    groups,
+    counts = {},
+}: {
+    groups: NavGroup[];
+    counts?: NavCounts | null;
+}) {
+    const { url } = usePage();
+    const { t } = useTranslation();
+    const activeKey = findActiveKey(groups, url);
     return (
-        <nav aria-label="Main navigation" className="space-y-3">
-            {items.map((item) => (
-                <SidebarGroup key={item.title} className="py-0">
-                    {item.children?.length > 0 && (
-                        <SidebarGroupLabel className="mb-2">
-                            {item.title}
+        <nav
+            aria-label={t('Main navigation')}
+            className="flex flex-col gap-[18px]"
+        >
+            {groups.map((group) => (
+                <SidebarGroup key={group.key} className="gap-1 p-0">
+                    {group.titleKey && (
+                        <SidebarGroupLabel>
+                            <span
+                                aria-hidden="true"
+                                className={cn(
+                                    'size-1.5 rounded-full',
+                                    navDot[group.domain],
+                                )}
+                            />
+                            {t(group.titleKey)}
                         </SidebarGroupLabel>
                     )}
-                    <SidebarMenu>
-                        {item.children?.length > 0
-                            ? item.children.map(renderLink)
-                            : renderLink(item)}
+                    <SidebarMenu className="gap-1">
+                        {group.items.map((item) => (
+                            <NavLink
+                                key={item.key}
+                                item={item}
+                                active={item.key === activeKey}
+                                count={
+                                    item.badgeKey
+                                        ? counts?.[item.badgeKey]
+                                        : undefined
+                                }
+                            />
+                        ))}
                     </SidebarMenu>
                 </SidebarGroup>
             ))}

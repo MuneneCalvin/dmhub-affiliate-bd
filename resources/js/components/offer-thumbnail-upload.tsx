@@ -43,13 +43,13 @@ export function OfferThumbnailUpload({
                     />
                 )}
             </div>
-            <p id="thumbnail-hint" className="text-sm text-muted-foreground">
+            <p id="thumbnail-hint" className="text-sm text-ink-muted">
                 {t(
                     'JPG, PNG, GIF or WebP, up to 10 MB. The thumbnail URL is generated from your upload.',
                 )}
             </p>
             {existingUrl && (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-ink-muted">
                     {t(
                         'The existing file is kept unless you upload a replacement.',
                     )}
@@ -59,7 +59,7 @@ export function OfferThumbnailUpload({
                 <p
                     id="thumbnail-error"
                     role="alert"
-                    className="text-sm text-destructive"
+                    className="text-sm text-danger-ink"
                 >
                     {t(error)}
                 </p>

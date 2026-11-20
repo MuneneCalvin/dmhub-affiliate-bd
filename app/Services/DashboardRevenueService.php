@@ -40,4 +40,26 @@ class DashboardRevenueService
             ];
         })->all();
     }
+
+    /**
+     * Row counts per day for the same window as lastThirtyDays().
+     *
+     * @return list<array{date: string, count: int}>
+     */
+    public function lastThirtyDaysCount(Builder $rows, string $column): array
+    {
+        $end = CarbonImmutable::today();
+        $start = $end->subDays(29);
+        $counts = (clone $rows)
+            ->whereBetween($column, [$start->startOfDay(), $end->endOfDay()])
+            ->selectRaw("DATE($column) as day, COUNT(*) as total")
+            ->groupBy('day')
+            ->pluck('total', 'day');
+
+        return collect(range(0, 29))->map(function ($offset) use ($counts, $start) {
+            $date = $start->addDays($offset)->toDateString();
+
+            return ['date' => $date, 'count' => (int) ($counts[$date] ?? 0)];
+        })->all();
+    }
 }

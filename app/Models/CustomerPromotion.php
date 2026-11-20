@@ -23,6 +23,11 @@ class CustomerPromotion extends Model
         return $this->hasMany(PromotionVersion::class);
     }
 
+    public function latestPublishedVersion()
+    {
+        return $this->hasOne(PromotionVersion::class)->latestOfMany('version');
+    }
+
     public function stores()
     {
         return $this->belongsToMany(StoreConnection::class, 'promotion_store');

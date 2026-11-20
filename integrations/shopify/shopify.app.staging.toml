@@ -1,5 +1,5 @@
-# Shared staging app under Tami Wears. Client ID is public; the secret belongs in deployment environment variables.
-client_id = "d39894d870305e9038abe5e8768337e1"
+# Shared staging app under DM Consultants Limited. Client ID is public; the secret belongs in deployment environment variables.
+client_id = "cab55899e76c13e771c831afb04178c2"
 name = "DM Hub Promotions"
 application_url = "https://affiliates-bnd.dmhub.cloud"
 embedded = false

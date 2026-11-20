@@ -274,7 +274,7 @@ export function CampaignOffers({
                                                 {t('Tracking guide')}
                                             </Link>
                                         ) : (
-                                            <span className="text-muted-foreground">
+                                            <span className="text-ink-muted">
                                                 {t('Awaiting access')}
                                             </span>
                                         )}
@@ -798,7 +798,7 @@ function OfferDetails({
                                         role="status"
                                         className={
                                             copyError
-                                                ? 'text-sm text-destructive'
+                                                ? 'text-sm text-danger-ink'
                                                 : 'sr-only'
                                         }
                                     >

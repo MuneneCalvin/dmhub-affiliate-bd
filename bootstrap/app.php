@@ -14,6 +14,7 @@ use App\Http\Middleware\RedirectIfPublisher;
 use App\Http\Middleware\RequireBusinessPermission;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetLocale;
+use App\Http\Middleware\TrustCloudflareClientIp;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -32,6 +33,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // Comma-separated proxy IPs/CIDRs (or '*') from TRUSTED_PROXIES. Set to your load balancer in production.
         $trusted = env('TRUSTED_PROXIES', '*');
         $middleware->trustProxies(at: $trusted === '*' ? '*' : array_values(array_filter(array_map('trim', explode(',', (string) $trusted)))));
+
+        $middleware->append(TrustCloudflareClientIp::class);
 
         $middleware->web(append: [
             HandleAppearance::class,

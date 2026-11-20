@@ -15,7 +15,7 @@ export function AppContent({
     }
     return (
         <main
-            className="mx-auto flex w-full flex-1 flex-col bg-background"
+            className="mx-auto flex w-full flex-1 flex-col bg-canvas"
             {...props}
         >
             {children}

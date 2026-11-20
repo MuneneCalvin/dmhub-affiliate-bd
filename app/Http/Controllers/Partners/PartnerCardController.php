@@ -21,7 +21,7 @@ class PartnerCardController extends Controller
         $account = $workspace->find($request->user(), $id);
         $can = $workspace->permissions($request->user(), $account);
         if ($card === 'business') {
-            abort_unless($can['edit'], 403);
+            abort_unless($can['editProfile'], 403);
             $account->update($request->validate([
                 'business_name' => 'required|string|max:200',
                 'website_name' => 'nullable|url:http,https|max:100',
@@ -53,18 +53,18 @@ class PartnerCardController extends Controller
     {
         $account = $workspace->find($request->user(), $id);
         $can = $workspace->permissions($request->user());
-        if ($card === 'details' || $card === 'site') {
-            abort_unless($card === 'details' ? $can['editProfile'] : $can['editSites'], 403);
+        if (in_array($card, ['business', 'details', 'site'])) {
+            abort_unless($card === 'site' ? ($can['editSites'] || $can['editProfile']) : $can['editProfile'], 403);
             $rules = [];
             if ($can['editSites']) {
                 $rules['website_url'] = 'nullable|url:http,https|max:255';
             }
-            if ($card === 'details' || $can['edit']) {
+            if ($can['editProfile']) {
                 $rules += ['business_name' => 'nullable|string|max:255', 'industry' => 'nullable|string|max:255',
                     'coc_number' => ['nullable', 'string', 'max:10', Rule::unique('publishers', 'coc_number')->ignore($account->id)]];
             }
             if ($card === 'details') {
-                $rules += ['first_name' => 'required|string|max:255', 'last_name' => 'required|string|max:255'];
+                $rules += ['first_name' => 'required|string|max:30', 'last_name' => 'required|string|max:30'];
             }
             $data = $request->validate($rules);
             DB::transaction(function () use ($account, $data, $card) {
@@ -105,10 +105,10 @@ class PartnerCardController extends Controller
     private function profile(Request $request, User $user): void
     {
         $data = $request->validate([
-            'first_name' => 'required|string|max:255', 'last_name' => 'required|string|max:255',
-            'user_name' => ['required', 'string', 'max:255', Rule::unique('users', 'user_name')->ignore($user->id)],
+            'first_name' => 'required|string|max:30', 'last_name' => 'required|string|max:30',
+            'user_name' => ['required', 'string', 'max:50', Rule::unique('users', 'user_name')->ignore($user->id)],
             'email' => ['required', 'email', 'lowercase', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
-            'title' => 'nullable|string|max:255', 'country_iso' => 'nullable|string|size:3',
+            'title' => 'nullable|string|max:50', 'country_iso' => 'nullable|string|size:3',
             'timezone' => 'nullable|timezone|max:50', 'language' => ['nullable', Rule::in(['en', 'nl'])],
         ]);
         $user->fill($data);
@@ -136,15 +136,12 @@ class PartnerCardController extends Controller
             if ($statusChanged) {
                 $account->user()->update(['status' => $data['status']]);
                 if ($account instanceof Advertiser) {
+                    // Stay verified when deactivated so the advertiser remains listed and can be reactivated.
                     $attributes['status'] = $data['status'];
-                    if ($data['status'] !== 'A') {
-                        $attributes['is_verified'] = false;
-                    }
-                } else {
-                    $attributes['is_verified'] = $data['status'] === 'A';
-                    if ($data['status'] === 'A') {
-                        $attributes['verified_at'] = now();
-                    }
+                } elseif ($data['status'] === 'A') {
+                    // Deactivating keeps the publisher verified so it stays listed and can be reactivated.
+                    $attributes['is_verified'] = true;
+                    $attributes['verified_at'] = now();
                 }
             }
             $account->update($attributes);

@@ -103,3 +103,8 @@ Route::middleware(['auth', 'check.advertiser.status', 'verified'])->group(functi
 });
 
 require __DIR__.'/settings.php';
+
+// Design-system gallery for visual QA. Only registered on local machines.
+if (app()->isLocal()) {
+    Route::get('/dev/ui', fn () => Inertia::render('dev/ui'))->name('dev.ui');
+}

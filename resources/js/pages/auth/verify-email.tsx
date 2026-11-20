@@ -1,50 +1,70 @@
-// Components
-import TextLink from '@/components/text-link';
+import { StatePanel } from '@/components/app';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import AuthLayout from '@/layouts/auth-layout';
 import { logout } from '@/routes';
 import { send } from '@/routes/verification';
-import { Form, Head } from '@inertiajs/react';
-import { useLanguage } from '@/context/language-context';
+import { type SharedData } from '@/types';
+import { Form, Head, Link, router, usePage } from '@inertiajs/react';
+import { CircleCheck, Mail } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export default function VerifyEmail({ status }: { status?: string }) {
-    const { __ } = useLanguage();
+    const { t } = useTranslation();
+    const email = usePage<SharedData>().props.auth?.user?.email;
+
     return (
-        <AuthLayout
-            title={__('Verify email')}
-            description={__(
-                'Please verify your email address by clicking on the link we just emailed to you.',
-            )}
-        >
-            <Head title={__('Email verification')} />
+        <AuthLayout width="wide">
+            <Head title={t('Email verification')} />
 
             {status === 'verification-link-sent' && (
-                <div className="mb-4 text-center text-sm font-medium text-green-600">
-                    {__(`
-                    A new verification link has been sent to the email address
-                    you provided during registration.
-                `)}
-                </div>
+                <Alert variant="success">
+                    <CircleCheck aria-hidden="true" />
+                    <AlertDescription>
+                        {t(
+                            'A new verification link has been sent to the email address you provided during registration.',
+                        )}
+                    </AlertDescription>
+                </Alert>
             )}
 
-            <Form {...send.form()} className="space-y-6 text-center">
-                {({ processing }) => (
+            <StatePanel
+                tone="analytics"
+                icon={<Mail strokeWidth={1.8} />}
+                title={t('Check your inbox')}
+                description={
+                    email
+                        ? t(
+                              'We sent a verification link to {{email}}. Click it to activate your account.',
+                              { email },
+                          )
+                        : t(
+                              'We sent you a verification link. Click it to activate your account.',
+                          )
+                }
+                actions={
                     <>
-                        <Button disabled={processing} variant="secondary">
-                            {processing && <Spinner />}
-                            {__('Resend verification email')}
+                        <Form {...send.form()}>
+                            {({ processing }) => (
+                                <Button type="submit" disabled={processing}>
+                                    {processing && <Spinner />}
+                                    {t('Resend email')}
+                                </Button>
+                            )}
+                        </Form>
+                        <Button variant="ghost" asChild>
+                            <Link
+                                href={logout()}
+                                as="button"
+                                onClick={() => router.flushAll()}
+                            >
+                                {t('Log out')}
+                            </Link>
                         </Button>
-
-                        <TextLink
-                            href={logout()}
-                            className="mx-auto block text-sm"
-                        >
-                            {__('Log out')}
-                        </TextLink>
                     </>
-                )}
-            </Form>
+                }
+            />
         </AuthLayout>
     );
 }

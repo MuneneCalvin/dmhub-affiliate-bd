@@ -30,13 +30,22 @@ class NetworkController extends Controller
                 $query->where('status', $status);
             }
             $networks = $query->orderBy('id', 'desc')
-                ->paginate($pageSize);
+                ->paginate($pageSize)
+                ->withQueryString();
+            $counts = DB::table('networks')->select('status', DB::raw('count(*) as total'))->groupBy('status')->pluck('total', 'status');
             $currencies = Currency::all();
             $countries = DB::table('countries')->where('status', 'A')->get();
 
             return Inertia::render('networks/index', [
                 'currencies' => $currencies,
                 'countries' => $countries,
+                'status' => in_array($status, ['A', 'P', 'D'], true) ? $status : 'all',
+                'statusCounts' => [
+                    'all' => (int) $counts->sum(),
+                    'A' => (int) ($counts['A'] ?? 0),
+                    'P' => (int) ($counts['P'] ?? 0),
+                    'D' => (int) ($counts['D'] ?? 0),
+                ],
                 'networksData' => [
                     'results' => $networks->items(),
                     'total' => $networks->total(),
@@ -102,8 +111,9 @@ class NetworkController extends Controller
     public function show($id)
     {
         try {
-            $networks = Network::where('id', $id)
-                ->join('countries', 'countries.country_iso', '=', 'networks.country_iso')
+            $networks = Network::where('networks.id', $id)
+                ->leftJoin('countries', 'countries.country_iso', '=', 'networks.country_iso')
+                ->select('networks.*', 'countries.country_name')
                 ->first();
 
             if (! $networks) {

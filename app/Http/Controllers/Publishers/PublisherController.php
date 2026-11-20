@@ -75,13 +75,27 @@ class PublisherController extends Controller
             ]);
         $query->where('publishers.is_verified', true);
         $this->scopeToNetwork($query);
+        $query->addSelect(DB::raw("(select count(*) from publisher_campaigns where publisher_campaigns.publisher_id = publishers.id and publisher_campaigns.status = 'A') as campaigns_count"));
+
+        // Status tiles count across every page; the list itself may be filtered.
+        $status = in_array($request->query('status'), ['active', 'inactive'], true) ? $request->query('status') : 'all';
+        $statusCounts = [
+            'all' => (clone $query)->count(),
+            'active' => (clone $query)->where('users.status', 'A')->count(),
+            'inactive' => (clone $query)->where('users.status', '!=', 'A')->count(),
+        ];
 
         $publishers = $query
+            ->when($status === 'active', fn ($q) => $q->where('users.status', 'A'))
+            ->when($status === 'inactive', fn ($q) => $q->where('users.status', '!=', 'A'))
             ->orderBy('publishers.id', 'desc')
-            ->paginate($pageSize);
+            ->paginate($pageSize)
+            ->withQueryString();
 
         return inertia('publishers/index', [
             'pbshers' => $publishers,
+            'status' => $status,
+            'statusCounts' => $statusCounts,
             'networks' => $this->networkOptions(),
             'extingNetwork' => $user->is_network ? UserNetworks::where('user_id', $user->id)->with('network')->first() : null,
             'currencies' => Currency::all(),
@@ -224,20 +238,20 @@ class PublisherController extends Controller
     {
         try {
             $publisher = $this->findManaged($id);
-            $newStatus = $publisher->is_verified ? 'P' : 'A';
-            $newVerified = ! $publisher->is_verified;
+            // Verification is approval, not activity: a deactivated publisher stays verified and listed.
+            $newStatus = $publisher->user->status === 'A' ? 'P' : 'A';
 
-            DB::transaction(function () use ($publisher, $newStatus, $newVerified) {
-                $publisher->update([
-                    'is_verified' => $newVerified,
-                ]);
+            DB::transaction(function () use ($publisher, $newStatus) {
+                if ($newStatus === 'A') {
+                    $publisher->update(['is_verified' => true, 'verified_at' => $publisher->verified_at ?? now()]);
+                }
 
                 $publisher->user()->update([
                     'status' => $newStatus,
                 ]);
             });
 
-            $statusMessage = $newVerified ? 'activated' : 'deactivated';
+            $statusMessage = $newStatus === 'A' ? 'activated' : 'deactivated';
 
             return redirect()->back()->with('success', "Publisher {$statusMessage} successfully");
         } catch (Exception $e) {
@@ -249,15 +263,10 @@ class PublisherController extends Controller
     {
         try {
             $publisher = $this->findManaged($id);
-            DB::transaction(function () use ($publisher) {
-                $publisher->update([
-                    'is_verified' => false,
-                ]);
-
-                $publisher->user()->update([
-                    'status' => 'P',
-                ]);
-            });
+            // Stay verified so the publisher remains in the list and can be reactivated.
+            $publisher->user()->update([
+                'status' => 'P',
+            ]);
 
             return redirect()->back()->with('success', 'Publisher deactivated successfully');
         } catch (Exception $e) {

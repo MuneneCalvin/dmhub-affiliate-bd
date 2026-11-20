@@ -3,7 +3,7 @@ import createServer from '@inertiajs/react/server';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import ReactDOMServer from 'react-dom/server';
 
-const appName = import.meta.env.VITE_APP_NAME || 'DM Hub';
+const appName = import.meta.env.VITE_APP_NAME || 'Brand New Day';
 
 createServer((page) =>
     createInertiaApp({
@@ -13,7 +13,11 @@ createServer((page) =>
         resolve: (name) =>
             resolvePageComponent(
                 `./pages/${name}.tsx`,
-                import.meta.glob('./pages/**/*.tsx'),
+                // Page tests live beside pages; keep them out of the build.
+                import.meta.glob([
+                    './pages/**/*.tsx',
+                    '!./pages/**/*.test.tsx',
+                ]),
             ),
         setup: ({ App, props }) => {
             return <App {...props} />;

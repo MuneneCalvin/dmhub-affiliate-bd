@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Support\TrackingUrl;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
@@ -120,12 +122,12 @@ class PublisherCampaigns extends Model
 
     public function getScriptUrl(): string
     {
-        return url("/s/{$this->generateScriptToken()}.js");
+        return TrackingUrl::to("/s/{$this->generateScriptToken()}.js");
     }
 
     public function getImpressionPixelUrl(): string
     {
-        return url("/sp/{$this->generateScriptToken()}");
+        return TrackingUrl::to("/sp/{$this->generateScriptToken()}");
     }
 
     public function getEmbedScriptTag(): string
@@ -139,15 +141,22 @@ class PublisherCampaigns extends Model
     {
         $trackingId = $this->extractTrackingId();
         if ($trackingId) {
-            return url("/t/{$trackingId}/c/{$creative->id}");
+            return TrackingUrl::to("/t/{$trackingId}/c/{$creative->id}");
         }
 
-        return url("/t/{$this->tracking_link}?creative_id={$creative->id}");
+        return TrackingUrl::to("/t/{$this->tracking_link}?creative_id={$creative->id}");
     }
 
     public function getCreativeImpressionUrl(Creative $creative): string
     {
-        return url("/i/{$creative->tracking_code}?pc={$this->script_token}");
+        return TrackingUrl::to("/i/{$creative->tracking_code}?pc={$this->script_token}");
+    }
+
+    /** Stored links keep the host they were created on; always present them on the tracking host. */
+    protected function trackingLink(): Attribute
+    {
+        return Attribute::get(fn (?string $value) => $value && preg_match('/\/t\/([^\/\?]+)/', $value, $matches)
+            ? TrackingUrl::to('/t/'.$matches[1]) : $value);
     }
 
     public function extractTrackingId(): ?string
@@ -193,7 +202,7 @@ class PublisherCampaigns extends Model
         return [
             'publisher_campaign_id' => $this->id,
             'script_token' => $this->script_token,
-            'main_tracking_link' => url("/t/{$this->extractTrackingId()}"),
+            'main_tracking_link' => TrackingUrl::to("/t/{$this->extractTrackingId()}"),
             'embed_script' => [
                 'tag' => $this->getEmbedScriptTag(),
                 'url' => $this->getScriptUrl(),

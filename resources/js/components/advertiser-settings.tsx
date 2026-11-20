@@ -10,6 +10,13 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import type { AdvertiserWorkspaceProps } from '@/types/advertiser-workspace';
 import { useForm } from '@inertiajs/react';
 import { useState } from 'react';
@@ -43,7 +50,7 @@ export function AdvertiserSettings({
                     <h2 className="text-lg font-semibold">
                         {t('Business settings')}
                     </h2>
-                    <p className="mt-1 text-sm text-muted-foreground">
+                    <p className="mt-1 text-sm text-ink-muted">
                         {t('Update the business details for this advertiser.')}
                     </p>
                     <form
@@ -100,72 +107,89 @@ export function AdvertiserSettings({
                                 <Label htmlFor="advertiser-currency">
                                     {t('Currency')}
                                 </Label>
-                                <select
-                                    id="advertiser-currency"
-                                    className="h-10 w-full rounded-md border bg-background px-3"
+                                <Select
                                     disabled={funded}
                                     value={form.data.currency_code ?? ''}
-                                    onChange={(event) =>
-                                        form.setData(
-                                            'currency_code',
-                                            event.target.value,
-                                        )
+                                    onValueChange={(value) =>
+                                        form.setData('currency_code', value)
                                     }
                                 >
-                                    <option value="" disabled>
-                                        {t('Select currency')}
-                                    </option>
-                                    {currencies.map((currency) => (
-                                        <option
-                                            value={currency.currency_code}
-                                            key={currency.currency_code}
-                                        >
-                                            {currency.currency_code} ·{' '}
-                                            {currency.currency_name}
-                                        </option>
-                                    ))}
-                                </select>
+                                    <SelectTrigger
+                                        id="advertiser-currency"
+                                        className="h-10 w-full rounded-md border bg-surface px-3"
+                                    >
+                                        <SelectValue
+                                            placeholder={t('Select currency')}
+                                        />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {currencies.map((currency) => (
+                                            <SelectItem
+                                                value={currency.currency_code}
+                                                key={currency.currency_code}
+                                            >
+                                                {currency.currency_code} ·{' '}
+                                                {currency.currency_name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
                             {can.changeNetwork && (
                                 <div className="space-y-2">
                                     <Label htmlFor="advertiser-network">
                                         {t('Network')}
                                     </Label>
-                                    <select
-                                        id="advertiser-network"
-                                        className="h-10 w-full rounded-md border bg-background px-3"
+                                    <Select
                                         disabled={funded}
-                                        value={form.data.network_id ?? ''}
-                                        onChange={(event) =>
+                                        value={
+                                            String(
+                                                form.data.network_id ?? '',
+                                            ) || '__none__'
+                                        }
+                                        onValueChange={(value) =>
                                             form.setData(
                                                 'network_id',
-                                                event.target.value
-                                                    ? Number(event.target.value)
-                                                    : null,
+                                                value === '__none__'
+                                                    ? null
+                                                    : Number(value),
                                             )
                                         }
                                     >
-                                        <option value="">
-                                            {t('No network assigned')}
-                                        </option>
-                                        {a.network_id &&
-                                            !networks.some(
-                                                (network) =>
-                                                    network.id === a.network_id,
-                                            ) && (
-                                                <option value={a.network_id}>
-                                                    {a.network_name}
-                                                </option>
-                                            )}
-                                        {networks.map((network) => (
-                                            <option
-                                                value={network.id}
-                                                key={network.id}
-                                            >
-                                                {network.network_name}
-                                            </option>
-                                        ))}
-                                    </select>
+                                        <SelectTrigger
+                                            id="advertiser-network"
+                                            className="h-10 w-full rounded-md border bg-surface px-3"
+                                        >
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="__none__">
+                                                {t('No network assigned')}
+                                            </SelectItem>
+                                            {a.network_id &&
+                                                !networks.some(
+                                                    (network) =>
+                                                        network.id ===
+                                                        a.network_id,
+                                                ) && (
+                                                    <SelectItem
+                                                        value={String(
+                                                            a.network_id,
+                                                        )}
+                                                    >
+                                                        {a.network_name}
+                                                    </SelectItem>
+                                                )}
+                                            {networks.map((network) => (
+                                                <SelectItem
+                                                    value={String(network.id)}
+                                                    key={network.id}
+                                                >
+                                                    {network.network_name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                             )}
                             <div className="space-y-2">
@@ -185,13 +209,13 @@ export function AdvertiserSettings({
                                         )
                                     }
                                 />
-                                <p className="text-xs text-muted-foreground">
+                                <p className="text-xs text-ink-muted">
                                     {t('Changing a budget does not add funds.')}
                                 </p>
                             </div>
                         </div>
                         {funded && (
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-sm text-ink-muted">
                                 {t(
                                     'Currency and network cannot change after financial activity. Use a separate account.',
                                 )}
@@ -209,7 +233,7 @@ export function AdvertiserSettings({
                     <h2 className="text-lg font-semibold">
                         {t('Advertiser credit limit')}
                     </h2>
-                    <p className="mt-1 text-sm text-muted-foreground">
+                    <p className="mt-1 text-sm text-ink-muted">
                         {t(
                             'Required maximum unpaid commissions across this advertiser’s campaigns. Zero prevents borrowing; assign a positive limit to run without prepaid funds. Deposits and reversals restore credit. Network prepayment requirements take precedence.',
                         )}
@@ -251,7 +275,7 @@ export function AdvertiserSettings({
             )}
             <section className="campaign-panel p-5">
                 <h2 className="text-lg font-semibold">{t('Account status')}</h2>
-                <p className="mt-2 text-sm text-muted-foreground">
+                <p className="mt-2 text-sm text-ink-muted">
                     {t(
                         'Status changes also apply to the advertiser’s login account.',
                     )}

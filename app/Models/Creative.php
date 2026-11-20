@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Support\Tenancy;
+use App\Support\TrackingUrl;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
@@ -72,12 +73,12 @@ class Creative extends Model
 
     public function getDirectTrackingUrl(): string
     {
-        return url("/c/{$this->tracking_code}");
+        return TrackingUrl::to("/c/{$this->tracking_code}");
     }
 
     public function getImpressionPixelUrl(): string
     {
-        return url("/i/{$this->tracking_code}");
+        return TrackingUrl::to("/i/{$this->tracking_code}");
     }
 
     protected function buildEmbedCode(string $trackingUrl): string
@@ -153,7 +154,7 @@ class Creative extends Model
         if (preg_match('/\/t\/([^\/\?]+)/', $baseTrackingLink, $matches)) {
             $trackingId = $matches[1];
 
-            return url("/t/{$trackingId}/c/{$this->id}");
+            return TrackingUrl::to("/t/{$trackingId}/c/{$this->id}");
         }
         $separator = strpos($baseTrackingLink, '?') !== false ? '&' : '?';
 

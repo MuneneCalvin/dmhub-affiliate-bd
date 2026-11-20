@@ -1,141 +1,193 @@
-import FinanceSummaryTable, {
-    FinanceSummary,
-} from '@/components/finance-summary';
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { ActionColumn, InvoiceColumns } from '@/dev/columns/columns';
-import { ReusablePageTitle } from '@/dev/core';
-import { CustomBaseTable, SearchTools } from '@/dev/table';
-import { useDebounce } from '@/hooks';
-import AppLayout from '@/layouts/app-layout';
-import publisher from '@/routes/publisher';
-import {
-    BreadcrumbItem,
-    PublisherInvoice,
-    PublisherPayoutRequest,
-    SingleActionsHandler,
-    TFilterOptions,
-    TPaginationFilters,
-} from '@/types';
-import { FILTEROPTIONS, ReusableReducer } from '@/utils/constants';
-import { Head, router, usePage } from '@inertiajs/react';
-import { AlertTriangle, Plus } from 'lucide-react';
-import { useReducer } from 'react';
+import { Head, Link, usePage } from '@inertiajs/react';
+import { Download, Info, Plus, ReceiptText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-const InvoicesIndex = () => {
+import {
+    DirectoryHeading,
+    MutedCell,
+    PageHeader,
+    ResourceDirectory,
+} from '@/components/app';
+import {
+    CurrencyTotals,
+    useFormatMoney,
+    type FinanceSummary,
+    type Invoice,
+    type PayoutRequest,
+} from '@/components/finance';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { SegmentedControl } from '@/components/ui/segmented-control';
+import {
+    useDirectoryQuery,
+    type LaravelPage,
+} from '@/hooks/use-directory-query';
+import AppLayout from '@/layouts/app-layout';
+import { useDate } from '@/lib/format';
+import publisher from '@/routes/publisher';
+
+type Filter = 'all' | 'open' | 'paid' | 'rejected';
+
+type PageProps = {
+    invoices: LaravelPage<Invoice>;
+    summary: FinanceSummary;
+    canRequest: PayoutRequest;
+    status: Filter;
+    statusCounts: Record<Filter, number>;
+};
+
+export default function InvoicesIndex() {
     const { t } = useTranslation();
+    const { invoices, summary, canRequest, status, statusCounts } =
+        usePage<PageProps>().props;
+    const query = useDirectoryQuery();
+    const money = useFormatMoney();
+    const date = useDate();
 
-    const breadcrumbs: BreadcrumbItem[] = [
-        {
-            title: t('Invoices'),
-            href: '/publisher/invoices',
-        },
-    ];
-    const { invoices, summary, canRequest } = usePage<{
-        invoices: {
-            data: PublisherInvoice[];
-            current_page: number;
-            last_page: number;
-            per_page: number;
-        };
-        summary: FinanceSummary;
-        canRequest: PublisherPayoutRequest;
-    }>().props;
-
-    const [filter, optionsDispatcher] = useReducer(
-        ReusableReducer<TPaginationFilters & TFilterOptions>,
-        { ...FILTEROPTIONS, page: 1, pageSize: 25 },
-    );
-    const optionsDispatcherDebounce = useDebounce({
-        debounceCallback: optionsDispatcher,
-    });
-
-    const ActionsHandlerMapping: SingleActionsHandler<PublisherInvoice>[] = [
-        {
-            label: t('View Details'),
-            onSelect: (data) => {
-                router.visit(publisher.invoices.show.url(data.id));
-            },
-        },
-    ];
+    const labels: Record<Filter, string> = {
+        all: t('All'),
+        open: t('Open'),
+        paid: t('Paid'),
+        rejected: t('Rejected'),
+    };
 
     return (
         <AppLayout>
             <Head title={t('Invoices')} />
-            <div className="workspace-page flex h-full flex-1 flex-col gap-6">
-                <ReusablePageTitle
+            <div className="workspace-page flex flex-col gap-6">
+                <PageHeader
                     title={t('Invoices')}
                     description={t('Manage your payout invoices')}
-                    breadcrumbs={breadcrumbs}
-                    children={
-                        <Button
-                            onClick={() =>
-                                router.visit(publisher.invoices.create.url())
-                            }
-                            disabled={!canRequest?.can_request}
-                        >
-                            <Plus className="mr-2 h-4 w-4" />
-                            {t('Request Payout')}
-                        </Button>
+                    breadcrumbs={[
+                        { title: t('Finance'), href: publisher.earnings.url() },
+                        {
+                            title: t('Invoices'),
+                            href: publisher.invoices.url(),
+                        },
+                    ]}
+                    icon={<ReceiptText />}
+                    tone="finance"
+                    actions={
+                        canRequest?.can_request ? (
+                            <Button asChild>
+                                <Link href={publisher.invoices.create.url()}>
+                                    <Plus />
+                                    {t('Request Payout')}
+                                </Link>
+                            </Button>
+                        ) : (
+                            <Button disabled>
+                                <Plus />
+                                {t('Request Payout')}
+                            </Button>
+                        )
                     }
                 />
 
                 {!canRequest?.can_request && (
-                    <Alert
-                        variant="default"
-                        className="border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950"
-                    >
-                        <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                        <AlertDescription className="text-yellow-800 dark:text-yellow-200">
+                    <Alert variant="info" role="note">
+                        <Info />
+                        <AlertDescription>
                             {t(
                                 'No reviewed balance is currently above its payout threshold. Balances are kept separate by currency and liable network.',
                             )}
                         </AlertDescription>
                     </Alert>
                 )}
-                <FinanceSummaryTable summary={summary} />
-                <div className="w-full">
-                    <CustomBaseTable
-                        {...{
-                            onPageChange: (page) =>
-                                optionsDispatcher({
-                                    payload: { page },
-                                    type: 'page',
-                                }),
-                            OtherToolsProps: {
-                                onChange: (data: any) =>
-                                    optionsDispatcherDebounce({
-                                        payload: { term: data },
-                                        type: 'term',
-                                    }),
-                                placeholder: t('Search'),
-                                includeFilter: true,
+
+                <CurrencyTotals
+                    summary={summary}
+                    label={t('Invoice totals by currency')}
+                />
+
+                <ResourceDirectory<Invoice>
+                    label={t('Invoice History')}
+                    heading={
+                        <DirectoryHeading
+                            icon={<ReceiptText />}
+                            tone="finance"
+                            title={t('Invoice History')}
+                        />
+                    }
+                    toolbar={
+                        <SegmentedControl
+                            label={t('Invoice status')}
+                            size="sm"
+                            value={status}
+                            onValueChange={(next) => query.setStatus(next)}
+                            options={(
+                                ['all', 'open', 'paid', 'rejected'] as const
+                            ).map((value) => ({
+                                value,
+                                label: labels[value],
+                                count: statusCounts?.[value] ?? 0,
+                            }))}
+                        />
+                    }
+                    searchable={false}
+                    rows={invoices.data}
+                    rowKey={(invoice) => invoice.id}
+                    nameHeader={t('Invoice')}
+                    name={(invoice) => invoice.invoice_number}
+                    subtitle={(invoice) =>
+                        invoice.period_start
+                            ? `${date(invoice.period_start)} – ${date(invoice.period_end)}`
+                            : date(invoice.created_at)
+                    }
+                    status={(invoice) => invoice.status}
+                    tone="finance"
+                    columns={[
+                        {
+                            id: 'network',
+                            header: t('Network'),
+                            cell: (invoice) => (
+                                <MutedCell>
+                                    {invoice.network?.network_name}
+                                </MutedCell>
+                            ),
+                        },
+                        {
+                            id: 'requested',
+                            header: t('Requested'),
+                            cell: (invoice) => (
+                                <MutedCell>
+                                    {date(
+                                        invoice.requested_at ??
+                                            invoice.created_at,
+                                    )}
+                                </MutedCell>
+                            ),
+                        },
+                        {
+                            id: 'amount',
+                            header: t('Amount'),
+                            align: 'end',
+                            cell: (invoice) => (
+                                <strong className="font-extrabold">
+                                    {money(invoice.amount, invoice.currency)}
+                                </strong>
+                            ),
+                        },
+                    ]}
+                    href={(invoice) => publisher.invoices.show.url(invoice.id)}
+                    actions={() => [
+                        {
+                            label: t('Download PDF'),
+                            icon: <Download />,
+                            tone: 'finance',
+                            onSelect: (invoice) => {
+                                window.location.href =
+                                    publisher.invoices.pdf.url(invoice.id);
                             },
-                            columns: [
-                                ...InvoiceColumns,
-                                ActionColumn({ ActionsHandlerMapping }),
-                            ],
-                            OtherTools: SearchTools,
-                            data: invoices?.data ?? [],
-                            pageCount: invoices?.last_page ?? 1,
-                            title: t('Invoice History'),
-                            showPagination: true,
-                            setPageSize: (pageSize) =>
-                                optionsDispatcher({
-                                    payload: { pageSize },
-                                    type: 'pageSize',
-                                }),
-                            pageSize: invoices?.per_page ?? 25,
-                            page: invoices?.current_page ?? 1,
-                        }}
-                    />
-                </div>
+                        },
+                    ]}
+                    pagination={query.pagination(invoices)}
+                    emptyTitle={t('No invoices yet')}
+                    emptyDescription={t(
+                        'Create an invoice once your approved balance reaches the minimum payout.',
+                    )}
+                />
             </div>
         </AppLayout>
     );
-};
-
-export default InvoicesIndex;
+}

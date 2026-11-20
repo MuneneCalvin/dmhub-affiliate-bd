@@ -20,17 +20,17 @@
     flex-wrap: wrap;
     gap: 16px;
 }
-.campaign-tracking select {
+.campaign-tracking [data-slot='select-trigger'] {
     width: 280px;
     max-width: 100%;
     border: 1px solid var(--border);
-    border-radius: 7px;
+    border-radius: var(--radius-control);
     padding: 9px 12px;
     background: var(--background);
     color: var(--foreground);
-    box-shadow: 0 1px 2px #00000008;
+    box-shadow: var(--elevation-card);
 }
-.campaign-tracking select:focus-visible {
+.campaign-tracking [data-slot='select-trigger']:focus-visible {
     outline: 2px solid var(--primary);
     outline-offset: 3px;
 }
@@ -47,7 +47,7 @@
 }
 .campaign-tracking .tracking-panel {
     border: 1px solid var(--border);
-    border-radius: 9px;
+    border-radius: 14px;
     overflow: hidden;
     min-width: 0;
     background: var(--background);
@@ -84,7 +84,7 @@
     align-items: center;
     border: 1px solid var(--border);
     background: color-mix(in srgb, var(--muted) 40%, var(--background));
-    border-radius: 7px;
+    border-radius: var(--radius-control);
 }
 .campaign-tracking .tracking-copy-field input,
 .campaign-tracking .tracking-copy-field textarea {
@@ -103,7 +103,7 @@
 .campaign-tracking .tracking-copy-field button {
     flex-shrink: 0;
     padding: 10px 12px;
-    border-radius: 6px;
+    border-radius: var(--radius-control);
 }
 .campaign-tracking .tracking-qr {
     display: flex;
@@ -143,7 +143,7 @@
 .campaign-tracking .tracking-steps {
     list-style: none;
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 14px;
     overflow: hidden;
 }
 .campaign-tracking .tracking-steps li {
@@ -196,7 +196,7 @@
     align-items: center;
     gap: 12px;
     border: 1px solid var(--border);
-    border-radius: 7px;
+    border-radius: var(--radius-control);
     padding: 9px 12px;
     font-weight: 600;
     list-style: none;
@@ -210,10 +210,12 @@
 .campaign-tracking .tracking-technical pre {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
     font-size: 12px;
-    padding: 14px;
-    border-radius: 6px;
-    background: var(--muted);
+    padding: 16px;
+    border-radius: var(--radius-card);
+    background: var(--sidebar);
+    color: var(--sidebar-text);
     margin: 12px 0;
 }
 .campaign-tracking .tracking-technical p,
@@ -254,10 +256,10 @@
     text-align: right;
 }
 .campaign-tracking .tracking-success {
-    color: #27994c;
+    color: var(--success-ink);
 }
 .campaign-tracking .tracking-pending {
-    color: #de9700;
+    color: var(--warning-ink);
 }
 .campaign-tracking .tracking-rejected {
     color: var(--destructive);
@@ -268,9 +270,9 @@
     gap: 12px;
     margin: 16px;
     padding: 12px 15px;
-    background: #fff3d9;
-    color: #563b08;
-    border-radius: 8px;
+    background: var(--warning-soft);
+    color: var(--warning-ink);
+    border-radius: 14px;
     font-size: 13px;
 }
 .campaign-tracking .tracking-funds svg {
@@ -309,7 +311,7 @@
     align-items: center;
     gap: 12px;
     background: var(--muted);
-    border-radius: 8px;
+    border-radius: 14px;
     padding: 12px 16px;
     margin-top: 20px;
     color: var(--tracking-muted);
@@ -331,7 +333,7 @@
     gap: 12px;
     text-align: center;
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 14px;
     padding: 48px 20px;
 }
 @media (max-width: 1200px) {
@@ -365,7 +367,7 @@
         flex: 1;
         min-width: 180px;
     }
-    .campaign-tracking select {
+    .campaign-tracking [data-slot='select-trigger'] {
         width: 100%;
     }
 }
@@ -384,5 +386,58 @@
     }
     .campaign-tracking .tracking-steps li {
         gap: 12px;
+    }
+}
+
+.tracking-offer-row,
+.tracking-offer-columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr) 7rem;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.125rem 1.25rem;
+    font-size: 0.875rem;
+}
+.tracking-offer-columns {
+    padding-block: 0.7rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--muted-foreground);
+}
+.tracking-offer-row:hover,
+.tracking-offer-row:focus-visible {
+    background: var(--muted);
+}
+.tracking-offer-row:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: -2px;
+}
+.tracking-offer-row > :last-child {
+    justify-self: end;
+}
+@media (max-width: 767px) {
+    .tracking-offer-columns {
+        display: none;
+    }
+    .tracking-offer-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: start;
+        gap: 0.8rem;
+        padding: 1rem;
+    }
+    .tracking-offer-row strong {
+        grid-column: 1 / -1;
+    }
+    .tracking-offer-row > :last-child {
+        grid-column: 1 / -1;
+        justify-self: start;
+    }
+}
+
+@media (min-width: 768px) {
+    .campaign-tracking[data-publisher='true']
+        :is(.tracking-offer-row, .tracking-offer-columns) {
+        grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) 7rem;
     }
 }

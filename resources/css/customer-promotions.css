@@ -1,0 +1,80 @@
+.promotion-panel {
+    min-width: 0;
+    padding: clamp(1rem, 2vw, 1.5rem);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--card);
+}
+.promotion-select {
+    width: 100%;
+    min-width: 0;
+    min-height: 2.5rem;
+    border: 1px solid var(--input);
+    border-radius: 14px;
+    padding: 0.4rem 0.65rem;
+    color: var(--foreground);
+    background: var(--card);
+    font-size: 0.875rem;
+}
+.promotion-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    color: var(--primary);
+    font-size: 0.875rem;
+    font-weight: 550;
+}
+.promotion-link:hover {
+    text-decoration: underline;
+}
+.promotion-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    border-radius: var(--radius-control);
+    background: var(--muted);
+    padding: 0.18rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 550;
+}
+.promotion-status[data-active='true'] {
+    color: var(--success-ink);
+    background: color-mix(in srgb, currentColor 11%, var(--card));
+}
+.promotion-hub dt {
+    color: var(--muted-foreground);
+    font-size: 0.75rem;
+}
+.promotion-hub dd {
+    overflow-wrap: anywhere;
+    margin-top: 0.2rem;
+}
+.promotion-hub > section {
+    padding: 0 1.25rem 1rem;
+}
+.promotion-workspace :is(label, legend) {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+.promotion-workspace
+    :is(input, [data-slot='select-trigger'], textarea)[aria-invalid='true'] {
+    border-color: var(--destructive);
+}
+
+.promotion-workspace progress {
+    appearance: none;
+    background: var(--muted);
+    border: 0;
+}
+.promotion-workspace progress::-webkit-progress-bar {
+    background: var(--muted);
+}
+.promotion-workspace progress::-webkit-progress-value {
+    background: var(--primary);
+}
+.promotion-workspace progress::-moz-progress-bar {
+    background: var(--primary);
+}
+.dark .promotion-status[data-active='true'] {
+    color: var(--success-dot);
+}

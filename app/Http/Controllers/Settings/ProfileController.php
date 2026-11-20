@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
+use App\Support\SettingsSections;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -27,13 +28,27 @@ class ProfileController extends Controller
     }
 
     /**
+     * Show the company details the user may edit (advertiser / publisher).
+     */
+    public function company(Request $request): Response
+    {
+        $companies = SettingsSections::companies($request->user());
+        abort_if($companies === [], 404);
+
+        return Inertia::render('settings/company', ['companies' => $companies]);
+    }
+
+    /**
      * Update the user's profile settings.
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
         $validated = $request->validated();
-        // The profile form's "Name" field edits the username; users have no `name` column.
-        $request->user()->fill(['user_name' => $validated['name'], 'email' => $validated['email']]);
+        // Preserve the existing request key for the username.
+        $request->user()->fill([
+            ...collect($validated)->except('name')->all(),
+            'user_name' => $validated['name'],
+        ]);
         if ($request->user()->isDirty('email')) {
             $request->user()->email_verified_at = null;
         }

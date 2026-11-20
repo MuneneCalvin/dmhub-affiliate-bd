@@ -39,6 +39,7 @@ Route::middleware('auth')->group(function () {
 
     // my campaigns
     Route::get('publishers/my/campaigns', [PublisherCampaignController::class, 'index'])->middleware('business.permission:view_my_campaigns')->name('publishers.my.campaign');
+    Route::get('publishers/my/campaigns/{id}/offers/{offerId}/tracking', [PublisherCampaignController::class, 'show'])->whereNumber('offerId')->middleware('business.permission:view_my_campaigns')->name('publisher.tracking.offer');
     Route::get('publishers/my/campaigns/show/{id}', [PublisherCampaignController::class, 'show'])->middleware('business.permission:view_my_campaigns')->name('publishers.my.campaign.show');
     Route::get('publishers/my/campaigns/{assignment}/finance/export', [CampaignFinanceController::class, 'publisherExport'])->middleware('business.permission:view_my_campaigns')->name('publisher.finance.export');
     Route::get('publishers/my/campaigns/{assignment}/analytics/export', [CampaignAnalyticsController::class, 'publisherExport'])->middleware('business.permission:view_my_campaigns')->name('publisher.analytics.export');
@@ -51,6 +52,7 @@ Route::middleware('auth')->group(function () {
     Route::get('publisher/invoices/create', [PublisherInvoiceController::class, 'create'])->middleware('business.permission:request_payouts')->name('publisher.invoices.create');
     Route::post('publisher/invoices', [PublisherInvoiceController::class, 'store'])->middleware('business.permission:request_payouts')->middleware(HandleFinanceErrors::class)->name('publisher.invoices.store');
     Route::get('publisher/invoices/{id}', [PublisherInvoiceController::class, 'show'])->middleware('business.permission:view_invoices')->name('publisher.invoices.show');
+    Route::get('publisher/invoices/{id}/pdf', [PublisherInvoiceController::class, 'pdf'])->middleware('business.permission:view_invoices')->name('publisher.invoices.pdf');
 
     // Publisher Scripts & Integration Documentation
     Route::get('publisher/scripts', [PublisherScriptDocsController::class, 'index'])->middleware('business.permission:view_embeded_scripts')->name('publisher.scripts');

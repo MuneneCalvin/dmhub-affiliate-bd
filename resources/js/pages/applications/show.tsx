@@ -1,133 +1,82 @@
+import {
+    CopyField,
+    DetailList,
+    PageHeader,
+    SectionCard,
+} from '@/components/app';
+import { useConfirmationDialog } from '@/components/app/confirm-dialog';
+import { RejectApplicationsDialog } from '@/components/applications/reject-applications-dialog';
+import { APPLICATION_STATUS } from '@/components/applications/types';
 import { formatCommission } from '@/components/partner-money';
-import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import {
-    CustomDialogComponent,
-    InfoRow,
-    ReusablePageTitle,
-    ReusableSearchSelect,
-    useConfirmationDialog,
-} from '@/dev/core';
-import { useCustomDialogContextFactory } from '@/hooks';
+import { RadioCard, RadioCardGroup } from '@/components/ui/radio-card';
+import { StatusBadge } from '@/components/ui/status-badge';
 import AppLayout from '@/layouts/app-layout';
 import applications from '@/routes/applications';
-import { ApplicationDetails, BreadcrumbItem, TOffers } from '@/types';
+import type { ApplicationDetails, TOffers } from '@/types';
 import { trafficSourceLabels } from '@/utils/campaign-display';
 import { termsText } from '@/utils/partner-terms';
 import { Head, router, usePage } from '@inertiajs/react';
 import {
-    Calendar,
-    DollarSign,
+    CheckCircle2,
+    FileCheck2,
     FileText,
-    Globe,
     Link2,
-    Mail,
     Megaphone,
+    MessageSquareText,
     Package,
-    User,
+    ScrollText,
+    UserRound,
+    X,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import RejectApplicationModal from './modals/reject';
 
-const ApplicationShowPage = () => {
-    const { t } = useTranslation();
-    const { application, campaignOffers } = usePage<{
+export default function ApplicationShowPage() {
+    const { t, i18n } = useTranslation();
+    const {
+        application: a,
+        campaignOffers,
+        errors,
+    } = usePage<{
         application: ApplicationDetails;
         campaignOffers: TOffers[];
+        errors: Record<string, string>;
     }>().props;
-
-    const serverErrors = usePage().props.errors;
-    const [selectedOfferId, setSelectedOfferId] = useState<string>(
-        application.requested_offer_id?.toString() ?? '',
+    const [offerId, setOfferId] = useState(
+        a.requested_offer_id?.toString() ?? '',
     );
     const [approving, setApproving] = useState(false);
+    const [rejectOpen, setRejectOpen] = useState(false);
     const { confirm, ConfirmDialog } = useConfirmationDialog();
+    const name =
+        [a.first_name, a.last_name].filter(Boolean).join(' ') || a.email;
+    const pending = a.status === 'P';
+    const dateTime = (value: string | null | undefined) =>
+        value
+            ? new Intl.DateTimeFormat(i18n.language, {
+                  dateStyle: 'medium',
+                  timeStyle: 'short',
+              }).format(new Date(value))
+            : null;
 
-    const breadcrumbs: BreadcrumbItem[] = [
-        {
-            title: t('Publisher Applications'),
-            href: applications.index.url(),
-        },
-        {
-            title: `${application.first_name} ${application.last_name}`,
-            href: '',
-        },
-    ];
-
-    const { handleDialogContextSwitch, dialogContent, dialogOpen } =
-        useCustomDialogContextFactory<{
-            application?: ApplicationDetails;
-        }>();
-
-    const getStatusBadge = (status: string) => {
-        const statusMap: Record<
-            string,
-            {
-                label: string;
-                variant: 'default' | 'secondary' | 'destructive' | 'outline';
-            }
-        > = {
-            P: { label: t('Pending'), variant: 'secondary' },
-            A: { label: t('Approved'), variant: 'default' },
-            R: { label: t('Rejected'), variant: 'destructive' },
-        };
-        const current = statusMap[status] ?? {
-            label: t('Unknown'),
-            variant: 'outline',
-        };
-        return <Badge variant={current.variant}>{current.label}</Badge>;
-    };
-
-    const formatDate = (date: string | null) => {
-        if (!date) return 'N/A';
-        return new Date(date).toLocaleDateString('en-GB', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-        });
-    };
-
-    const handleApprove = () => {
-        if (!selectedOfferId) {
-            confirm({
-                title: t('Offer Required'),
-                description: t(
-                    'Please select an offer to assign to this publisher',
-                ),
-                confirmLabel: t('OK'),
-                cancelLabel: t('Close'),
-                onConfirm: () => {},
-            });
-            return;
-        }
-
-        const selectedOffer = campaignOffers?.find(
-            (o) => o.id.toString() === selectedOfferId,
-        );
+    const approve = () => {
+        const offer = campaignOffers?.find((o) => String(o.id) === offerId);
+        if (!offer) return;
         confirm({
-            title: t('Approve Application'),
-            description: `${t('Are you sure you want to approve this application and assign to')} "${selectedOffer?.name}"?`,
+            title: t('Approve application'),
+            description: t(
+                'Approve this application and assign the publisher to "{{offer}}"?',
+                { offer: offer.name },
+            ),
             confirmLabel: t('Approve'),
             cancelLabel: t('Cancel'),
             onConfirm: () => {
                 setApproving(true);
                 router.post(
-                    applications.approve.url(application.id),
-                    {
-                        offer_id: selectedOfferId,
-                    },
+                    applications.approve.url(a.id),
+                    { offer_id: offerId },
                     {
                         preserveScroll: true,
                         onFinish: () => setApproving(false),
@@ -137,452 +86,301 @@ const ApplicationShowPage = () => {
         });
     };
 
-    const offerOptions =
-        campaignOffers?.map((offer: TOffers) => ({
-            value: offer.id.toString(),
-            label: `${offer.name} (${formatCommission(offer.commission_value_1, offer.commission_type_1, application.currency)})`,
-        })) || [];
-
     return (
         <AppLayout>
-            <Head
-                title={`${t('Application')} - ${application.first_name} ${application.last_name}`}
-            />
-            <div className="workspace-page flex h-full flex-1 flex-col gap-4">
-                <ReusablePageTitle
-                    title={t('Application Details')}
-                    breadcrumbs={breadcrumbs}
-                >
-                    {application.status === 'P' && (
-                        <div className="flex items-center gap-2">
+            <Head title={`${t('Application')} · ${name}`} />
+            <div className="workspace-page flex flex-col gap-6">
+                <PageHeader
+                    title={name}
+                    description={t('Application for {{campaign}}', {
+                        campaign: a.campaign_name,
+                    })}
+                    breadcrumbs={[
+                        {
+                            title: t('Applications'),
+                            href: applications.index.url(),
+                        },
+                        { title: name, href: applications.show.url(a.id) },
+                    ]}
+                    icon={<FileCheck2 />}
+                    tone="admin"
+                    actions={
+                        pending && (
                             <Button
-                                variant="destructive"
-                                onClick={() =>
-                                    handleDialogContextSwitch({
-                                        Component: RejectApplicationModal,
-                                        componentProps: {
-                                            application,
-                                        },
-                                    })
-                                }
+                                variant="secondary"
+                                onClick={() => setRejectOpen(true)}
                             >
+                                <X className="text-danger-ink" />
                                 {t('Reject')}
                             </Button>
-                        </div>
-                    )}
-                </ReusablePageTitle>
+                        )
+                    }
+                >
+                    <div className="mt-1">
+                        <StatusBadge
+                            status={APPLICATION_STATUS[a.status] ?? a.status}
+                        />
+                    </div>
+                </PageHeader>
 
-                <div className="w-full">
-                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <User className="h-5 w-5" />
-                                    {t('Publisher Information')}
-                                </CardTitle>
-                                <CardDescription>
-                                    {t('Details about the applicant')}
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-1">
-                                <InfoRow
-                                    label={t('Name')}
-                                    value={`${application.first_name} ${application.last_name}`}
-                                    icon={User}
+                {Object.keys(errors ?? {}).length > 0 && (
+                    <Alert variant="danger">
+                        <AlertDescription>
+                            {Object.values(errors).map((error) => (
+                                <p key={error}>{error}</p>
+                            ))}
+                        </AlertDescription>
+                    </Alert>
+                )}
+
+                {pending && campaignOffers?.length > 0 && (
+                    <SectionCard
+                        title={t('Assign offer & approve')}
+                        description={t(
+                            'Approval requires the offer and current terms accepted by the publisher.',
+                        )}
+                        icon={<Package />}
+                        tone="success"
+                        footer={
+                            <div className="flex justify-end">
+                                <Button
+                                    variant="success"
+                                    onClick={approve}
+                                    disabled={!offerId || approving}
+                                >
+                                    <CheckCircle2 />
+                                    {approving
+                                        ? t('Approving...')
+                                        : t('Approve & Assign Offer')}
+                                </Button>
+                            </div>
+                        }
+                    >
+                        <RadioCardGroup
+                            name="offer_id"
+                            label={t('Select offer')}
+                            value={offerId}
+                            onValueChange={setOfferId}
+                            className="grid gap-3 md:grid-cols-2 xl:grid-cols-3"
+                        >
+                            {campaignOffers.map((offer) => (
+                                <RadioCard
+                                    key={offer.id}
+                                    value={String(offer.id)}
+                                    title={offer.name}
+                                    hint={[
+                                        offer.commission_value_1 != null
+                                            ? formatCommission(
+                                                  offer.commission_value_1,
+                                                  offer.commission_type_1,
+                                                  a.currency,
+                                              )
+                                            : null,
+                                        Number(offer.id) ===
+                                        a.requested_offer_id
+                                            ? t('Requested by the publisher')
+                                            : null,
+                                    ]
+                                        .filter(Boolean)
+                                        .join(' · ')}
+                                    icon={<Megaphone />}
+                                    tone="brand"
                                 />
-                                <Separator />
-                                <InfoRow
-                                    label={t('Email')}
-                                    value={application.email}
-                                    icon={Mail}
-                                />
-                                <Separator />
-                                <InfoRow
-                                    label={t('Website')}
-                                    value={
-                                        application.website_url ? (
+                            ))}
+                        </RadioCardGroup>
+                    </SectionCard>
+                )}
+
+                <div className="grid gap-[18px] lg:grid-cols-3">
+                    <SectionCard
+                        title={t('Publisher')}
+                        icon={<UserRound />}
+                        tone="partners"
+                    >
+                        <DetailList
+                            labelWidth={120}
+                            rows={[
+                                { label: t('Name'), value: name },
+                                { label: t('Email'), value: a.email },
+                                {
+                                    label: t('Website'),
+                                    value:
+                                        a.website_url &&
+                                        /^https?:\/\//i.test(a.website_url) ? (
                                             <a
-                                                href={application.website_url}
+                                                href={a.website_url}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="text-blue-600 hover:underline"
+                                                className="text-brand-ink hover:underline"
                                             >
-                                                {application.website_url}
+                                                {a.website_url}
                                             </a>
                                         ) : (
-                                            'N/A'
-                                        )
-                                    }
-                                    icon={Globe}
-                                />
-                                <Separator />
-                                <InfoRow
-                                    label={t('Traffic Sources')}
-                                    value={trafficSourceLabels(
-                                        application.traffic_sources,
-                                        t('Not set'),
-                                    )}
-                                />
-                                <Separator />
-                                <InfoRow
-                                    label={t('Promotional Methods')}
-                                    value={
-                                        application.promotional_methods || 'N/A'
-                                    }
-                                />
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Megaphone className="h-5 w-5" />
-                                    {t('Campaign & Offer')}
-                                </CardTitle>
-                                <CardDescription>
-                                    {t('Applied campaign details')}
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-1">
-                                <InfoRow
-                                    label={t('Campaign')}
-                                    value={application.campaign_name}
-                                />
-                                <Separator />
-                                <InfoRow
-                                    label={t(
-                                        application.offer_id
-                                            ? 'Assigned Offer'
-                                            : 'Requested Offer',
-                                    )}
-                                    value={
-                                        application.offer_name ||
-                                        application.requested_offer_name || (
-                                            <Badge
-                                                variant="outline"
-                                                className="border-yellow-600 text-yellow-600"
-                                            >
-                                                {t('Pending Assignment')}
-                                            </Badge>
-                                        )
-                                    }
-                                />
-                                <Separator />
-                                <InfoRow
-                                    label={t('Network')}
-                                    value={application.network_name}
-                                />
-                                {application.offer_id && (
-                                    <>
-                                        <Separator />
-                                        <InfoRow
-                                            label={t('Commission')}
-                                            value={formatCommission(
-                                                application.commission_value_1,
-                                                application.commission_type_1,
-                                                application.currency,
-                                            )}
-                                            icon={DollarSign}
-                                        />
-                                    </>
-                                )}
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <FileText className="h-5 w-5" />
-                                    {t('Application Status')}
-                                </CardTitle>
-                                <CardDescription>
-                                    {t('Current status and timeline')}
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-1">
-                                <InfoRow
-                                    label={t('Status')}
-                                    value={getStatusBadge(application.status)}
-                                />
-                                <Separator />
-                                <InfoRow
-                                    label={t('Applied At')}
-                                    value={formatDate(
-                                        application.applied_at ||
-                                            application.created_at,
-                                    )}
-                                    icon={Calendar}
-                                />
-                                {application.status === 'A' && (
-                                    <>
-                                        <Separator />
-                                        <InfoRow
-                                            label={t('Approved At')}
-                                            value={formatDate(
-                                                application.approved_at,
-                                            )}
-                                            icon={Calendar}
-                                        />
-                                    </>
-                                )}
-                                {application.status === 'R' &&
-                                    application.rejection_reason && (
-                                        <>
-                                            <Separator />
-                                            <InfoRow
-                                                label={t('Rejection Reason')}
-                                                value={
-                                                    application.rejection_reason
-                                                }
-                                            />
-                                        </>
-                                    )}
-                            </CardContent>
-                        </Card>
-
-                        {application.terms_snapshot && (
-                            <Card className="md:col-span-2 lg:col-span-3">
-                                <CardHeader>
-                                    <CardTitle>{t('Accepted terms')}</CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-3 text-sm">
-                                    <p>
-                                        {t('Accepted at')}:{' '}
-                                        {formatDate(
-                                            application.terms_accepted_at ??
-                                                null,
-                                        )}
-                                    </p>
-                                    <p className="whitespace-pre-wrap">
-                                        {termsText(
-                                            application.terms_snapshot
-                                                .campaign_terms,
-                                        )}
-                                    </p>
-                                    <p className="whitespace-pre-wrap">
-                                        {termsText(
-                                            application.terms_snapshot
-                                                .offer_terms,
-                                        )}
-                                    </p>
-                                    {application.terms_snapshot.commissions.map(
-                                        (rule, index) => (
-                                            <p key={index}>
-                                                {rule.type}:{' '}
-                                                {formatCommission(
-                                                    rule.value,
-                                                    rule.type,
-                                                    application.terms_snapshot
-                                                        ?.currency,
-                                                )}
-                                            </p>
+                                            a.website_url
                                         ),
-                                    )}
-                                </CardContent>
-                            </Card>
-                        )}
-
-                        {/* Offer Assignment Section - Only for pending applications */}
-                        {application.status === 'P' &&
-                            campaignOffers &&
-                            campaignOffers.length > 0 && (
-                                <Card className="border-green-200 bg-green-50/50 md:col-span-2 lg:col-span-3 dark:border-green-900 dark:bg-green-900/20">
-                                    <CardHeader>
-                                        <CardTitle className="flex items-center gap-2 text-green-700 dark:text-green-300">
-                                            <Package className="h-5 w-5" />
-                                            {t('Assign Offer & Approve')}
-                                        </CardTitle>
-                                        <CardDescription>
-                                            {t(
-                                                'Select an offer to assign to this publisher before approving',
+                                },
+                                {
+                                    label: t('Traffic sources'),
+                                    value: (
+                                        <span className="capitalize">
+                                            {trafficSourceLabels(
+                                                a.traffic_sources,
+                                                t('Not set'),
                                             )}
-                                        </CardDescription>
-                                    </CardHeader>
-                                    <CardContent className="space-y-4">
-                                        <p className="text-sm">
-                                            {t(
-                                                'Approval requires the offer and current terms accepted by the publisher.',
-                                            )}
-                                        </p>
-                                        {Object.entries(serverErrors).map(
-                                            ([field, error]) => (
-                                                <p
-                                                    key={field}
-                                                    className="text-sm text-destructive"
-                                                >
-                                                    {error}
-                                                </p>
-                                            ),
-                                        )}
-                                        <div className="grid gap-4 md:grid-cols-2">
-                                            <div>
-                                                <Label className="mb-2 block">
-                                                    {t('Select Offer')} *
-                                                </Label>
-                                                <ReusableSearchSelect
-                                                    id="offer_id"
-                                                    label=""
-                                                    data={offerOptions}
-                                                    placeholder={t(
-                                                        'Select an offer...',
-                                                    )}
-                                                    value={selectedOfferId}
-                                                    onChange={
-                                                        setSelectedOfferId
-                                                    }
-                                                />
-                                            </div>
-                                            <div className="flex items-end">
-                                                <Button
-                                                    onClick={handleApprove}
-                                                    className="w-full bg-green-600 hover:bg-green-700 md:w-auto"
-                                                    disabled={
-                                                        !selectedOfferId ||
-                                                        approving
-                                                    }
-                                                >
-                                                    {approving
-                                                        ? t('Approving...')
-                                                        : t(
-                                                              'Approve & Assign Offer',
-                                                          )}
-                                                </Button>
-                                            </div>
-                                        </div>
-
-                                        {/* Show available offers preview */}
-                                        <div className="mt-4">
-                                            <Label className="mb-2 block text-sm text-muted-foreground">
-                                                {t(
-                                                    'Available Offers for this Campaign',
-                                                )}
-                                                :
-                                            </Label>
-                                            <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
-                                                {campaignOffers.map(
-                                                    (offer: TOffers) => (
-                                                        <div
-                                                            key={offer.id}
-                                                            className={`cursor-pointer rounded-lg border p-3 transition-all ${
-                                                                selectedOfferId ===
-                                                                offer.id.toString()
-                                                                    ? 'border-green-500 bg-green-100 dark:bg-green-900/40'
-                                                                    : 'border-gray-200 hover:border-gray-400 dark:border-gray-700'
-                                                            }`}
-                                                            onClick={() =>
-                                                                setSelectedOfferId(
-                                                                    offer.id.toString(),
-                                                                )
-                                                            }
-                                                        >
-                                                            <div className="font-semibold">
-                                                                {offer.name}
-                                                            </div>
-                                                            {offer.description && (
-                                                                <p className="mt-1 line-clamp-1 text-sm text-muted-foreground">
-                                                                    {
-                                                                        offer.description
-                                                                    }
-                                                                </p>
-                                                            )}
-                                                            <div className="mt-2 flex gap-2 text-sm">
-                                                                {offer.commission_value_1 && (
-                                                                    <Badge
-                                                                        variant="outline"
-                                                                        className="text-green-600"
-                                                                    >
-                                                                        {formatCommission(
-                                                                            offer.commission_value_1,
-                                                                            offer.commission_type_1,
-                                                                            application.currency,
-                                                                        )}
-                                                                    </Badge>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    ),
-                                                )}
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            )}
-
-                        {application.applied_notes && (
-                            <Card className="md:col-span-2 lg:col-span-3">
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <FileText className="h-5 w-5" />
-                                        {t('Application Notes')}
-                                    </CardTitle>
-                                    <CardDescription>
-                                        {t('Notes submitted by the publisher')}
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <p className="text-sm whitespace-pre-wrap text-muted-foreground">
-                                        {application.applied_notes}
-                                    </p>
-                                </CardContent>
-                            </Card>
-                        )}
-
-                        {application.status === 'A' &&
-                            application.tracking_link && (
-                                <Card className="md:col-span-2 lg:col-span-3">
-                                    <CardHeader>
-                                        <CardTitle className="flex items-center gap-2">
-                                            <Link2 className="h-5 w-5" />
-                                            {t('Tracking Information')}
-                                        </CardTitle>
-                                        <CardDescription>
-                                            {t(
-                                                'Tracking link generated for this application',
-                                            )}
-                                        </CardDescription>
-                                    </CardHeader>
-                                    <CardContent className="space-y-2">
-                                        <InfoRow
-                                            label={t('Tracking Link')}
-                                            value={
-                                                <code className="rounded bg-muted px-2 py-1 text-sm break-all">
-                                                    {application.tracking_link}
-                                                </code>
+                                        </span>
+                                    ),
+                                },
+                                {
+                                    label: t('Promotional methods'),
+                                    value: a.promotional_methods,
+                                },
+                            ]}
+                        />
+                    </SectionCard>
+                    <SectionCard
+                        title={t('Campaign & offer')}
+                        icon={<Megaphone />}
+                        tone="brand"
+                    >
+                        <DetailList
+                            labelWidth={120}
+                            rows={[
+                                {
+                                    label: t('Campaign'),
+                                    value: a.campaign_name,
+                                },
+                                {
+                                    label: t(
+                                        a.offer_id
+                                            ? 'Assigned offer'
+                                            : 'Requested offer',
+                                    ),
+                                    value:
+                                        a.offer_name ||
+                                        a.requested_offer_name ||
+                                        t('Pending assignment'),
+                                },
+                                { label: t('Network'), value: a.network_name },
+                                Boolean(a.offer_id) && {
+                                    label: t('Commission'),
+                                    value: formatCommission(
+                                        a.commission_value_1,
+                                        a.commission_type_1,
+                                        a.currency,
+                                    ),
+                                },
+                            ]}
+                        />
+                    </SectionCard>
+                    <SectionCard
+                        title={t('Status & timeline')}
+                        icon={<FileText />}
+                        tone="admin"
+                    >
+                        <DetailList
+                            labelWidth={120}
+                            rows={[
+                                {
+                                    label: t('Status'),
+                                    value: (
+                                        <StatusBadge
+                                            status={
+                                                APPLICATION_STATUS[a.status] ??
+                                                a.status
                                             }
                                         />
-                                        {application.sub && (
-                                            <>
-                                                <Separator />
-                                                <InfoRow
-                                                    label={t('Sub ID')}
-                                                    value={application.sub}
-                                                />
-                                            </>
-                                        )}
-                                    </CardContent>
-                                </Card>
-                            )}
-                    </div>
+                                    ),
+                                },
+                                {
+                                    label: t('Applied'),
+                                    value: dateTime(
+                                        a.applied_at || a.created_at,
+                                    ),
+                                },
+                                a.status === 'A' && {
+                                    label: t('Approved'),
+                                    value: dateTime(a.approved_at),
+                                },
+                                a.status === 'R' && {
+                                    label: t('Rejection reason'),
+                                    value: a.rejection_reason,
+                                },
+                            ]}
+                        />
+                    </SectionCard>
                 </div>
 
-                <CustomDialogComponent
-                    {...{ handleDialogContextSwitch, dialogOpen }}
-                    className="sm:max-w-[500px]"
-                >
-                    {dialogContent?.Component && (
-                        <dialogContent.Component
-                            {...{
-                                componentProps: dialogContent.componentProps,
-                                handleDialogContextSwitch,
-                            }}
-                        />
-                    )}
-                </CustomDialogComponent>
+                {a.applied_notes && (
+                    <SectionCard
+                        title={t('Message from publisher')}
+                        icon={<MessageSquareText />}
+                        tone="analytics"
+                    >
+                        <p className="rounded-[14px] bg-canvas p-3.5 text-sm break-words whitespace-pre-wrap">
+                            {a.applied_notes}
+                        </p>
+                    </SectionCard>
+                )}
 
-                <ConfirmDialog />
+                {a.terms_snapshot && (
+                    <SectionCard
+                        title={t('Accepted terms')}
+                        description={t('Accepted at {{date}}', {
+                            date: dateTime(a.terms_accepted_at) ?? '—',
+                        })}
+                        icon={<ScrollText />}
+                        tone="neutral"
+                    >
+                        <div className="grid gap-3 text-sm">
+                            <p className="whitespace-pre-wrap">
+                                {termsText(a.terms_snapshot.campaign_terms)}
+                            </p>
+                            <p className="whitespace-pre-wrap">
+                                {termsText(a.terms_snapshot.offer_terms)}
+                            </p>
+                            {a.terms_snapshot.commissions.map((rule, index) => (
+                                <p key={index} className="font-semibold">
+                                    {rule.type}:{' '}
+                                    {formatCommission(
+                                        rule.value,
+                                        rule.type,
+                                        a.terms_snapshot?.currency,
+                                    )}
+                                </p>
+                            ))}
+                        </div>
+                    </SectionCard>
+                )}
+
+                {a.status === 'A' && a.tracking_link && (
+                    <SectionCard
+                        title={t('Tracking information')}
+                        icon={<Link2 />}
+                        tone="analytics"
+                    >
+                        <div className="grid gap-3">
+                            <CopyField
+                                label={t('Tracking link')}
+                                value={a.tracking_link}
+                            />
+                            {a.sub && (
+                                <DetailList
+                                    rows={[
+                                        { label: t('Sub ID'), value: a.sub },
+                                    ]}
+                                />
+                            )}
+                        </div>
+                    </SectionCard>
+                )}
             </div>
+            <RejectApplicationsDialog
+                open={rejectOpen}
+                onOpenChange={setRejectOpen}
+                ids={[a.id]}
+                applicantName={name}
+            />
+            <ConfirmDialog />
         </AppLayout>
     );
-};
-
-export default ApplicationShowPage;
+}

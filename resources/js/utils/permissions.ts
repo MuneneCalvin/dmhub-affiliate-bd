@@ -60,7 +60,7 @@ export function clearPermissions(): void {
  */
 export function hasPermission(
     permissions: Permission[],
-    permission: Permission
+    permission: Permission,
 ): boolean {
     return permissions.includes(permission);
 }
@@ -70,7 +70,7 @@ export function hasPermission(
  */
 export function hasAnyPermission(
     permissions: Permission[],
-    requiredPermissions: Permission[]
+    requiredPermissions: Permission[],
 ): boolean {
     return requiredPermissions.some((p) => permissions.includes(p));
 }
@@ -80,7 +80,7 @@ export function hasAnyPermission(
  */
 export function hasAllPermissions(
     permissions: Permission[],
-    requiredPermissions: Permission[]
+    requiredPermissions: Permission[],
 ): boolean {
     return requiredPermissions.every((p) => permissions.includes(p));
 }

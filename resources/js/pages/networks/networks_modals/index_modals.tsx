@@ -1,12 +1,14 @@
 /* eslint-disable @typescript-eslint/no-empty-object-type */
+import { SearchSelect, SelectField } from '@/components/app/form-controls';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
-    ReusableModalHeader,
-    ReusableNormalSelect,
-    ReusableSearchSelect,
-} from '@/dev/core';
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { store } from '@/routes/networks';
 import { TCountry, TCurrency, TModalPropsW, TNetwork } from '@/types';
 import { TNetworkOnboardingTypes } from '@/types/schema_types';
@@ -15,12 +17,16 @@ import { networkSchema } from '@/utils/form-schema';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router, usePage } from '@inertiajs/react';
 import { Label } from '@radix-ui/react-label';
+import { Network } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 export function AddNetworksForm({
     handleDialogContextSwitch,
 }: TModalPropsW<TNetwork, {}>) {
+    // React Hook Form mutates formState.errors in place, so React Compiler
+    // memoisation would hide new errors; opt this form out.
+    'use no memo';
     const { t } = useTranslation();
     const { currencies } = usePage<{ currencies: TCurrency[] }>().props;
     const { countries } = usePage<{ countries: TCountry[] }>().props;
@@ -59,10 +65,12 @@ export function AddNetworksForm({
     };
     return (
         <div className="w-full">
-            <ReusableModalHeader
-                title={t(`Create_Network`)}
-                className="text-left text-primary"
-            />
+            <DialogHeader icon={<Network />} tone="partners" className="mb-5">
+                <DialogTitle>{t(`Create_Network`)}</DialogTitle>
+                <DialogDescription>
+                    {t('Set up a network, its owner and its defaults.')}
+                </DialogDescription>
+            </DialogHeader>
             <form
                 className="flex flex-col gap-6"
                 onSubmit={handleSubmit(onSubmit)}
@@ -96,10 +104,10 @@ export function AddNetworksForm({
                         </div>
                     </div>
                     <div className="grid gap-2">
-                        <ReusableSearchSelect
+                        <SearchSelect
                             id="default_currency"
                             label={t('Default Currency')}
-                            data={currencies.map((currency: TCurrency) => ({
+                            options={currencies.map((currency: TCurrency) => ({
                                 value: String(currency.currency_code),
                                 label: currency.currency_name,
                             }))}
@@ -112,10 +120,10 @@ export function AddNetworksForm({
                         />
                     </div>
                     <div className="grid gap-2">
-                        <ReusableNormalSelect
+                        <SelectField
                             id="default_commission_model"
                             label={t('Default Commission Model')}
-                            data={COMMISSION_MODELS.map((model) => ({
+                            options={COMMISSION_MODELS.map((model) => ({
                                 value: String(model.key),
                                 label: t(model.value),
                             }))}
@@ -150,7 +158,7 @@ export function AddNetworksForm({
                         />
                         <span>
                             {t('Require prepaid advertiser funds')}
-                            <span className="block text-sm text-muted-foreground">
+                            <span className="block text-sm text-ink-muted">
                                 {t(
                                     'Off by default. Campaigns can run and accrue commissions before funding. Negative balances show amounts owed; payouts require recorded cash.',
                                 )}
@@ -175,10 +183,10 @@ export function AddNetworksForm({
                         />
                     </div>
                     <div className="grid gap-2">
-                        <ReusableNormalSelect
+                        <SelectField
                             id="payment_frequency"
                             label={t('Payment Frequency')}
-                            data={FREQUENCY.map((frequency) => ({
+                            options={FREQUENCY.map((frequency) => ({
                                 value: String(frequency.key),
                                 label: t(frequency.value),
                             }))}
@@ -264,10 +272,10 @@ export function AddNetworksForm({
                         <InputError message={errors.support_phone?.message} />
                     </div>
                     <div className="grid gap-2">
-                        <ReusableSearchSelect
+                        <SearchSelect
                             id="country_iso"
                             label={t('Country')}
-                            data={countries.map((country: TCountry) => ({
+                            options={countries.map((country: TCountry) => ({
                                 value: String(country.country_iso),
                                 label: country.country_name,
                             }))}
@@ -277,24 +285,18 @@ export function AddNetworksForm({
                             error={errors.country_iso?.message}
                         />
                     </div>
-                    <div className="flex w-full items-center justify-between gap-12">
+                    <DialogFooter>
                         <Button
-                            className="cursor-pointer border-red-100 text-red-600"
-                            {...{
-                                variant: 'outline',
-                                type: 'button',
-                                onClick: () =>
-                                    handleDialogContextSwitch?.({
-                                        state: false,
-                                    }),
-                            }}
+                            type="button"
+                            variant="secondary"
+                            onClick={() =>
+                                handleDialogContextSwitch?.({ state: false })
+                            }
                         >
                             {t('Cancel')}
                         </Button>
-                        <Button type="submit" className="mt-2 w-50">
-                            {t('Submit')}
-                        </Button>
-                    </div>
+                        <Button type="submit">{t('Save')}</Button>
+                    </DialogFooter>
                 </div>
             </form>
         </div>

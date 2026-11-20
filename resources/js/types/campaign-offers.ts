@@ -1,7 +1,46 @@
-import type {
-    CustomerPromotion,
-    PromotionStore,
-} from '@/components/customer-promotions';
+export type PromotionConfig = {
+    name: string;
+    type: string;
+    value: string;
+    currency: string;
+    scope: string;
+    product_ids: string[];
+    category_ids: string[];
+    excluded_product_ids: string[];
+    exclude_sale_items: boolean;
+    minimum_subtotal: string;
+    minimum_quantity: number;
+    combines_with_other_discounts: boolean;
+    starts_at: string;
+    ends_at: string | null;
+    validity_hours: number | string;
+    display: string;
+    message: string;
+    applied_message: string;
+    commission_basis: string;
+    usage_limit?: number | string | null;
+    background_color?: string;
+    text_color?: string;
+    message_nl?: string;
+    applied_message_nl?: string;
+    store_ids?: number[];
+};
+export type PromotionStore = {
+    id: number;
+    name: string;
+    platform: string;
+    domain: string;
+    status: string;
+    currency: string;
+};
+export type CustomerPromotion = {
+    status: string;
+    published_version: number | null;
+    draft: PromotionConfig;
+    latest_published_version?: { configuration: PromotionConfig } | null;
+    stores: PromotionStore[];
+};
+
 export type OfferRate = {
     id: number | null;
     type: string;

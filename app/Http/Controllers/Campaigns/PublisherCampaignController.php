@@ -92,7 +92,7 @@ class PublisherCampaignController extends Controller
         ]);
     }
 
-    public function show($id)
+    public function show($id, ?int $offerId = null)
     {
         $user = Auth::user();
 
@@ -102,12 +102,18 @@ class PublisherCampaignController extends Controller
             ->select('publisher_campaigns.*');
         $assignment = $this->scopeToUser($query, $user)->firstOrFail();
 
+        if ($offerId !== null || (request('tab') === 'tracking' && request()->anyFilled(['offer', 'publisher']))) {
+            return inertia('campaigns/offer-tracking', [
+                'trackingWorkspace' => fn () => app(CampaignTrackingService::class)->detail($assignment->campaign, request(), $offerId, $assignment),
+            ]);
+        }
+
         return inertia('publishercampaigns/show', [
             'overview' => app(CampaignOverviewService::class)->build($assignment->campaign, $user, $assignment),
             'ownEnrollment' => fn () => app(CampaignPublishersService::class)->build($assignment->campaign, $user, $assignment),
             'financeWorkspace' => fn () => request('tab') === 'finance' ? app(CampaignFinanceService::class)->build($assignment->campaign, request(), $assignment) : null,
             'analyticsWorkspace' => fn () => request('tab') === 'analytics' ? app(CampaignAnalyticsService::class)->build($assignment->campaign, request(), $assignment) : null,
-            'trackingWorkspace' => fn () => request('tab') === 'tracking' ? app(CampaignTrackingService::class)->build($assignment->campaign, request(), $assignment) : null,
+            'trackingHub' => fn () => request('tab') === 'tracking' ? app(CampaignTrackingService::class)->hub($assignment->campaign, $assignment) : null,
             'offerWorkspace' => fn () => app(CampaignOffersService::class)->build($assignment->campaign, $user, $assignment),
         ]);
     }

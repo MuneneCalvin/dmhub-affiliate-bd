@@ -1,19 +1,19 @@
+import { PageHeader } from '@/components/app';
 import { GeneratedTrackingTemplate } from '@/components/generated-tracking-template';
 import { OfferStepTabs } from '@/components/offer-step-tabs';
 import { OfferThumbnailUpload } from '@/components/offer-thumbnail-upload';
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import {
+    CheckboxField,
+    MultiSelect,
+    NumberField,
+    SearchSelect,
+    TextField,
+    TextareaField,
+} from '@/components/app/form-controls';
+import { FormDialog } from '@/components/app/form-dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import {
-    CustomDialogComponent,
-    ReusableCheckbox,
-    ReusableNumberInput,
-    ReusablePageTitle,
-    ReusableSearchMultiSelect,
-    ReusableSearchSelect,
-    ReusableTextarea,
-    ReusableTextInput,
-} from '@/dev/core';
 import { useCustomDialogContextFactory } from '@/hooks';
 import AppLayout from '@/layouts/app-layout';
 import advertiser from '@/routes/advertiser';
@@ -23,14 +23,17 @@ import { OFFER_BONUSES, OFFER_TERMS, TRAFFIC_SOURCES } from '@/utils/enums';
 import { offersSchema } from '@/utils/form-schema';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Head, router, usePage } from '@inertiajs/react';
-import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2, Tag } from 'lucide-react';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 const OffersIndexPage = () => {
+    // React Hook Form mutates formState.errors in place, so React Compiler
+    // memoisation would hide new errors; opt this form out.
+    'use no memo';
     const { t } = useTranslation();
-    const { id, commissions } = usePage<any>().props;
+    const { id, commissions, campaign } = usePage<any>().props;
 
     const { handleDialogContextSwitch, dialogContent, dialogOpen } =
         useCustomDialogContextFactory<{
@@ -38,17 +41,14 @@ const OffersIndexPage = () => {
         }>();
 
     const breadcrumbs: BreadcrumbItem[] = [
+        { title: t('Campaigns'), href: advertiser.campaign.index.url() },
         {
-            title: t('Advertiser'),
-            href: advertiser.campaign.index.url(),
+            title: campaign?.name ?? t('Campaign'),
+            href: advertiser.campaign.show.url(Number(id)),
         },
         {
-            title: t('Offers'),
+            title: t('Create offer'),
             href: advertiser.offers.index.url(Number(id)),
-        },
-        {
-            title: t('Create Offer'),
-            href: '#',
         },
     ];
 
@@ -157,12 +157,20 @@ const OffersIndexPage = () => {
 
     return (
         <AppLayout>
-            <Head title={t('Create Offer')} />
-            <div className="workspace-page flex h-full flex-1 flex-col gap-4">
-                <ReusablePageTitle
-                    title={t('Create Offer')}
-                    description={t('Create a new offer for your campaign')}
+            <Head title={t('Create offer')} />
+            <div className="workspace-page flex h-full flex-1 flex-col gap-6">
+                <PageHeader
+                    title={t('Create offer')}
+                    description={
+                        campaign?.name
+                            ? t('A new offer for {{campaign}}', {
+                                  campaign: campaign.name,
+                              })
+                            : t('Create a new offer for your campaign')
+                    }
                     breadcrumbs={breadcrumbs}
+                    icon={<Tag />}
+                    tone="brand"
                 />
 
                 <form
@@ -174,7 +182,7 @@ const OffersIndexPage = () => {
                         }
                         void handleSubmit(onSubmit, showErrors)(event);
                     }}
-                    className="@container mx-auto w-full max-w-5xl overflow-hidden rounded-xl border bg-card"
+                    className="@container mx-auto w-full max-w-5xl overflow-hidden rounded-card border border-border bg-surface shadow-card"
                 >
                     <OfferStepTabs
                         step={currentStep}
@@ -187,7 +195,7 @@ const OffersIndexPage = () => {
                                     <h3 className="text-lg font-semibold">
                                         {t('Basic Information')}
                                     </h3>
-                                    <p className="text-sm text-muted-foreground">
+                                    <p className="text-sm text-ink-muted">
                                         {t('Step 1 of 4: Set offer details.')}
                                     </p>
                                 </div>
@@ -197,7 +205,7 @@ const OffersIndexPage = () => {
                                         name="name"
                                         control={control}
                                         render={({ field }) => (
-                                            <ReusableTextInput
+                                            <TextField
                                                 id="name"
                                                 label={t('Offer Name')}
                                                 required
@@ -215,7 +223,7 @@ const OffersIndexPage = () => {
                                         name="description"
                                         control={control}
                                         render={({ field }) => (
-                                            <ReusableTextarea
+                                            <TextareaField
                                                 id="description"
                                                 label={t('Description')}
                                                 rows={3}
@@ -256,7 +264,7 @@ const OffersIndexPage = () => {
                                     <h3 className="text-lg font-semibold">
                                         {t('Commission Settings')}
                                     </h3>
-                                    <p className="text-sm text-muted-foreground">
+                                    <p className="text-sm text-ink-muted">
                                         {t(
                                             'Step 2 of 4: Configure commission and bonus settings.',
                                         )}
@@ -270,12 +278,12 @@ const OffersIndexPage = () => {
                                                 name="commission_type_1"
                                                 control={control}
                                                 render={({ field }) => (
-                                                    <ReusableSearchSelect
+                                                    <SearchSelect
                                                         id="commission_type_1"
                                                         label={t(
                                                             'Primary Commission Type',
                                                         )}
-                                                        data={commissions.map(
+                                                        options={commissions.map(
                                                             (
                                                                 comm: CommissionType,
                                                             ) => ({
@@ -307,7 +315,7 @@ const OffersIndexPage = () => {
                                                 name="commission_value_1"
                                                 control={control}
                                                 render={({ field }) => (
-                                                    <ReusableNumberInput
+                                                    <NumberField
                                                         id="commission_value_1"
                                                         label={t(
                                                             'Primary Commission Value',
@@ -334,12 +342,12 @@ const OffersIndexPage = () => {
                                                 name="commission_type_2"
                                                 control={control}
                                                 render={({ field }) => (
-                                                    <ReusableSearchSelect
+                                                    <SearchSelect
                                                         id="commission_type_2"
                                                         label={t(
                                                             'Secondary Commission Type',
                                                         )}
-                                                        data={commissions.map(
+                                                        options={commissions.map(
                                                             (
                                                                 comm: CommissionType,
                                                             ) => ({
@@ -370,7 +378,7 @@ const OffersIndexPage = () => {
                                             name="commission_value_2"
                                             control={control}
                                             render={({ field }) => (
-                                                <ReusableNumberInput
+                                                <NumberField
                                                     id="commission_value_2"
                                                     label={t(
                                                         'Secondary Commission Value',
@@ -392,7 +400,7 @@ const OffersIndexPage = () => {
                                             name="minimum_payout"
                                             control={control}
                                             render={({ field }) => (
-                                                <ReusableNumberInput
+                                                <NumberField
                                                     id="minimum_payout"
                                                     label={t('Minimum Payout')}
                                                     step={0.01}
@@ -417,7 +425,7 @@ const OffersIndexPage = () => {
                                                     name="bonus"
                                                     control={control}
                                                     render={({ field }) => (
-                                                        <ReusableCheckbox
+                                                        <CheckboxField
                                                             id={`bonus_${bonus.value}`}
                                                             label={bonus.label}
                                                             checked={
@@ -456,7 +464,7 @@ const OffersIndexPage = () => {
                                             ))}
                                         </div>
                                         {errors.bonus?.message && (
-                                            <p className="text-sm text-red-600">
+                                            <p className="text-[13px] font-semibold text-danger-ink">
                                                 {errors.bonus.message}
                                             </p>
                                         )}
@@ -487,7 +495,7 @@ const OffersIndexPage = () => {
                                     <h3 className="text-lg font-semibold">
                                         {t('Tracking Settings')}
                                     </h3>
-                                    <p className="text-sm text-muted-foreground">
+                                    <p className="text-sm text-ink-muted">
                                         {t(
                                             'Step 3 of 4: Configure conversion and tracking URLs.',
                                         )}
@@ -500,7 +508,7 @@ const OffersIndexPage = () => {
                                             name="conversion_window_hours"
                                             control={control}
                                             render={({ field }) => (
-                                                <ReusableNumberInput
+                                                <NumberField
                                                     id="conversion_window_hours"
                                                     label={t(
                                                         'Conversion Window (Hours)',
@@ -521,7 +529,7 @@ const OffersIndexPage = () => {
                                             name="click_cookie_lifetime_hours"
                                             control={control}
                                             render={({ field }) => (
-                                                <ReusableNumberInput
+                                                <NumberField
                                                     id="click_cookie_lifetime_hours"
                                                     label={t(
                                                         'Click Cookie Lifetime (Hours)',
@@ -543,7 +551,7 @@ const OffersIndexPage = () => {
                                         name="preview_url"
                                         control={control}
                                         render={({ field }) => (
-                                            <ReusableTextInput
+                                            <TextField
                                                 id="preview_url"
                                                 label={t('Landing page URL')}
                                                 type="url"
@@ -556,7 +564,7 @@ const OffersIndexPage = () => {
                                             />
                                         )}
                                     />
-                                    <p className="text-sm text-muted-foreground">
+                                    <p className="text-sm text-ink-muted">
                                         {t(
                                             'Visitors are redirected here after a tracked click. Use the actual form or checkout landing page; DM Hub adds referral_id and click_id to this URL.',
                                         )}
@@ -610,7 +618,7 @@ const OffersIndexPage = () => {
                                     <h3 className="text-lg font-semibold">
                                         {t('Traffic Settings')}
                                     </h3>
-                                    <p className="text-sm text-muted-foreground">
+                                    <p className="text-sm text-ink-muted">
                                         {t(
                                             'Step 4 of 4: Select traffic sources and terms.',
                                         )}
@@ -622,12 +630,12 @@ const OffersIndexPage = () => {
                                         name="allowed_traffic_sources"
                                         control={control}
                                         render={({ field }) => (
-                                            <ReusableSearchMultiSelect
+                                            <MultiSelect
                                                 id="allowed_traffic_sources"
                                                 label={t(
                                                     'Allowed Traffic Sources',
                                                 )}
-                                                data={TRAFFIC_SOURCES}
+                                                options={TRAFFIC_SOURCES}
                                                 placeholder={t(
                                                     'Select allowed traffic sources...',
                                                 )}
@@ -647,12 +655,12 @@ const OffersIndexPage = () => {
                                         name="prohibited_traffic_sources"
                                         control={control}
                                         render={({ field }) => (
-                                            <ReusableSearchMultiSelect
+                                            <MultiSelect
                                                 id="prohibited_traffic_sources"
                                                 label={t(
                                                     'Prohibited Traffic Sources',
                                                 )}
-                                                data={TRAFFIC_SOURCES}
+                                                options={TRAFFIC_SOURCES}
                                                 placeholder={t(
                                                     'Select prohibited traffic sources...',
                                                 )}
@@ -672,10 +680,10 @@ const OffersIndexPage = () => {
                                         name="terms"
                                         control={control}
                                         render={({ field }) => (
-                                            <ReusableSearchMultiSelect
+                                            <MultiSelect
                                                 id="terms"
                                                 label={t('Terms & Conditions')}
-                                                data={OFFER_TERMS}
+                                                options={OFFER_TERMS}
                                                 placeholder={t(
                                                     'Select terms & conditions...',
                                                 )}
@@ -713,7 +721,7 @@ const OffersIndexPage = () => {
                     </OfferStepTabs>
                 </form>
 
-                <CustomDialogComponent
+                <FormDialog
                     {...{ handleDialogContextSwitch, dialogOpen }}
                     className="sm:max-w-[700px]"
                 >
@@ -725,7 +733,7 @@ const OffersIndexPage = () => {
                             }}
                         />
                     )}
-                </CustomDialogComponent>
+                </FormDialog>
             </div>
         </AppLayout>
     );

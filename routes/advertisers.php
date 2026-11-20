@@ -41,11 +41,13 @@ Route::middleware(['auth', 'ensure.campaign.manager'])->group(function () {
     Route::get('advertiser/campaigns/index', [AdvertiserCampaignController::class, 'index'])->middleware('business.permission:view_campaigns')->name('advertiser.campaign.index');
     Route::get('advertiser/campaigns/create', [AdvertiserCampaignController::class, 'createPage'])->middleware('business.permission:create_campaigns')->name('advertiser.campaign.create');
     Route::post('advertiser/campaigns/store', [AdvertiserCampaignController::class, 'store'])->middleware('business.permission:create_campaigns')->name('advertiser.campaign.store');
+    Route::get('advertiser/campaigns/{id}/offers/{offerId}/tracking', [AdvertiserCampaignController::class, 'show'])->whereNumber('offerId')->middleware('business.permission:view_campaigns')->name('campaign.tracking.offer');
     Route::get('advertiser/campaigns/show/{id}', [AdvertiserCampaignController::class, 'show'])->middleware('business.permission:view_campaigns')->name('advertiser.campaign.show');
     Route::get('advertiser/campaigns/edit/{id}', [AdvertiserCampaignController::class, 'edit'])->middleware('business.permission:manage_campaigns')->name('advertiser.campaign.edit');
     Route::post('advertiser/campaigns/update/{id}', [AdvertiserCampaignController::class, 'update'])->middleware('business.permission:manage_campaigns')->name('advertiser.campaign.update');
 
     Route::put('advertiser/campaigns/{campaign}/settings', [CampaignSettingsController::class, 'update'])->middleware('business.permission:manage_campaigns')->name('campaign.settings.update');
+    Route::patch('advertiser/campaigns/{campaign}/status', [CampaignSettingsController::class, 'status'])->middleware('business.permission:manage_campaigns')->name('campaign.status.update');
     Route::post('advertiser/campaigns/{campaign}/settings/terms', [CampaignSettingsController::class, 'storeTerms'])->middleware('business.permission:manage_campaigns')->name('campaign.settings.terms');
 
     Route::get('advertiser/campaigns/{campaign}/finance/export', [CampaignFinanceController::class, 'export'])->middleware('business.permission:view_campaigns')->name('campaign.finance.export');
@@ -59,6 +61,7 @@ Route::middleware(['auth', 'ensure.campaign.manager'])->group(function () {
 
     Route::post('advertiser/campaigns/{campaign}/publishers/{application}/review', [CampaignPublisherController::class, 'review'])->middleware('business.permission:view_campaigns')->name('campaign.publishers.review');
 
+    Route::get('advertiser/campaigns/{campaign}/promotions', [CustomerPromotionController::class, 'edit'])->middleware('business.permission:manage_offers')->name('campaign.promotions.edit');
     Route::put('advertiser/offers/{offer}/promotion', [CustomerPromotionController::class, 'update'])->middleware('business.permission:manage_offers')->name('campaign.promotion.update');
     Route::post('advertiser/campaigns/{campaign}/stores', [StoreConnectionController::class, 'store'])->middleware('business.permission:manage_offers')->name('campaign.stores.store');
     Route::put('advertiser/campaigns/{campaign}/stores/{store}', [StoreConnectionController::class, 'update'])->middleware('business.permission:manage_offers')->name('campaign.stores.update');

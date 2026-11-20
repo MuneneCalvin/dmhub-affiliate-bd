@@ -8,5 +8,5 @@
         "esModuleInterop": true,
         "skipLibCheck": true
     },
-    "include": ["playwright*.config.ts", "tests/browser/**/*.ts"]
+    "include": ["playwright*.config.ts", "tests/browser/**/*.ts", "tests/e2e/**/*.ts"]
 }

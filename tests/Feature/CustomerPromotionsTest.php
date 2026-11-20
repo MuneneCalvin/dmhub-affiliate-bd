@@ -69,6 +69,8 @@ it('does not change live versions or store bindings when saving a draft', functi
     $this->put($this->url, ['action' => 'save', 'configuration' => promotionConfig(['value' => '31']), 'store_ids' => []])->assertSessionHasNoErrors();
     $p = CustomerPromotion::sole();
     expect($p->stores()->count())->toBe(1)->and($p->published_version)->toBe(1)->and($p->draft['value'])->toBe('31');
+    $this->get(route('advertiser.campaign.show', ['id' => $this->f['campaign']->id, 'tab' => 'offers']))
+        ->assertInertia(fn (Assert $page) => $page->where('offerWorkspace.offers.0.customer_promotion.latest_published_version.configuration.value', '7.25'));
 });
 
 it('validates percentages, explicit values, selected scope, currency, dates and safe messages', function (array $override, string $error) {
@@ -85,7 +87,7 @@ it('scopes management and store bindings to the owning advertiser', function () 
     $other = conversionFixture('CPS');
     $this->put(route('campaign.promotion.update', $other['offer']), ['action' => 'pause'])->assertNotFound();
     $this->store->update(['advertiser_id' => $other['advertiser']->id]);
-    ($this->publish)()->assertUnprocessable();
+    ($this->publish)()->assertSessionHasErrors('store_ids');
 });
 
 it('requires authenticated store credentials and rejects foreign referrals', function () {
@@ -205,6 +207,47 @@ it('exposes settings to managers without disclosing store credentials', function
         ->assertDontSee('never-show-this');
 });
 
+it('opens the requested campaign offer in the promotion editor and scopes store management', function () {
+    $campaign = $this->f['campaign'];
+    $other = conversionFixture('CPS');
+    ($this->publish)()->assertSessionHasNoErrors();
+    $this->get(route('campaign.promotions.edit', ['campaign' => $campaign, 'offer' => $this->f['offer']->id]))
+        ->assertOk()->assertInertia(fn (Assert $page) => $page->component('advertisercampaigns/offers/promotions')
+        ->where('offer.id', $this->f['offer']->id)->where('offer.customer_promotion.draft.value', '7.25')
+        ->where('stores.0.id', $this->store->id)->missing('stores.0.token_hash'));
+    $this->get(route('campaign.promotions.edit', $campaign))->assertInertia(fn (Assert $page) => $page->where('offer', null));
+    $this->get(route('campaign.promotions.edit', ['campaign' => $campaign, 'offer' => '']))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('offer', null));
+    $this->get(route('campaign.promotions.edit', ['campaign' => $campaign, 'offer' => $other['offer']->id]))->assertNotFound();
+    $this->get(route('campaign.promotions.edit', $other['campaign']))->assertNotFound();
+});
+
+it('uses store setup for discount offers even before publishing and while paused', function () {
+    $f = $this->f;
+    $f['assignment']->update(['commission_type' => 'CPL', 'script_impressions' => 1]);
+    $guide = route('campaign.tracking.offer', [$f['campaign'], $f['offer']]);
+    $this->put($this->url, ['action' => 'save', 'configuration' => promotionConfig(), 'store_ids' => []])->assertSessionHasNoErrors();
+    foreach (['draft', 'active', 'paused'] as $status) {
+        if ($status === 'active') {
+            ($this->publish)()->assertSessionHasNoErrors();
+        } elseif ($status === 'paused') {
+            $this->put($this->url, ['action' => 'pause'])->assertSessionHasNoErrors();
+        }
+        $this->get($guide)->assertInertia(fn (Assert $page) => $page
+            ->where('trackingWorkspace.promotion_status', $status)->where('trackingWorkspace.setup_options', ['promotion'])
+            ->where('trackingWorkspace.embed_script', null)->where('trackingWorkspace.events_url', null));
+    }
+});
+
+it('shows published store connections on the tracking hub and offer guide', function () {
+    ($this->publish)()->assertSessionHasNoErrors();
+    $hub = route('advertiser.campaign.show', ['id' => $this->f['campaign']->id, 'tab' => 'tracking']);
+    $guide = route('campaign.tracking.offer', [$this->f['campaign'], $this->f['offer']]);
+    $this->get($hub)->assertInertia(fn (Assert $page) => $page->where('trackingHub.offers.0.stores.0.id', $this->store->id));
+    $this->store->update(['status' => 'disconnected']);
+    $this->get($guide)->assertInertia(fn (Assert $page) => $page->where('trackingWorkspace.stores.0.status', 'disconnected'));
+});
+
 it('lets a merchant add and activate a WooCommerce store without an opt-in flag', function () {
     $this->post(route('campaign.stores.store', $this->f['campaign']), [
         'name' => 'Merchant shop', 'platform' => 'woocommerce', 'domain' => 'merchant.example',
@@ -247,7 +290,7 @@ it('lets a merchant add and authorize Shopify from their campaign', function () 
     ksort($query);
     $query['hmac'] = hash_hmac('sha256', http_build_query($query, '', '&', PHP_QUERY_RFC3986), 'test-secret');
     $this->get(route('integrations.shopify.callback', $query))
-        ->assertRedirect(route('advertiser.campaign.show', ['id' => $this->f['campaign']->id, 'tab' => 'offers']));
+        ->assertRedirect(route('campaign.promotions.edit', $this->f['campaign']));
     expect($store->fresh()->status)->toBe('connected')->and($store->fresh()->credentials['access_token'])->toBe('merchant-secret');
     $this->get(route('advertiser.campaign.show', ['id' => $this->f['campaign']->id, 'tab' => 'offers']))
         ->assertOk()->assertDontSee('merchant-secret');
@@ -260,7 +303,7 @@ it('reports Shopify setup problems within the campaign and validates the canonic
     config(['promotions.shopify.client_id' => null, 'promotions.shopify.client_secret' => null]);
     $this->store->update(['platform' => 'shopify', 'domain' => 'merchant.myshopify.com']);
     $this->get(route('integrations.shopify.install', ['store' => $this->store, 'campaign' => $this->f['campaign']->id]))
-        ->assertRedirect(route('advertiser.campaign.show', ['id' => $this->f['campaign']->id, 'tab' => 'offers']))
+        ->assertRedirect(route('campaign.promotions.edit', $this->f['campaign']))
         ->assertSessionHas('error', 'Shopify connection is not available yet. Contact your DM Hub administrator.');
 });
 

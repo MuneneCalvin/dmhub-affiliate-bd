@@ -16,10 +16,10 @@
         </script>
         <style>
             html {
-                background-color: #f5f7fb;
+                background-color: #f6f5ff;
             }
             html.dark {
-                background-color: #0e1625;
+                background-color: #0f0c24;
             }
         </style>
         <title inertia>{{ config('app.name', 'Brand New Day') }}</title>
@@ -32,7 +32,7 @@
         <link rel="apple-touch-icon" href="{{ $faviconUrl }}">
 
         <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700" rel="stylesheet" />
+        <link href="https://fonts.bunny.net/css?family=plus-jakarta-sans:400,500,600,700,800|jetbrains-mono:500" rel="stylesheet" />
 
         @viteReactRefresh
         @vite(['resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])

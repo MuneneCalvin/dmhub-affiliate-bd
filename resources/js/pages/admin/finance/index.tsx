@@ -1,8 +1,16 @@
 import { FundingSheet } from '@/components/advertiser-funding-sheet';
+import {
+    DetailList,
+    MutedCell,
+    PageHeader,
+    ResourceDirectory,
+} from '@/components/app';
+import { useFormatMoney } from '@/components/finance';
 import { FormErrors, OptionCards } from '@/components/finance-form-controls';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import {
     Select,
     SelectContent,
@@ -18,17 +26,17 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
+import { StatusBadge } from '@/components/ui/status-badge';
 import { Textarea } from '@/components/ui/textarea';
-import { ReusablePageTitle } from '@/dev/core';
+import { useDirectoryQuery } from '@/hooks/use-directory-query';
 import AppLayout from '@/layouts/app-layout';
+import { useDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import { formatCurrency, formatDate } from '@/utils/utils';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import {
-    ChevronLeft,
-    ChevronRight,
     Info,
     Landmark,
+    Scale,
     Search,
     ShieldAlert,
     ShieldCheck,
@@ -37,7 +45,7 @@ import {
     SlidersHorizontal,
     X,
 } from 'lucide-react';
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
 type FraudAssessment = {
@@ -69,8 +77,8 @@ type Advertiser = { id: number; business_name: string; currency: string };
 type PageProps = {
     earnings: {
         data: Earning[];
-        prev_page_url: string | null;
-        next_page_url: string | null;
+        current_page: number;
+        last_page: number;
         from: number | null;
         to: number | null;
         total: number;
@@ -93,88 +101,43 @@ const STATUSES = [
     'reversed',
 ] as const;
 
-const STATUS_TONE: Record<string, string> = {
-    pending:
-        'bg-amber-50 text-amber-800 ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-400/20',
-    approved:
-        'bg-emerald-50 text-emerald-800 ring-emerald-600/20 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-400/20',
-    locked: 'bg-sky-50 text-sky-800 ring-sky-600/20 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-400/20',
-    payable:
-        'bg-indigo-50 text-indigo-800 ring-indigo-600/20 dark:bg-indigo-500/10 dark:text-indigo-300 dark:ring-indigo-400/20',
-    paid: 'bg-muted text-foreground ring-border',
-    rejected:
-        'bg-rose-50 text-rose-800 ring-rose-600/20 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-400/20',
-    reversed:
-        'bg-rose-50 text-rose-800 ring-rose-600/20 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-400/20',
-};
-
 const DESTRUCTIVE_OPERATIONS = ['reject', 'reversal', 'chargeback'];
-
-function Pill({
-    className,
-    children,
-}: {
-    className?: string;
-    children: ReactNode;
-}) {
-    return (
-        <span
-            className={cn(
-                'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap ring-1 ring-inset',
-                className,
-            )}
-        >
-            {children}
-        </span>
-    );
-}
-
-function StatusPill({ status }: { status: string }) {
-    const { t } = useTranslation();
-    return (
-        <Pill className={STATUS_TONE[status] ?? STATUS_TONE.paid}>
-            <span className="inline-block first-letter:uppercase">
-                {t(status)}
-            </span>
-        </Pill>
-    );
-}
 
 function fraudView(assessment: FraudAssessment | null | undefined) {
     if (!assessment)
         return {
             label: 'Not checked',
             icon: ShieldQuestion,
-            tone: 'text-muted-foreground',
+            tone: 'text-ink-muted',
         };
     if (assessment.applied_at)
         return {
             label: 'Automatically approved',
             icon: ShieldCheck,
-            tone: 'text-emerald-700 dark:text-emerald-400',
+            tone: 'text-success-ink',
         };
     if (assessment.status === 'error')
         return {
             label: 'Check failed',
             icon: ShieldX,
-            tone: 'text-rose-700 dark:text-rose-400',
+            tone: 'text-danger-ink',
         };
     if (['queued', 'running', 'waiting'].includes(assessment.status))
         return {
             label: 'Checks running',
             icon: ShieldQuestion,
-            tone: 'text-amber-700 dark:text-amber-400',
+            tone: 'text-warning-ink',
         };
     if (assessment.recommendation === 'manual_review')
         return {
             label: 'Needs manual review',
             icon: ShieldAlert,
-            tone: 'text-amber-700 dark:text-amber-400',
+            tone: 'text-warning-ink',
         };
     return {
         label: 'Checks passed',
         icon: ShieldCheck,
-        tone: 'text-emerald-700 dark:text-emerald-400',
+        tone: 'text-success-ink',
     };
 }
 
@@ -187,23 +150,21 @@ function FraudLink({ earning }: { earning: Earning }) {
         <Link
             href={`/finance/earnings/${earning.id}/fraud`}
             className={cn(
-                'inline-flex items-center gap-1.5 rounded text-xs font-medium hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
+                'inline-flex min-h-6 items-center gap-1.5 rounded text-xs font-semibold hover:underline',
                 view.tone,
             )}
         >
             <Icon className="size-3.5 shrink-0" aria-hidden />
             {t(view.label)}
             {score !== null && score !== undefined && (
-                <span className="text-muted-foreground tabular-nums">
-                    · {score}
-                </span>
+                <span className="text-ink-muted tabular-nums">· {score}</span>
             )}
         </Link>
     );
 }
 
 const netCommission = (earning: Earning) =>
-    Number(earning.amount) - earning.reversed_minor / 100;
+    Math.round(Number(earning.amount) * 100 - earning.reversed_minor) / 100;
 
 const publisherName = (earning: Earning) => {
     const user = earning.publisher?.user;
@@ -234,6 +195,9 @@ export default function FinanceIndex() {
         filters,
     } = usePage<PageProps>().props;
     const counts = statusCounts as Record<string, number>;
+    const money = useFormatMoney();
+    const date = useDate();
+    const query = useDirectoryQuery();
     const [selected, setSelected] = useState<Earning | null>(null);
     const [fundingOpen, setFundingOpen] = useState(false);
     const [search, setSearch] = useState(filters.search);
@@ -248,86 +212,69 @@ export default function FinanceIndex() {
     };
 
     const hasFilters = !!filters.search || filters.fraud !== 'all';
+    const resetFilters = () => {
+        setSearch('');
+        visit({ search: '', fraud: 'all' });
+    };
 
     return (
         <AppLayout>
             <Head title={t('Financial review')} />
             <div className="workspace-page flex flex-col gap-6">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                    <ReusablePageTitle
-                        title={t('Financial review')}
-                        description={t(
-                            'Review confirmed commissions, record returns, and reconcile funding.',
-                        )}
-                        breadcrumbs={[
-                            { title: t('Finance'), href: '/finance' },
-                        ]}
-                    />
-                    <div className="flex flex-wrap gap-2">
-                        {canManageFraud && (
-                            <Button variant="outline" asChild>
-                                <Link href="/finance/fraud">
-                                    <SlidersHorizontal />
-                                    {t('Manage fraud rules')}
-                                </Link>
-                            </Button>
-                        )}
-                        {canFund && (
-                            <Button onClick={() => setFundingOpen(true)}>
-                                <Landmark />
-                                {t('Record funding')}
-                            </Button>
-                        )}
-                    </div>
-                </div>
+                <PageHeader
+                    title={t('Financial review')}
+                    description={t(
+                        'Review confirmed commissions, record returns, and reconcile funding.',
+                    )}
+                    breadcrumbs={[
+                        { title: t('Finance'), href: '/finance' },
+                        { title: t('Financial review'), href: '/finance' },
+                    ]}
+                    icon={<Scale />}
+                    tone="finance"
+                    actions={
+                        <div className="flex flex-wrap gap-2.5">
+                            {canManageFraud && (
+                                <Button variant="secondary" asChild>
+                                    <Link href="/finance/fraud">
+                                        <SlidersHorizontal />
+                                        {t('Manage fraud rules')}
+                                    </Link>
+                                </Button>
+                            )}
+                            {canFund && (
+                                <Button onClick={() => setFundingOpen(true)}>
+                                    <Landmark />
+                                    {t('Record funding')}
+                                </Button>
+                            )}
+                        </div>
+                    }
+                />
 
-                <section className="overflow-hidden rounded-xl border bg-card">
-                    {/* Status tabs */}
-                    <div
-                        role="tablist"
-                        aria-label={t('Status')}
-                        className="flex gap-1 overflow-x-auto border-b px-2"
-                    >
-                        {STATUSES.map((status) => {
-                            const active = filters.status === status;
-                            const count = counts[status] ?? 0;
-                            return (
-                                <button
-                                    key={status}
-                                    type="button"
-                                    role="tab"
-                                    aria-selected={active}
-                                    onClick={() => visit({ status })}
-                                    className={cn(
-                                        '-mb-px flex shrink-0 items-center gap-2 border-b-2 px-3 py-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
-                                        active
-                                            ? 'border-primary text-foreground'
-                                            : 'border-transparent text-muted-foreground hover:text-foreground',
-                                    )}
-                                >
-                                    <span className="inline-block first-letter:uppercase">
-                                        {t(status)}
-                                    </span>
-                                    <span
-                                        className={cn(
-                                            'min-w-5 rounded-full px-1.5 text-center text-xs tabular-nums',
-                                            active
-                                                ? 'bg-primary text-primary-foreground'
-                                                : 'bg-muted text-muted-foreground',
-                                        )}
-                                    >
-                                        {count}
-                                    </span>
-                                </button>
-                            );
-                        })}
-                    </div>
+                <SegmentedControl
+                    label={t('Commission status')}
+                    variant="filled"
+                    tone="finance"
+                    value={filters.status}
+                    onValueChange={(status) => visit({ status })}
+                    className="self-start border border-border bg-surface"
+                    options={STATUSES.map((status) => ({
+                        value: status,
+                        label: t(
+                            status.charAt(0).toUpperCase() + status.slice(1),
+                        ),
+                        count: counts[status] ?? 0,
+                    }))}
+                />
 
-                    {/* Toolbar */}
-                    <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center">
+                <ResourceDirectory<Earning>
+                    label={t('Commissions')}
+                    searchable={false}
+                    heading={
                         <form
                             role="search"
-                            className="relative flex-1 sm:max-w-sm"
+                            className="flex h-11 w-full max-w-[380px] min-w-0 items-center gap-2.5 rounded-control border border-border-strong bg-surface-muted px-3.5 focus-within:border-brand sm:w-[380px]"
                             onSubmit={(e) => {
                                 e.preventDefault();
                                 visit({ search });
@@ -337,13 +284,14 @@ export default function FinanceIndex() {
                                 {t('Order reference')}
                             </Label>
                             <Search
-                                className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+                                className="size-[18px] shrink-0 text-brand"
                                 aria-hidden
                             />
-                            <Input
+                            <input
                                 id="order-search"
+                                type="search"
                                 maxLength={100}
-                                className="px-9"
+                                className="min-w-0 flex-1 bg-transparent text-sm outline-none [&::-webkit-search-cancel-button]:hidden"
                                 placeholder={t('Search order reference…')}
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
@@ -352,7 +300,7 @@ export default function FinanceIndex() {
                                 <button
                                     type="button"
                                     aria-label={t('Clear search')}
-                                    className="absolute top-1/2 right-2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground"
+                                    className="-mr-2 inline-flex size-9 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-tint"
                                     onClick={() => {
                                         setSearch('');
                                         visit({ search: '' });
@@ -362,248 +310,159 @@ export default function FinanceIndex() {
                                 </button>
                             )}
                         </form>
-                        <Select
-                            value={filters.fraud ?? 'all'}
-                            onValueChange={(fraud) =>
-                                visit({
-                                    fraud,
-                                    status:
-                                        fraud === 'automatic'
-                                            ? 'approved'
-                                            : filters.status,
-                                })
-                            }
-                        >
-                            <SelectTrigger
-                                className="sm:w-60"
-                                aria-label={t('Fraud checks')}
+                    }
+                    toolbar={
+                        <>
+                            <Select
+                                value={filters.fraud ?? 'all'}
+                                onValueChange={(fraud) =>
+                                    visit({
+                                        fraud,
+                                        status:
+                                            fraud === 'automatic'
+                                                ? 'approved'
+                                                : filters.status,
+                                    })
+                                }
                             >
-                                <ShieldCheck className="text-muted-foreground" />
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">
-                                    {t('All assessments')}
-                                </SelectItem>
-                                <SelectItem value="awaiting">
-                                    {t('Awaiting checks or hold')}
-                                </SelectItem>
-                                <SelectItem value="manual_review">
-                                    {t('Needs manual review')}
-                                </SelectItem>
-                                <SelectItem value="automatic">
-                                    {t('Automatically approved')}
-                                </SelectItem>
-                                <SelectItem value="error">
-                                    {t('Check failed')}
-                                </SelectItem>
-                            </SelectContent>
-                        </Select>
-                        {hasFilters && (
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                    setSearch('');
-                                    visit({ search: '', fraud: 'all' });
-                                }}
-                            >
+                                <SelectTrigger
+                                    className="sm:w-60"
+                                    aria-label={t('Fraud checks')}
+                                >
+                                    <ShieldCheck className="text-ink-muted" />
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">
+                                        {t('All assessments')}
+                                    </SelectItem>
+                                    <SelectItem value="awaiting">
+                                        {t('Awaiting checks or hold')}
+                                    </SelectItem>
+                                    <SelectItem value="manual_review">
+                                        {t('Needs manual review')}
+                                    </SelectItem>
+                                    <SelectItem value="automatic">
+                                        {t('Automatically approved')}
+                                    </SelectItem>
+                                    <SelectItem value="error">
+                                        {t('Check failed')}
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                            {hasFilters && (
+                                <Button variant="ghost" onClick={resetFilters}>
+                                    {t('Reset filters')}
+                                </Button>
+                            )}
+                        </>
+                    }
+                    rows={earnings.data}
+                    rowKey={(earning) => earning.id}
+                    nameHeader={t('Order / campaign')}
+                    name={(earning) => earning.conversion?.order_code ?? '—'}
+                    subtitle={(earning) =>
+                        [
+                            earning.publisher_campaign?.campaign?.name,
+                            earning.created_at
+                                ? date(earning.created_at)
+                                : null,
+                        ]
+                            .filter(Boolean)
+                            .join(' · ') || undefined
+                    }
+                    status={(earning) => earning.status}
+                    tone="finance"
+                    columns={[
+                        {
+                            id: 'publisher',
+                            header: t('Publisher'),
+                            cell: (earning) => (
+                                <MutedCell>{publisherName(earning)}</MutedCell>
+                            ),
+                        },
+                        {
+                            id: 'fraud',
+                            header: t('Fraud checks'),
+                            cell: (earning) => <FraudLink earning={earning} />,
+                        },
+                        {
+                            id: 'net',
+                            header: t('Net commission'),
+                            align: 'end',
+                            cell: (earning) =>
+                                earning.currency ? (
+                                    <>
+                                        <strong className="font-extrabold">
+                                            {money(
+                                                netCommission(earning),
+                                                earning.currency,
+                                            )}
+                                        </strong>
+                                        {earning.reversed_minor > 0 && (
+                                            <span className="block text-xs text-ink-muted line-through">
+                                                {money(
+                                                    earning.amount,
+                                                    earning.currency,
+                                                )}
+                                            </span>
+                                        )}
+                                    </>
+                                ) : (
+                                    <span className="text-xs font-semibold text-danger-ink">
+                                        {t('Requires reconciliation')}
+                                    </span>
+                                ),
+                        },
+                        {
+                            id: 'review',
+                            header: (
+                                <span className="sr-only">{t('Review')}</span>
+                            ),
+                            align: 'end',
+                            cell: (earning) => {
+                                const blocked = blockedReason(
+                                    earning,
+                                    canAdjust,
+                                );
+                                return blocked ? (
+                                    <span className="text-xs text-ink-muted">
+                                        {t(blocked)}
+                                    </span>
+                                ) : (
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant={
+                                            earning.status === 'pending'
+                                                ? 'primary'
+                                                : 'secondary'
+                                        }
+                                        onClick={() => setSelected(earning)}
+                                    >
+                                        {earning.status === 'pending'
+                                            ? t('Review')
+                                            : t('Adjust')}
+                                    </Button>
+                                );
+                            },
+                        },
+                    ]}
+                    pagination={query.pagination(earnings)}
+                    emptyTitle={t('No commissions found')}
+                    emptyDescription={t(
+                        'No commissions match this status and order reference.',
+                    )}
+                    emptyAction={
+                        hasFilters && (
+                            <Button variant="secondary" onClick={resetFilters}>
                                 {t('Reset filters')}
                             </Button>
-                        )}
-                    </div>
+                        )
+                    }
+                />
 
-                    {/* Table */}
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead className="bg-muted/40 text-xs text-muted-foreground">
-                                <tr className="text-left">
-                                    <th className="px-4 py-2.5 font-medium">
-                                        {t('Order / campaign')}
-                                    </th>
-                                    <th className="hidden px-4 py-2.5 font-medium md:table-cell">
-                                        {t('Publisher')}
-                                    </th>
-                                    <th className="px-4 py-2.5 font-medium">
-                                        {t('Status')}
-                                    </th>
-                                    <th className="px-4 py-2.5 text-right font-medium">
-                                        {t('Net commission')}
-                                    </th>
-                                    <th className="px-4 py-2.5 text-right font-medium">
-                                        <span className="sr-only">
-                                            {t('Review')}
-                                        </span>
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y">
-                                {earnings.data.map((earning) => {
-                                    const blocked = blockedReason(
-                                        earning,
-                                        canAdjust,
-                                    );
-                                    const net = netCommission(earning);
-                                    return (
-                                        <tr
-                                            key={earning.id}
-                                            className={cn(
-                                                'transition-colors hover:bg-muted/40',
-                                                selected?.id === earning.id &&
-                                                    'bg-muted/60',
-                                            )}
-                                        >
-                                            <td className="max-w-[11rem] px-4 py-3 sm:max-w-xs">
-                                                <p
-                                                    className="truncate font-mono text-[13px]"
-                                                    title={
-                                                        earning.conversion
-                                                            ?.order_code
-                                                    }
-                                                >
-                                                    {earning.conversion
-                                                        ?.order_code ?? '—'}
-                                                </p>
-                                                <p className="truncate text-xs text-muted-foreground">
-                                                    {earning.publisher_campaign
-                                                        ?.campaign?.name ?? '—'}
-                                                    {earning.created_at &&
-                                                        ` · ${formatDate(earning.created_at)}`}
-                                                </p>
-                                            </td>
-                                            <td className="hidden px-4 py-3 whitespace-nowrap md:table-cell">
-                                                {publisherName(earning) ?? (
-                                                    <span className="text-muted-foreground">
-                                                        —
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <div className="flex flex-col items-start gap-1">
-                                                    <StatusPill
-                                                        status={earning.status}
-                                                    />
-                                                    <FraudLink
-                                                        earning={earning}
-                                                    />
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-3 text-right whitespace-nowrap tabular-nums">
-                                                {earning.currency ? (
-                                                    <>
-                                                        <span className="font-medium">
-                                                            {formatCurrency(
-                                                                net,
-                                                                earning.currency,
-                                                            )}
-                                                        </span>
-                                                        {earning.reversed_minor >
-                                                            0 && (
-                                                            <span className="block text-xs text-muted-foreground line-through">
-                                                                {formatCurrency(
-                                                                    earning.amount,
-                                                                    earning.currency,
-                                                                )}
-                                                            </span>
-                                                        )}
-                                                    </>
-                                                ) : (
-                                                    <span className="text-xs text-destructive">
-                                                        {t(
-                                                            'Requires reconciliation',
-                                                        )}
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-3 text-right whitespace-nowrap">
-                                                {blocked ? (
-                                                    <span className="text-xs text-muted-foreground">
-                                                        {t(blocked)}
-                                                    </span>
-                                                ) : (
-                                                    <Button
-                                                        type="button"
-                                                        size="sm"
-                                                        variant={
-                                                            earning.status ===
-                                                            'pending'
-                                                                ? 'default'
-                                                                : 'outline'
-                                                        }
-                                                        onClick={() =>
-                                                            setSelected(earning)
-                                                        }
-                                                    >
-                                                        {earning.status ===
-                                                        'pending'
-                                                            ? t('Review')
-                                                            : t('Adjust')}
-                                                    </Button>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                        {!earnings.data.length && (
-                            <div className="flex flex-col items-center gap-2 px-4 py-14 text-center">
-                                <span className="flex size-10 items-center justify-center rounded-full bg-muted">
-                                    <Search className="size-5 text-muted-foreground" />
-                                </span>
-                                <p className="font-medium">
-                                    {t('No commissions found')}
-                                </p>
-                                <p className="max-w-sm text-sm text-muted-foreground">
-                                    {t(
-                                        'No commissions match this status and order reference.',
-                                    )}
-                                </p>
-                                {hasFilters && (
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="mt-2"
-                                        onClick={() => {
-                                            setSearch('');
-                                            visit({ search: '', fraud: 'all' });
-                                        }}
-                                    >
-                                        {t('Reset filters')}
-                                    </Button>
-                                )}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Pagination */}
-                    {earnings.total > 0 && (
-                        <div className="flex items-center justify-between gap-4 border-t px-4 py-3 text-sm text-muted-foreground">
-                            <span className="tabular-nums">
-                                {t('Showing {{from}}–{{to}} of {{total}}', {
-                                    from: earnings.from,
-                                    to: earnings.to,
-                                    total: earnings.total,
-                                })}
-                            </span>
-                            <div className="flex gap-2">
-                                <PageLink
-                                    href={earnings.prev_page_url}
-                                    label={t('Previous')}
-                                    icon={<ChevronLeft />}
-                                />
-                                <PageLink
-                                    href={earnings.next_page_url}
-                                    label={t('Next')}
-                                    icon={<ChevronRight />}
-                                    iconAfter
-                                />
-                            </div>
-                        </div>
-                    )}
-                </section>
-
-                <p className="flex gap-2 text-sm text-muted-foreground">
+                <p className="flex gap-2 text-sm text-ink-muted">
                     <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
                     {t(
                         'Locked or payable commissions require invoice cancellation before an adjustment. Paid adjustments are recovered from future payouts.',
@@ -627,53 +486,6 @@ export default function FinanceIndex() {
     );
 }
 
-function PageLink({
-    href,
-    label,
-    icon,
-    iconAfter,
-}: {
-    href: string | null;
-    label: string;
-    icon: ReactNode;
-    iconAfter?: boolean;
-}) {
-    if (!href)
-        return (
-            <Button variant="outline" size="sm" disabled>
-                {!iconAfter && icon}
-                {label}
-                {iconAfter && icon}
-            </Button>
-        );
-    return (
-        <Button variant="outline" size="sm" asChild>
-            <Link href={href} preserveScroll>
-                {!iconAfter && icon}
-                {label}
-                {iconAfter && icon}
-            </Link>
-        </Button>
-    );
-}
-
-function DetailRow({
-    label,
-    children,
-}: {
-    label: string;
-    children: ReactNode;
-}) {
-    return (
-        <div className="flex items-start justify-between gap-4 py-2 text-sm">
-            <dt className="text-muted-foreground">{label}</dt>
-            <dd className="min-w-0 text-right font-medium break-all">
-                {children}
-            </dd>
-        </div>
-    );
-}
-
 type Operation = 'approve' | 'reject' | 'refund' | 'reversal' | 'chargeback';
 
 function ReviewSheet({
@@ -686,6 +498,8 @@ function ReviewSheet({
     onClose: () => void;
 }) {
     const { t } = useTranslation();
+    const money = useFormatMoney();
+    const date = useDate();
     const [operation, setOperation] = useState<Operation>('approve');
     const [openedFor, setOpenedFor] = useState<number | null>(null);
     const review = useForm({
@@ -753,7 +567,11 @@ function ReviewSheet({
             <SheetContent className="w-full gap-0 sm:max-w-lg">
                 {earning && (
                     <form onSubmit={submit} className="flex h-full flex-col">
-                        <SheetHeader className="border-b p-5">
+                        <SheetHeader
+                            icon={<Scale />}
+                            tone="finance"
+                            className="p-5"
+                        >
                             <SheetTitle>
                                 {earning.status === 'pending'
                                     ? t('Review commission')
@@ -765,69 +583,78 @@ function ReviewSheet({
                         </SheetHeader>
 
                         <div className="flex-1 space-y-6 overflow-y-auto p-5">
-                            <div className="rounded-lg border bg-muted/30 px-4 py-2">
-                                <div className="flex items-baseline justify-between gap-4 border-b py-3">
-                                    <span className="text-sm text-muted-foreground">
+                            <div className="flex flex-col gap-3 rounded-[14px] border border-border bg-surface-muted p-4">
+                                <div className="flex items-baseline justify-between gap-4 border-b border-border pb-3">
+                                    <span className="text-sm text-ink-muted">
                                         {t('Net commission')}
                                     </span>
-                                    <span className="text-2xl font-semibold tabular-nums">
+                                    <span className="text-2xl font-extrabold tabular-nums">
                                         {earning.currency
-                                            ? formatCurrency(
+                                            ? money(
                                                   netCommission(earning),
                                                   earning.currency,
                                               )
                                             : '—'}
                                     </span>
                                 </div>
-                                <dl className="divide-y">
-                                    <DetailRow label={t('Status')}>
-                                        <StatusPill status={earning.status} />
-                                    </DetailRow>
-                                    <DetailRow label={t('Fraud checks')}>
-                                        <FraudLink earning={earning} />
-                                    </DetailRow>
-                                    <DetailRow label={t('Campaign')}>
-                                        {earning.publisher_campaign?.campaign
-                                            ?.name ?? '—'}
-                                    </DetailRow>
-                                    <DetailRow label={t('Publisher')}>
-                                        {publisherName(earning) ?? '—'}
-                                    </DetailRow>
-                                    {earning.base_value && earning.currency && (
-                                        <DetailRow label={t('Sale amount')}>
-                                            <span className="tabular-nums">
-                                                {formatCurrency(
+                                <DetailList
+                                    labelWidth={140}
+                                    rows={[
+                                        {
+                                            label: t('Status'),
+                                            value: (
+                                                <StatusBadge
+                                                    status={earning.status}
+                                                />
+                                            ),
+                                        },
+                                        {
+                                            label: t('Fraud checks'),
+                                            value: (
+                                                <FraudLink earning={earning} />
+                                            ),
+                                        },
+                                        {
+                                            label: t('Campaign'),
+                                            value: earning.publisher_campaign
+                                                ?.campaign?.name,
+                                        },
+                                        {
+                                            label: t('Publisher'),
+                                            value: publisherName(earning),
+                                        },
+                                        !!earning.base_value &&
+                                            !!earning.currency && {
+                                                label: t('Sale amount'),
+                                                value: money(
                                                     earning.base_value,
                                                     earning.currency,
-                                                )}
-                                            </span>
-                                        </DetailRow>
-                                    )}
-                                    {earning.reversed_minor > 0 &&
-                                        earning.currency && (
-                                            <DetailRow
-                                                label={t('Already adjusted')}
-                                            >
-                                                <span className="text-destructive tabular-nums">
-                                                    −
-                                                    {formatCurrency(
-                                                        earning.reversed_minor /
-                                                            100,
-                                                        earning.currency,
-                                                    )}
-                                                </span>
-                                            </DetailRow>
-                                        )}
-                                    {earning.created_at && (
-                                        <DetailRow label={t('Recorded')}>
-                                            {formatDate(earning.created_at)}
-                                        </DetailRow>
-                                    )}
-                                </dl>
+                                                ),
+                                            },
+                                        earning.reversed_minor > 0 &&
+                                            !!earning.currency && {
+                                                label: t('Already adjusted'),
+                                                value: (
+                                                    <span className="text-danger-ink tabular-nums">
+                                                        −
+                                                        {money(
+                                                            earning.reversed_minor /
+                                                                100,
+                                                            earning.currency,
+                                                        )}
+                                                    </span>
+                                                ),
+                                            },
+                                        !!earning.created_at && {
+                                            label: t('Recorded'),
+                                            value: date(earning.created_at),
+                                        },
+                                    ]}
+                                />
                             </div>
 
                             <fieldset className="space-y-2">
-                                <legend className="mb-2 text-sm font-medium">
+                                <legend className="mb-2 text-sm font-bold">
                                     {t('Decision')}
                                 </legend>
                                 <OptionCards
@@ -864,7 +691,7 @@ function ReviewSheet({
                                             )
                                         }
                                     />
-                                    <p className="text-xs text-muted-foreground">
+                                    <p className="text-xs text-ink-muted">
                                         {t(
                                             'Enter the additional order amount returned. The commission adjustment is calculated proportionally.',
                                         )}
@@ -895,7 +722,7 @@ function ReviewSheet({
                                     <Label htmlFor="review-reason">
                                         {t('Reason and evidence')}
                                     </Label>
-                                    <span className="text-xs text-muted-foreground tabular-nums">
+                                    <span className="text-xs text-ink-muted tabular-nums">
                                         {review.data.reason.length}/500
                                     </span>
                                 </div>
@@ -913,10 +740,10 @@ function ReviewSheet({
                             <FormErrors errors={review.errors} />
                         </div>
 
-                        <SheetFooter className="flex-row justify-end gap-2 border-t p-4">
+                        <SheetFooter className="flex-row justify-end gap-2 p-4">
                             <Button
                                 type="button"
-                                variant="outline"
+                                variant="secondary"
                                 onClick={onClose}
                             >
                                 {t('Cancel')}
@@ -927,7 +754,7 @@ function ReviewSheet({
                                 variant={
                                     DESTRUCTIVE_OPERATIONS.includes(operation)
                                         ? 'destructive'
-                                        : 'default'
+                                        : 'primary'
                                 }
                             >
                                 {review.processing

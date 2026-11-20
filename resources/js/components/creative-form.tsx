@@ -1,47 +1,92 @@
+import { PageHeader, SectionCard } from '@/components/app';
+import {
+    CREATIVE_KIND_META,
+    CreativeDropZone,
+    CreativePreview,
+    IMAGE_UPLOAD,
+    VIDEO_UPLOAD,
+    isImageKind,
+    type CreativeKind,
+} from '@/components/creatives';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { RadioCard, RadioCardGroup } from '@/components/ui/radio-card';
 import { Textarea } from '@/components/ui/textarea';
-import { ReusablePageTitle } from '@/dev/core';
 import { useFilePreview } from '@/hooks/use-file-preview';
 import AppLayout from '@/layouts/app-layout';
 import advertiser from '@/routes/advertiser';
-import { CREATIVE_TYPES } from '@/utils/enums';
-import { Head, router, useForm, usePage } from '@inertiajs/react';
-import { ArrowLeft, ArrowRight, Check, Loader2, Upload } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import {
+    Code2,
+    Eye,
+    FileText,
+    Film,
+    Image,
+    ImagePlus,
+    Link2,
+    Loader2,
+    Mail,
+    Save,
+} from 'lucide-react';
+import { type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 type CreativeData = {
     campaign_id: string;
     offer_id: string;
     name: string;
-    type: string;
+    type: CreativeKind;
     asset: File | null;
     preview_image: File | null;
     width: string;
     height: string;
     html_code: string;
     alt_text: string;
+    return_to: string;
 };
-type ExistingCreative = Omit<CreativeData, 'asset' | 'preview_image'> & {
+type ExistingCreative = {
     id: number;
+    name: string;
+    type: string;
+    width: string | number | null;
+    height: string | number | null;
+    html_code: string | null;
+    alt_text: string | null;
     file_url: string;
     preview_url: string | null;
 };
 type CampaignOption = { id: number; name: string };
 type OfferOption = CampaignOption & { campaign_id: number };
-const basics: (keyof CreativeData)[] = [
-    'campaign_id',
-    'offer_id',
+type Field = keyof CreativeData;
+
+const FORMAT_ICONS: Record<CreativeKind, ReactNode> = {
+    banner: <Image className="text-admin" />,
+    text: <Link2 className="text-analytics" />,
+    html: <Code2 className="text-brand" />,
+    email: <Mail className="text-finance" />,
+    video: <Film className="text-partners" />,
+};
+const FORMAT_HINTS: Record<CreativeKind, string> = {
+    banner: 'Image banner for websites',
+    text: 'A tracked text link',
+    html: 'Your own HTML snippet',
+    email: 'Image for newsletters',
+    video: 'MP4 or WebM video',
+};
+/** Order of the fields on the page, used to focus the first error. */
+const FIELD_ORDER: Field[] = [
     'name',
     'type',
+    'asset',
+    'width',
+    'height',
+    'html_code',
+    'alt_text',
+    'preview_image',
 ];
-const selectClass =
-    'h-11 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60';
 
-function Field({
+function FormField({
     id,
     label,
     hint,
@@ -55,16 +100,11 @@ function Field({
     children: ReactNode;
 }) {
     return (
-        <div className="space-y-2">
-            <Label htmlFor={id} className="text-sm">
-                {label}
-            </Label>
+        <div className="grid gap-2">
+            <Label htmlFor={id}>{label}</Label>
             {children}
             {hint && (
-                <p
-                    id={`${id}-hint`}
-                    className="text-sm leading-relaxed text-muted-foreground"
-                >
+                <p id={`${id}-hint`} className="text-[13px] text-ink-muted">
                     {hint}
                 </p>
             )}
@@ -72,7 +112,7 @@ function Field({
                 <p
                     id={`${id}-error`}
                     role="alert"
-                    className="text-sm text-destructive"
+                    className="text-sm font-medium text-danger-ink"
                 >
                     {error}
                 </p>
@@ -81,15 +121,17 @@ function Field({
     );
 }
 
+/** Create / edit form for one promotional material (creative). */
 export default function CreativeForm() {
     const { t } = useTranslation();
-    const { campaigns, offers, creative, offer } = usePage<{
+    const { creative, offer, returnTo } = usePage<{
         campaigns: CampaignOption[];
         offers: OfferOption[];
         creative?: ExistingCreative;
-        offer: OfferOption;
+        offer: OfferOption & { campaign?: { name: string } | null };
+        returnTo?: 'library' | null;
     }>().props;
-    const [step, setStep] = useState(0);
+    const fromLibrary = returnTo === 'library';
     const form = useForm<CreativeData>({
         campaign_id: String(offer.campaign_id),
         offer_id: String(offer.id),
@@ -97,710 +139,446 @@ export default function CreativeForm() {
         type:
             creative?.type === 'image'
                 ? 'banner'
-                : (creative?.type ?? 'banner'),
+                : ((creative?.type as CreativeKind) ?? 'banner'),
         asset: null,
         preview_image: null,
-        width: String(creative?.width ?? ''),
-        height: String(creative?.height ?? ''),
+        width: creative?.width ? String(creative.width) : '',
+        height: creative?.height ? String(creative.height) : '',
         html_code: creative?.html_code ?? '',
         alt_text: creative?.alt_text ?? '',
+        return_to: fromLibrary ? 'library' : '',
     });
     const { data, setData, errors, processing } = form;
-    const isImage = ['banner', 'image', 'email'].includes(data.type);
+    const isImage = isImageKind(data.type);
     const isVideo = data.type === 'video';
     const sameAssetType =
         creative &&
         (creative.type === data.type ||
-            (isImage && ['image', 'banner', 'email'].includes(creative.type)));
+            (isImage && isImageKind(creative.type)));
     const existingAsset = sameAssetType ? creative.file_url : '';
     const assetPreview = useFilePreview(data.asset);
     const posterPreview = useFilePreview(data.preview_image);
     const assetUrl = assetPreview || existingAsset;
-    const previewUrl =
+    const posterUrl =
         posterPreview || (sameAssetType ? creative.preview_url : '') || '';
-    const availableOffers = offers.filter(
-        (offer) => String(offer.campaign_id) === data.campaign_id,
-    );
-    const steps = [
-        {
-            title: t('Name & format'),
-            description: t(
-                'Name this promotional material and choose its format.',
-            ),
-        },
-        {
-            title: t('Material content'),
-            description: t(
-                'Upload your artwork or add the content for this format.',
-            ),
-        },
-        {
-            title: t('Review & save'),
-            description: t(
-                'Check the material before generating its tracking code.',
-            ),
-        },
-    ];
-    const title = creative
-        ? t('Edit promotional material')
-        : t('Add promotional material');
-    const offerUrl = advertiser.offers.show.url(offer.id) + '?tab=materials';
-    const fieldProps = (field: keyof CreativeData) => ({
-        id: field,
-        'aria-invalid': !!errors[field],
-        'aria-describedby': `${field}-hint${errors[field] ? ` ${field}-error` : ''}`,
-    });
+    const rules = isVideo ? VIDEO_UPLOAD : IMAGE_UPLOAD;
 
-    function validate(stage: number) {
-        const found: Partial<Record<keyof CreativeData, string>> = {};
-        if (stage === 0) {
-            if (!data.campaign_id) found.campaign_id = t('Select a campaign.');
-            if (
-                !availableOffers.some(
-                    (offer) => String(offer.id) === data.offer_id,
-                )
-            )
-                found.offer_id = t('Select an offer from this campaign.');
-            if (!data.name.trim()) found.name = t('Enter a material name.');
-            if (data.name.length > 100)
-                found.name = t('Use 100 characters or fewer.');
-        } else {
-            if ((isImage || isVideo) && !assetUrl)
-                found.asset = t('Upload a promotional material file.');
-            if (data.asset && (!data.width || !data.height))
-                found.asset = t(
-                    'The media could not be read. Choose a valid file.',
-                );
-            if (data.type === 'html' && !data.html_code.trim())
-                found.html_code = t('Enter the HTML content.');
-            if (data.type === 'text' && !data.alt_text.trim())
-                found.alt_text = t('Enter the link text.');
-            if (data.alt_text.length > 255)
-                found.alt_text = t('Use 255 characters or fewer.');
-            if (errors.asset) found.asset = errors.asset;
-            if (errors.preview_image)
-                found.preview_image = errors.preview_image;
-        }
-        form.clearErrors(
-            ...(stage === 0
-                ? basics
-                : ([
-                      'asset',
-                      'preview_image',
-                      'html_code',
-                      'alt_text',
-                      'width',
-                      'height',
-                  ] as (keyof CreativeData)[])),
-        );
+    const title = creative ? t('Edit creative') : t('New creative');
+    const offerUrl = `${advertiser.offers.show.url(offer.id)}?tab=materials`;
+    const cancelUrl = fromLibrary
+        ? creative
+            ? advertiser.creatives.show.url(creative.id)
+            : advertiser.creatives.index.url()
+        : offerUrl;
+    const describedBy = (field: Field, hint = true) =>
+        [hint && `${field}-hint`, errors[field] && `${field}-error`]
+            .filter(Boolean)
+            .join(' ') || undefined;
+    const mediaError = t('The media could not be read. Choose a valid file.');
+
+    const changeType = (type: CreativeKind) => {
+        setData((current) => ({
+            ...current,
+            type,
+            asset: null,
+            preview_image: null,
+            width: '',
+            height: '',
+            html_code: type === 'html' ? current.html_code : '',
+            alt_text: current.alt_text,
+        }));
+        form.clearErrors();
+    };
+    const chooseAsset = (file: File) => {
+        form.clearErrors('asset');
+        setData((current) => ({
+            ...current,
+            asset: file,
+            width: '',
+            height: '',
+        }));
+    };
+    const mediaLoaded = (width: number, height: number) => {
+        if (!data.asset) return;
+        form.clearErrors('asset');
+        setData((current) => ({
+            ...current,
+            width: String(width),
+            height: String(height),
+        }));
+    };
+
+    function validate() {
+        const found: Partial<Record<Field, string>> = {};
+        if (!data.name.trim()) found.name = t('Enter a material name.');
+        if (data.name.length > 100)
+            found.name = t('Use 100 characters or fewer.');
+        if ((isImage || isVideo) && !assetUrl)
+            found.asset = t('Upload a promotional material file.');
+        if (data.asset && (!data.width || !data.height))
+            found.asset = mediaError;
+        if (data.type === 'html' && !data.html_code.trim())
+            found.html_code = t('Enter the HTML content.');
+        if (data.type === 'text' && !data.alt_text.trim())
+            found.alt_text = t('Enter the link text.');
+        if (data.alt_text.length > 255)
+            found.alt_text = t('Use 255 characters or fewer.');
+        form.clearErrors();
         Object.entries(found).forEach(([key, value]) =>
-            form.setError(key as keyof CreativeData, value),
+            form.setError(key as Field, value),
         );
-        return Object.keys(found).length === 0;
+        return found;
     }
-    function navigate(next: number) {
-        if (processing) return;
-        if (next > step) {
-            for (let stage = 0; stage < next; stage++) {
-                if (!validate(stage)) {
-                    setStep(stage);
-                    return;
-                }
-            }
-        }
-        setStep(next);
-    }
-    function selectFile(file: File | null, preview = false) {
-        const key = preview ? 'preview_image' : 'asset';
-        form.clearErrors(key);
-        if (!preview)
-            setData((current) => ({
-                ...current,
-                asset: null,
-                width: '',
-                height: '',
-            }));
-        else setData(key, null);
-        if (!file) return;
-        const video = isVideo && !preview;
-        const types = video
-            ? ['video/mp4', 'video/webm']
-            : ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-        if (
-            !types.includes(file.type) ||
-            file.size > (video ? 50 : 10) * 1024 * 1024
-        ) {
-            form.setError(
-                key,
-                video
-                    ? t('Choose an MP4 or WebM file up to 50 MB.')
-                    : t('Choose a JPG, PNG, GIF or WebP image up to 10 MB.'),
+    const focusFirstError = (keys: string[]) => {
+        const first = FIELD_ORDER.find((field) => keys.includes(field));
+        if (first)
+            window.requestAnimationFrame(() =>
+                document.getElementById(first)?.focus(),
             );
-            return;
-        }
-        setData(key, file);
-    }
+    };
+
     const preview = (
-        <div className="flex min-h-40 items-center justify-center overflow-hidden rounded-lg bg-muted/50 p-4">
-            {isVideo && assetUrl ? (
-                <video
-                    key={assetUrl}
-                    src={assetUrl}
-                    poster={previewUrl || undefined}
-                    controls
-                    preload="metadata"
-                    className="max-h-64 w-full"
-                    onLoadedMetadata={(event) => {
-                        const { videoWidth, videoHeight } = event.currentTarget;
-                        if (data.asset) form.clearErrors('asset');
-                        if (data.asset)
-                            setData((current) => ({
-                                ...current,
-                                width: String(videoWidth),
-                                height: String(videoHeight),
-                            }));
-                    }}
-                    onError={() => {
-                        if (data.asset)
-                            form.setError(
-                                'asset',
-                                t(
-                                    'The media could not be read. Choose a valid file.',
-                                ),
-                            );
-                    }}
-                />
-            ) : (isImage || data.type === 'html') && assetUrl ? (
-                <img
-                    src={assetUrl}
-                    alt={data.alt_text || data.name || t('Material preview')}
-                    className="max-h-64 max-w-full object-contain"
-                    onLoad={(event) => {
-                        const { naturalWidth, naturalHeight } =
-                            event.currentTarget;
-                        if (data.asset) form.clearErrors('asset');
-                        if (data.asset)
-                            setData((current) => ({
-                                ...current,
-                                width: String(naturalWidth),
-                                height: String(naturalHeight),
-                            }));
-                    }}
-                    onError={() => {
-                        if (data.asset)
-                            form.setError(
-                                'asset',
-                                t(
-                                    'The media could not be read. Choose a valid file.',
-                                ),
-                            );
-                    }}
-                />
-            ) : data.type === 'text' ? (
-                <span className="text-primary underline">
-                    {data.alt_text || t('Your link text will appear here.')}
-                </span>
-            ) : (
-                <p className="text-center text-sm text-muted-foreground">
-                    {data.type === 'html'
-                        ? t(
-                              'Custom HTML is saved as source code and is not executed in this preview.',
-                          )
-                        : t('Your uploaded material will appear here.')}
-                </p>
-            )}
-        </div>
+        <CreativePreview
+            size="panel"
+            type={data.type}
+            name={data.name}
+            imageUrl={isVideo ? posterUrl : assetUrl || posterUrl}
+            videoUrl={isVideo ? assetUrl : undefined}
+            altText={data.alt_text}
+            badge={
+                data.width && data.height
+                    ? `${data.width}×${data.height}`
+                    : undefined
+            }
+            onMediaLoad={mediaLoaded}
+            onMediaError={() => {
+                if (data.asset) form.setError('asset', mediaError);
+            }}
+        />
     );
 
     return (
         <AppLayout>
             <Head title={title} />
-            <div className="workspace-page flex flex-1 flex-col gap-6">
-                <ReusablePageTitle
+            <div className="workspace-page flex flex-col gap-6">
+                <PageHeader
                     title={title}
                     description={t(
                         'Prepare campaign content. DM Hub takes care of the tracking.',
                     )}
-                    breadcrumbs={[
-                        {
-                            title: offer.name,
-                            href: advertiser.offers.show.url(offer.id),
-                        },
-                        {
-                            title: t('Promotional materials'),
-                            href: offerUrl,
-                        },
-                        { title, href: '' },
-                    ]}
+                    breadcrumbs={
+                        fromLibrary
+                            ? [
+                                  {
+                                      title: t('Creatives'),
+                                      href: advertiser.creatives.index.url(),
+                                  },
+                                  { title, href: '' },
+                              ]
+                            : [
+                                  {
+                                      title: offer.name,
+                                      href: advertiser.offers.show.url(
+                                          offer.id,
+                                      ),
+                                  },
+                                  {
+                                      title: t('Promotional materials'),
+                                      href: offerUrl,
+                                  },
+                                  { title, href: '' },
+                              ]
+                    }
+                    icon={creative ? <Image /> : <ImagePlus />}
+                    tone="admin"
                 />
                 <form
                     noValidate
                     onSubmit={(event) => {
                         event.preventDefault();
-                        if (step < 2) {
-                            navigate(step + 1);
+                        const found = validate();
+                        if (Object.keys(found).length) {
+                            focusFirstError(Object.keys(found));
                             return;
                         }
-                        for (let stage = 0; stage < 2; stage++)
-                            if (!validate(stage)) {
-                                setStep(stage);
-                                return;
-                            }
                         form.post(
                             creative
-                                ? `/advertiser/creatives/update/${creative.id}`
+                                ? advertiser.creatives.update.url(creative.id)
                                 : advertiser.creatives.store.url(),
                             {
                                 forceFormData: true,
                                 preserveScroll: true,
                                 onError: (serverErrors) =>
-                                    setStep(
-                                        Object.keys(serverErrors).some((key) =>
-                                            basics.includes(
-                                                key as keyof CreativeData,
-                                            ),
-                                        )
-                                            ? 0
-                                            : 1,
-                                    ),
+                                    focusFirstError(Object.keys(serverErrors)),
                             },
                         );
                     }}
-                    className="@container mx-auto w-full max-w-5xl overflow-hidden rounded-xl border bg-card"
+                    className="grid items-start gap-[18px] lg:grid-cols-[minmax(0,1.4fr)_minmax(320px,1fr)]"
                 >
-                    <Tabs
-                        value={String(step)}
-                        onValueChange={(value) => navigate(Number(value))}
-                        activationMode="manual"
-                        className="gap-0"
-                    >
-                        <TabsList
-                            aria-label={t('Promotional material setup steps')}
-                            className="grid h-auto w-full grid-cols-3 gap-1 rounded-none border-b bg-muted/30 p-2 sm:p-3"
+                    <div className="flex min-w-0 flex-col gap-[18px]">
+                        <SectionCard
+                            title={t('Details')}
+                            description={t(
+                                'Name this promotional material and choose its format.',
+                            )}
+                            icon={<FileText />}
+                            tone="brand"
+                            bodyClassName="grid gap-5"
                         >
-                            {steps.map((item, index) => (
-                                <TabsTrigger
-                                    key={item.title}
-                                    value={String(index)}
-                                    disabled={processing}
-                                    className="h-auto min-h-16 flex-col justify-start gap-1 px-2 py-3 text-center whitespace-normal data-[state=active]:shadow-none @min-[640px]:flex-row @min-[640px]:justify-center @min-[640px]:gap-3 @min-[640px]:text-left"
-                                >
-                                    <span
-                                        className="flex size-6 shrink-0 items-center justify-center rounded-full border text-xs"
-                                        aria-hidden="true"
-                                    >
-                                        {step > index ? (
-                                            <Check className="size-3.5" />
-                                        ) : (
-                                            index + 1
-                                        )}
+                            <div className="rounded-[14px] bg-surface-muted px-4 py-3 text-sm">
+                                <span className="text-ink-muted">
+                                    {t('Offer')}:{' '}
+                                </span>
+                                <span className="font-bold">{offer.name}</span>
+                                {offer.campaign?.name && (
+                                    <span className="text-ink-muted">
+                                        {' '}
+                                        · {offer.campaign.name}
                                     </span>
-                                    <span className="text-xs leading-snug sm:text-sm">
-                                        {item.title}
-                                    </span>
-                                </TabsTrigger>
-                            ))}
-                        </TabsList>
-                        {steps.map((item, index) => (
-                            <TabsContent
-                                key={item.title}
-                                value={String(index)}
-                                className="space-y-6 p-5 sm:p-8"
+                                )}
+                            </div>
+                            <FormField
+                                id="name"
+                                label={t('Material name')}
+                                error={errors.name}
                             >
-                                <div className="space-y-1">
-                                    <h2 className="text-lg font-semibold">
-                                        {item.title}
-                                    </h2>
-                                    <p className="text-sm leading-relaxed text-muted-foreground">
-                                        {item.description}
+                                <Input
+                                    id="name"
+                                    value={data.name}
+                                    maxLength={100}
+                                    aria-invalid={Boolean(errors.name)}
+                                    aria-describedby={describedBy(
+                                        'name',
+                                        false,
+                                    )}
+                                    onChange={(e) =>
+                                        setData('name', e.target.value)
+                                    }
+                                    placeholder={t(
+                                        'e.g. Summer campaign banner',
+                                    )}
+                                />
+                            </FormField>
+                            <fieldset className="grid gap-2">
+                                <legend className="mb-2 text-[13px] font-bold">
+                                    {t('Format')}
+                                </legend>
+                                <RadioCardGroup
+                                    id="type"
+                                    name="type"
+                                    value={data.type}
+                                    onValueChange={(value) =>
+                                        changeType(value as CreativeKind)
+                                    }
+                                    disabled={processing}
+                                    className="sm:grid-cols-2 xl:grid-cols-3"
+                                >
+                                    {(
+                                        Object.keys(
+                                            CREATIVE_KIND_META,
+                                        ) as CreativeKind[]
+                                    ).map((kind) => (
+                                        <RadioCard
+                                            key={kind}
+                                            value={kind}
+                                            title={t(
+                                                CREATIVE_KIND_META[kind].label,
+                                            )}
+                                            hint={t(FORMAT_HINTS[kind])}
+                                            icon={FORMAT_ICONS[kind]}
+                                            tone={CREATIVE_KIND_META[kind].tone}
+                                        />
+                                    ))}
+                                </RadioCardGroup>
+                                {errors.type && (
+                                    <p
+                                        role="alert"
+                                        className="text-sm font-medium text-danger-ink"
+                                    >
+                                        {errors.type}
+                                    </p>
+                                )}
+                            </fieldset>
+                        </SectionCard>
+
+                        <SectionCard
+                            title={t('Content')}
+                            description={t(
+                                'Upload your artwork or add the content for this format.',
+                            )}
+                            icon={FORMAT_ICONS[data.type]}
+                            tone={CREATIVE_KIND_META[data.type].tone}
+                            bodyClassName="grid gap-5"
+                        >
+                            {data.type !== 'text' && (
+                                <div className="grid gap-2">
+                                    <Label htmlFor="asset">
+                                        {data.type === 'html'
+                                            ? t('Supporting image (optional)')
+                                            : isVideo
+                                              ? t('Video file')
+                                              : t('Material image')}
+                                    </Label>
+                                    <CreativeDropZone
+                                        key={data.type}
+                                        id="asset"
+                                        layout="field"
+                                        rules={rules}
+                                        title={
+                                            data.asset || existingAsset
+                                                ? t('Drop a file to replace it')
+                                                : t('Drop a file to upload')
+                                        }
+                                        fileName={
+                                            data.asset?.name ??
+                                            (existingAsset
+                                                ? t(
+                                                      'The existing file is kept unless you upload a replacement.',
+                                                  )
+                                                : null)
+                                        }
+                                        error={
+                                            errors.asset ||
+                                            errors.width ||
+                                            errors.height
+                                        }
+                                        disabled={processing}
+                                        onFile={chooseAsset}
+                                    />
+                                    <p className="text-[13px] text-ink-muted">
+                                        {t(
+                                            'Dimensions are detected automatically.',
+                                        )}
                                     </p>
                                 </div>
-                                {index === 0 && (
-                                    <div className="grid gap-6 @min-[640px]:grid-cols-2">
-                                        <div className="rounded-lg bg-muted/40 p-4 text-sm @min-[640px]:col-span-2">
-                                            <span className="text-muted-foreground">
-                                                {t('Offer')}:{' '}
-                                            </span>
-                                            <span className="font-medium">
-                                                {offer.name}
-                                            </span>
-                                        </div>
-                                        <Field
-                                            id="name"
-                                            label={t('Material name')}
-                                            error={errors.name}
-                                        >
-                                            <Input
-                                                {...fieldProps('name')}
-                                                className="h-11"
-                                                value={data.name}
-                                                maxLength={100}
-                                                onChange={(e) =>
-                                                    setData(
-                                                        'name',
-                                                        e.target.value,
-                                                    )
-                                                }
-                                                placeholder={t(
-                                                    'e.g. Summer campaign banner',
-                                                )}
-                                            />
-                                        </Field>
-                                        <Field
-                                            id="type"
-                                            label={t('Format')}
-                                            error={errors.type}
-                                        >
-                                            <select
-                                                {...fieldProps('type')}
-                                                className={selectClass}
-                                                value={data.type}
-                                                onChange={(e) => {
-                                                    const type = e.target.value;
-                                                    setData((current) => ({
-                                                        ...current,
-                                                        type,
-                                                        asset: null,
-                                                        preview_image: null,
-                                                        width: '',
-                                                        height: '',
-                                                        html_code: '',
-                                                        alt_text: '',
-                                                    }));
-                                                    form.clearErrors();
-                                                }}
-                                            >
-                                                {CREATIVE_TYPES.map((type) => (
-                                                    <option
-                                                        key={type.value}
-                                                        value={type.value}
-                                                    >
-                                                        {t(type.label)}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </Field>
-                                    </div>
-                                )}
-                                {index === 1 && (
-                                    <div className="grid items-start gap-8 @min-[720px]:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
-                                        <div className="min-w-0 space-y-6">
-                                            {data.type !== 'text' && (
-                                                <Field
-                                                    id="asset"
-                                                    label={
-                                                        data.type === 'html'
-                                                            ? t(
-                                                                  'Supporting image (optional)',
-                                                              )
-                                                            : isVideo
-                                                              ? t('Video file')
-                                                              : t(
-                                                                    'Material image',
-                                                                )
-                                                    }
-                                                    error={
-                                                        errors.asset ||
-                                                        errors.width ||
-                                                        errors.height
-                                                    }
-                                                    hint={
-                                                        isVideo
-                                                            ? t(
-                                                                  'MP4 or WebM, up to 50 MB. Dimensions are detected automatically.',
-                                                              )
-                                                            : t(
-                                                                  'JPG, PNG, GIF or WebP, up to 10 MB. Dimensions are detected automatically.',
-                                                              )
-                                                    }
-                                                >
-                                                    <div className="space-y-3 rounded-lg border border-dashed p-4">
-                                                        <Upload
-                                                            className="size-5 text-muted-foreground"
-                                                            aria-hidden="true"
-                                                        />
-                                                        <Input
-                                                            {...fieldProps(
-                                                                'asset',
-                                                            )}
-                                                            key={data.type}
-                                                            type="file"
-                                                            accept={
-                                                                isVideo
-                                                                    ? 'video/mp4,video/webm'
-                                                                    : 'image/jpeg,image/png,image/gif,image/webp'
-                                                            }
-                                                            className="h-auto min-h-11 py-2"
-                                                            onChange={(e) =>
-                                                                selectFile(
-                                                                    e.target
-                                                                        .files?.[0] ??
-                                                                        null,
-                                                                )
-                                                            }
-                                                        />
-                                                        {existingAsset && (
-                                                            <p className="text-sm text-muted-foreground">
-                                                                {t(
-                                                                    'The existing file is kept unless you upload a replacement.',
-                                                                )}
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                </Field>
-                                            )}
-                                            {data.type === 'html' && (
-                                                <Field
-                                                    id="html_code"
-                                                    label={t('HTML content')}
-                                                    error={errors.html_code}
-                                                    hint={t(
-                                                        'Use {{click_url}} for the tracked link and {{file_url}} for an optional supporting image.',
-                                                        {
-                                                            click_url:
-                                                                '{{click_url}}',
-                                                            file_url:
-                                                                '{{file_url}}',
-                                                        },
-                                                    )}
-                                                >
-                                                    <Textarea
-                                                        {...fieldProps(
-                                                            'html_code',
-                                                        )}
-                                                        value={data.html_code}
-                                                        rows={7}
-                                                        onChange={(e) =>
-                                                            setData(
-                                                                'html_code',
-                                                                e.target.value,
-                                                            )
-                                                        }
-                                                    />
-                                                </Field>
-                                            )}
-                                            <Field
-                                                id="alt_text"
-                                                label={
-                                                    data.type === 'text'
-                                                        ? t('Link text')
-                                                        : t(
-                                                              'Alternative text (optional)',
-                                                          )
-                                                }
-                                                error={errors.alt_text}
-                                                hint={
-                                                    data.type === 'text'
-                                                        ? t(
-                                                              'The visible text for the generated tracking link.',
-                                                          )
-                                                        : t(
-                                                              'Describe the creative for people using a screen reader.',
-                                                          )
-                                                }
-                                            >
-                                                <Textarea
-                                                    {...fieldProps('alt_text')}
-                                                    value={data.alt_text}
-                                                    maxLength={255}
-                                                    rows={3}
-                                                    onChange={(e) =>
-                                                        setData(
-                                                            'alt_text',
-                                                            e.target.value,
-                                                        )
-                                                    }
-                                                />
-                                            </Field>
-                                            {(isVideo ||
-                                                data.type === 'html') && (
-                                                <Field
-                                                    id="preview_image"
-                                                    label={t(
-                                                        'Preview image (optional)',
-                                                    )}
-                                                    error={errors.preview_image}
-                                                    hint={t(
-                                                        'JPG, PNG, GIF or WebP, up to 10 MB.',
-                                                    )}
-                                                >
-                                                    <Input
-                                                        {...fieldProps(
-                                                            'preview_image',
-                                                        )}
-                                                        type="file"
-                                                        className="h-auto min-h-11 py-2"
-                                                        accept="image/jpeg,image/png,image/gif,image/webp"
-                                                        onChange={(e) =>
-                                                            selectFile(
-                                                                e.target
-                                                                    .files?.[0] ??
-                                                                    null,
-                                                                true,
-                                                            )
-                                                        }
-                                                    />
-                                                </Field>
-                                            )}
-                                        </div>
-                                        <aside className="min-w-0 space-y-4">
-                                            <h3 className="text-sm font-medium">
-                                                {t('Material preview')}
-                                            </h3>
-                                            {preview}
-                                            {data.width && data.height && (
-                                                <p className="text-sm text-muted-foreground tabular-nums">
-                                                    {t('Detected dimensions')}:{' '}
-                                                    {data.width} × {data.height}{' '}
-                                                    px
-                                                </p>
-                                            )}
-                                            {previewUrl && !isImage && (
-                                                <img
-                                                    src={previewUrl}
-                                                    alt={t('Preview image')}
-                                                    className="max-h-32 rounded-lg object-contain"
-                                                />
-                                            )}
-                                            <p className="text-sm leading-relaxed text-muted-foreground">
-                                                {t(
-                                                    'Asset URLs are created from your uploads. Tracking links and embed code are generated when you save.',
-                                                )}
-                                            </p>
-                                        </aside>
-                                    </div>
-                                )}
-                                {index === 2 && (
-                                    <div className="grid items-start gap-8 @min-[720px]:grid-cols-2">
-                                        <div className="space-y-6">
-                                            <dl className="space-y-4 text-sm">
-                                                {[
-                                                    [
-                                                        t('Material name'),
-                                                        data.name,
-                                                    ],
-                                                    [
-                                                        t('Campaign'),
-                                                        campaigns.find(
-                                                            (c) =>
-                                                                String(c.id) ===
-                                                                data.campaign_id,
-                                                        )?.name,
-                                                    ],
-                                                    [
-                                                        t('Offer'),
-                                                        availableOffers.find(
-                                                            (o) =>
-                                                                String(o.id) ===
-                                                                data.offer_id,
-                                                        )?.name,
-                                                    ],
-                                                    [
-                                                        t('Format'),
-                                                        t(
-                                                            CREATIVE_TYPES.find(
-                                                                (c) =>
-                                                                    c.value ===
-                                                                    data.type,
-                                                            )?.label ??
-                                                                data.type,
-                                                        ),
-                                                    ],
-                                                    [
-                                                        t('Creative file'),
-                                                        data.type === 'text'
-                                                            ? t(
-                                                                  'No file needed',
-                                                              )
-                                                            : data.asset
-                                                                  ?.name ||
-                                                              (existingAsset
-                                                                  ? t(
-                                                                        'Existing file',
-                                                                    )
-                                                                  : t(
-                                                                        'No file needed',
-                                                                    )),
-                                                    ],
-                                                ].map(([label, value]) => (
-                                                    <div
-                                                        key={label}
-                                                        className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] gap-4"
-                                                    >
-                                                        <dt className="text-muted-foreground">
-                                                            {label}
-                                                        </dt>
-                                                        <dd className="min-w-0 font-medium break-words">
-                                                            {value}
-                                                        </dd>
-                                                    </div>
-                                                ))}
-                                            </dl>
-                                            <div className="space-y-2 rounded-lg bg-muted/50 p-4">
-                                                <h3 className="text-sm font-medium">
-                                                    {t(
-                                                        'Generated automatically',
-                                                    )}
-                                                </h3>
-                                                <p className="text-sm leading-relaxed text-muted-foreground">
-                                                    {t(
-                                                        'DM Hub generates the asset URL, tracking code, tracking link, embed code and impression pixel. They are available on the creative details page after saving.',
-                                                    )}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="min-w-0 space-y-4">
-                                            {preview}
-                                            {data.type === 'html' && (
-                                                <pre className="max-h-48 overflow-auto rounded-lg bg-muted/50 p-4 text-xs break-all whitespace-pre-wrap">
-                                                    {data.html_code}
-                                                </pre>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-                            </TabsContent>
-                        ))}
-                    </Tabs>
-                    {form.progress && (
-                        <p role="status" className="px-5 pb-4 text-sm sm:px-8">
-                            {t('Uploading')}: {form.progress.percentage}%
-                        </p>
-                    )}
-                    <div className="flex flex-wrap items-center justify-between gap-3 border-t bg-muted/20 px-5 py-4 sm:px-8">
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            disabled={processing}
-                            onClick={() => router.visit(offerUrl)}
-                        >
-                            {t('Cancel')}
-                        </Button>
-                        <div className="flex gap-3">
-                            {step > 0 && (
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    disabled={processing}
-                                    onClick={() => navigate(step - 1)}
-                                >
-                                    <ArrowLeft className="size-4" />
-                                    {t('Back')}
-                                </Button>
                             )}
+                            {data.type === 'html' && (
+                                <FormField
+                                    id="html_code"
+                                    label={t('HTML content')}
+                                    error={errors.html_code}
+                                    hint={t(
+                                        'Use {{click_url}} for the tracked link and {{file_url}} for an optional supporting image.',
+                                        {
+                                            click_url: '{{click_url}}',
+                                            file_url: '{{file_url}}',
+                                        },
+                                    )}
+                                >
+                                    <Textarea
+                                        id="html_code"
+                                        className="font-mono text-[13px]"
+                                        value={data.html_code}
+                                        rows={8}
+                                        aria-invalid={Boolean(errors.html_code)}
+                                        aria-describedby={describedBy(
+                                            'html_code',
+                                        )}
+                                        onChange={(e) =>
+                                            setData('html_code', e.target.value)
+                                        }
+                                    />
+                                </FormField>
+                            )}
+                            <FormField
+                                id="alt_text"
+                                label={
+                                    data.type === 'text'
+                                        ? t('Link text')
+                                        : t('Alternative text (optional)')
+                                }
+                                error={errors.alt_text}
+                                hint={
+                                    data.type === 'text'
+                                        ? t(
+                                              'The visible text for the generated tracking link.',
+                                          )
+                                        : t(
+                                              'Describe the creative for people using a screen reader.',
+                                          )
+                                }
+                            >
+                                <Textarea
+                                    id="alt_text"
+                                    value={data.alt_text}
+                                    maxLength={255}
+                                    rows={3}
+                                    aria-invalid={Boolean(errors.alt_text)}
+                                    aria-describedby={describedBy('alt_text')}
+                                    onChange={(e) =>
+                                        setData('alt_text', e.target.value)
+                                    }
+                                />
+                            </FormField>
+                            {(isVideo || data.type === 'html') && (
+                                <div className="grid gap-2">
+                                    <Label htmlFor="preview_image">
+                                        {t('Preview image (optional)')}
+                                    </Label>
+                                    <CreativeDropZone
+                                        key={`${data.type}-poster`}
+                                        id="preview_image"
+                                        layout="field"
+                                        title={t('Drop a preview image')}
+                                        fileName={data.preview_image?.name}
+                                        error={errors.preview_image}
+                                        disabled={processing}
+                                        onFile={(file) => {
+                                            form.clearErrors('preview_image');
+                                            setData('preview_image', file);
+                                        }}
+                                    />
+                                </div>
+                            )}
+                        </SectionCard>
+                    </div>
+
+                    <aside className="flex min-w-0 flex-col gap-[18px] lg:sticky lg:top-24">
+                        <SectionCard
+                            title={t('Live preview')}
+                            icon={<Eye />}
+                            tone="analytics"
+                            bodyClassName="grid gap-4"
+                        >
+                            {preview}
+                            {data.type === 'html' && data.html_code && (
+                                <pre className="max-h-48 overflow-auto rounded-[14px] bg-sidebar p-4 font-mono text-xs break-all whitespace-pre-wrap text-sidebar-text">
+                                    {data.html_code}
+                                </pre>
+                            )}
+                            <p className="text-[13px] text-ink-muted">
+                                {t(
+                                    'Asset URLs are created from your uploads. Tracking links and embed code are generated when you save.',
+                                )}
+                            </p>
+                        </SectionCard>
+                        {form.progress && (
+                            <p role="status" className="text-sm text-ink-muted">
+                                {t('Uploading')}: {form.progress.percentage}%
+                            </p>
+                        )}
+                        <div className="flex flex-wrap justify-end gap-3">
+                            <Button
+                                asChild
+                                variant="secondary"
+                                disabled={processing}
+                            >
+                                <Link href={cancelUrl}>{t('Cancel')}</Link>
+                            </Button>
                             <Button type="submit" disabled={processing}>
                                 {processing ? (
-                                    <Loader2 className="size-4 animate-spin" />
-                                ) : null}
+                                    <Loader2 className="animate-spin" />
+                                ) : (
+                                    <Save />
+                                )}
                                 {processing
                                     ? t('Saving…')
-                                    : step < 2
-                                      ? t('Continue')
-                                      : title}
-                                {step < 2 && <ArrowRight className="size-4" />}
+                                    : creative
+                                      ? t('Save changes')
+                                      : t('Create creative')}
                             </Button>
                         </div>
-                    </div>
+                    </aside>
                 </form>
             </div>
         </AppLayout>

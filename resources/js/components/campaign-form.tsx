@@ -1,7 +1,19 @@
+import {
+    DetailList,
+    IconTile,
+    PageHeader,
+    Stepper,
+    TagInput,
+    type StepItem,
+} from '@/components/app';
+import { MultiSelect } from '@/components/app/form-controls';
 import { CampaignFunding } from '@/components/campaign-funding';
+import { CampaignPreviewCard, campaignStatusKey } from '@/components/campaigns';
 import { CountryTargeting } from '@/components/country-targeting';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -9,136 +21,116 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from '@/components/ui/popover';
+import { RadioCard, RadioCardGroup } from '@/components/ui/radio-card';
 import {
-    Tooltip,
-    TooltipContent,
-    TooltipTrigger,
-} from '@/components/ui/tooltip';
-import {
-    ReusableCheckbox,
-    ReusableNumberInput,
-    ReusablePageTitle,
-    ReusableSearchMultiSelect,
-    ReusableSearchSelect,
-    ReusableTextarea,
-    ReusableTextInput,
-} from '@/dev/core';
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/app-layout';
+import { useDate, useMoney } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import advertiser from '@/routes/advertiser';
-import {
-    BreadcrumbItem,
-    TCampaign,
-    TCountry,
-    TCurrency,
-    TTerms,
-} from '@/types';
+import { TCampaign, TCountry, TCurrency, TTerms } from '@/types';
 import { CampaignFormValues } from '@/types/schema_types';
 import { CAMPAIGN_METADATA, DEVICES } from '@/utils/enums';
 import { campaignSchema } from '@/utils/form-schema';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Head, router, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { format, parseISO } from 'date-fns';
 import {
-    Activity,
     ArrowLeft,
     ArrowRight,
-    Building2,
-    CalendarDays,
     CalendarIcon,
-    FileText,
+    CheckCircle2,
     Globe2,
-    HelpCircle,
+    Info,
     Loader2,
     Megaphone,
     Monitor,
     RefreshCw,
     Rocket,
     Save,
-    Tags,
-    Target,
+    Smartphone,
+    Tablet,
     Wallet,
     type LucideIcon,
 } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import {
+    Controller,
+    useForm,
+    useWatch,
+    type FieldErrors,
+} from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-const STEP_FIELDS: Record<number, (keyof CampaignFormValues)[]> = {
-    1: ['name', 'description', 'start_date', 'end_date', 'no_end_date'],
-    2: [
-        'terms',
+/** Fields validated by each wizard step (the last step only reviews). */
+export const STEP_FIELDS: (keyof CampaignFormValues | 'advertiser_id')[][] = [
+    [
+        'name',
+        'advertiser_id',
         'currency',
+        'description',
+        'start_date',
+        'end_date',
+        'no_end_date',
+    ],
+    ['geo_targeting', 'device_targeting', 'metadata'],
+    [
         'total_budget',
         'daily_budget',
         'max_publishers',
         'target_conversions',
         'target_roi',
+        'terms',
     ],
-    3: ['geo_targeting', 'device_targeting', 'metadata'],
+    [],
+];
+
+/** Index of the first step with an error, or null. */
+export function firstStepWithError(errors: object): number | null {
+    const keys = Object.keys(errors);
+    const step = STEP_FIELDS.findIndex((fields) =>
+        fields.some((field) =>
+            keys.some((key) => key === field || key.startsWith(`${field}.`)),
+        ),
+    );
+    return step === -1 ? null : step;
+}
+
+const deviceIcons: Record<string, LucideIcon> = {
+    desktop: Monitor,
+    mobile: Smartphone,
+    tablet: Tablet,
 };
 
-function HelpTip({ label, children }: { label: string; children: ReactNode }) {
-    const [open, setOpen] = useState(false);
+function FieldError({ id, message }: { id: string; message?: string }) {
+    if (!message) return null;
     return (
-        <Tooltip open={open} onOpenChange={setOpen}>
-            <TooltipTrigger asChild>
-                <button
-                    type="button"
-                    aria-label={label}
-                    onClick={() => setOpen(!open)}
-                    className="inline-flex size-6 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                >
-                    <HelpCircle className="size-4" aria-hidden="true" />
-                </button>
-            </TooltipTrigger>
-            <TooltipContent className="max-w-xs text-sm leading-relaxed">
-                {children}
-            </TooltipContent>
-        </Tooltip>
+        <p id={id} className="text-[13px] font-semibold text-danger-ink">
+            {message}
+        </p>
     );
 }
 
-function FormSection({
-    icon: Icon,
-    title,
-    description,
-    help,
-    children,
-}: {
-    icon: LucideIcon;
-    title: string;
-    description: string;
-    help?: string;
-    children: ReactNode;
-}) {
+function RequiredMark() {
     return (
-        <section
-            className="space-y-6 rounded-xl border bg-card p-5 sm:p-6"
-            aria-label={title}
-        >
-            <div className="flex items-start gap-3 border-b pb-5">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <Icon className="size-5" aria-hidden="true" />
-                </span>
-                <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                        <h3 className="font-semibold">{title}</h3>
-                        {help && <HelpTip label={title}>{help}</HelpTip>}
-                    </div>
-                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                        {description}
-                    </p>
-                </div>
-            </div>
-            {children}
-        </section>
+        <span aria-hidden="true" className="text-admin-ink">
+            {' '}
+            *
+        </span>
     );
 }
 
 function CampaignDate({
     id,
     label,
+    required = false,
     value,
     onChange,
     min,
@@ -147,6 +139,7 @@ function CampaignDate({
 }: {
     id: string;
     label: string;
+    required?: boolean;
     value?: Date;
     onChange: (value: Date | undefined) => void;
     min?: Date;
@@ -156,24 +149,28 @@ function CampaignDate({
     const { t } = useTranslation();
     const [open, setOpen] = useState(false);
     return (
-        <div className="space-y-2">
+        <div className="flex flex-col gap-1.5">
             <Label htmlFor={id}>
-                {label} <span className="text-destructive">*</span>
+                {label}
+                {required && <RequiredMark />}
             </Label>
             <Popover open={open} onOpenChange={setOpen}>
                 <PopoverTrigger asChild>
                     <Button
                         id={id}
                         type="button"
-                        variant="outline"
+                        variant="secondary"
                         aria-invalid={!!error}
                         aria-describedby={error ? `${id}-error` : undefined}
                         className={cn(
-                            'h-10 w-full justify-start font-normal',
-                            !value && 'text-muted-foreground',
+                            'w-full justify-start bg-surface-muted font-medium',
+                            !value && 'text-ink-muted',
                         )}
                     >
-                        <CalendarIcon className="size-4" aria-hidden="true" />
+                        <CalendarIcon
+                            className="text-analytics"
+                            aria-hidden="true"
+                        />
                         {value ? format(value, 'PPP') : t('Pick a date')}
                     </Button>
                 </PopoverTrigger>
@@ -195,11 +192,42 @@ function CampaignDate({
                     />
                 </PopoverContent>
             </Popover>
-            {error && (
-                <p id={`${id}-error`} className="text-sm text-destructive">
-                    {error}
+            <FieldError id={`${id}-error`} message={error} />
+        </div>
+    );
+}
+
+/** A labelled control with optional hint and error, on the wizard grid. */
+function FormRow({
+    id,
+    label,
+    required,
+    hint,
+    error,
+    wide,
+    children,
+}: {
+    id: string;
+    label: string;
+    required?: boolean;
+    hint?: string;
+    error?: string;
+    wide?: boolean;
+    children: ReactNode;
+}) {
+    return (
+        <div className={cn('flex flex-col gap-1.5', wide && 'sm:col-span-2')}>
+            <Label htmlFor={id}>
+                {label}
+                {required && <RequiredMark />}
+            </Label>
+            {children}
+            {hint && (
+                <p id={`${id}-hint`} className="text-xs text-ink-muted">
+                    {hint}
                 </p>
             )}
+            <FieldError id={`${id}-error`} message={error} />
         </div>
     );
 }
@@ -218,6 +246,8 @@ export type CampaignFormProps = {
     advertisers?: CampaignAdvertiser[];
     canSelectAdvertiser?: boolean;
     campaign?: TCampaign;
+    /** Edit page: the campaign's advertiser (not changeable). */
+    advertiserName?: string | null;
     selectedAdvertiserId?: number | null;
     funding?: { available_budget: string; currency: string } | null;
 };
@@ -229,44 +259,52 @@ const CampaignForm = ({
     advertisers = [],
     canSelectAdvertiser = false,
     campaign,
+    advertiserName,
     funding,
     selectedAdvertiserId,
 }: CampaignFormProps) => {
+    // React Hook Form mutates formState.errors in place, so React Compiler
+    // memoisation would hide new errors; opt this form out.
+    'use no memo';
     const { t } = useTranslation();
-    const serverErrors = usePage().props.errors;
+    const serverErrors = usePage().props.errors as Record<string, string>;
+    const formatDate = useDate();
     const isEditing = !!campaign;
-    const title = isEditing ? t('Edit Campaign') : t('Create Campaign');
+    const title = isEditing ? t('Edit campaign') : t('Create campaign');
     const noInitialEndDate = Number(campaign?.end_date?.slice(0, 4)) >= 2100;
-    const breadcrumbs: BreadcrumbItem[] = [
-        { title: t('Campaigns'), href: advertiser.campaign.index.url() },
-        ...(campaign
-            ? [
-                  {
-                      title: campaign.name,
-                      href: advertiser.campaign.show.url(campaign.id),
-                  },
-              ]
-            : []),
-        {
-            title,
-            href: campaign
-                ? advertiser.campaign.edit.url(campaign.id)
-                : advertiser.campaign.create.url(),
-        },
-    ];
     const [advertiserId, setAdvertiserId] = useState(
         String(selectedAdvertiserId ?? advertisers[0]?.id ?? ''),
     );
+    const [advertiserError, setAdvertiserError] = useState<string>();
     const [campaignStatus, setCampaignStatus] = useState(
         campaign?.campaign_status ?? 'A',
     );
-    const [currentStep, setCurrentStep] = useState(1);
+    const [currentStep, setCurrentStep] = useState(
+        () => firstStepWithError(serverErrors) ?? 0,
+    );
+    // Move keyboard and screen reader focus to the new step's title when the
+    // step changes (not on first render).
+    const stepTitleRef = useRef<HTMLHeadingElement>(null);
+    const stepFieldsRef = useRef<HTMLFieldSetElement>(null);
+    // After a failed step check, focus the first invalid field once the
+    // errors have rendered.
+    const focusFirstInvalid = () =>
+        requestAnimationFrame(() =>
+            stepFieldsRef.current
+                ?.querySelector<HTMLElement>('[aria-invalid="true"]')
+                ?.focus(),
+        );
+    const shownStep = useRef(currentStep);
+    useEffect(() => {
+        if (shownStep.current === currentStep) return;
+        shownStep.current = currentStep;
+        stepTitleRef.current?.focus();
+    }, [currentStep]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const {
         control,
         handleSubmit,
         formState: { errors },
-        watch,
         setValue,
         trigger,
     } = useForm<CampaignFormValues>({
@@ -305,548 +343,877 @@ const CampaignForm = ({
             no_end_date: noInitialEndDate,
         },
     });
-    const startDate = watch('start_date');
-    const noEndDate = watch('no_end_date');
-    const steps = [
-        {
-            title: t('Campaign details'),
-            description: t('Name, description & schedule'),
-            icon: Megaphone,
-        },
-        {
-            title: t('Budget & terms'),
-            description: t('Optional limits & agreements'),
-            icon: Wallet,
-        },
-        {
-            title: t('Audience & targeting'),
-            description: t('Countries, devices & tags'),
-            icon: Target,
-        },
-    ];
-    const handleNext = async () => {
-        if (await trigger(STEP_FIELDS[currentStep]))
-            setCurrentStep((step) => Math.min(step + 1, 3));
+    const values = useWatch({ control }) as CampaignFormValues;
+    const selectedAdvertiser = advertisers.find(
+        (item) => String(item.id) === advertiserId,
+    );
+    const advertiserLabel = isEditing
+        ? advertiserName
+        : selectedAdvertiser?.business_name;
+    const money = useMoney(values.currency || 'EUR');
+    const tagLabel = (tag: string) =>
+        t(
+            CAMPAIGN_METADATA.find((option) => option.value === tag)?.label ??
+                tag,
+        );
+    const errorFor = (field: keyof CampaignFormValues) =>
+        errors[field]?.message
+            ? t(String(errors[field]?.message))
+            : serverErrors[field];
+    // Inside Controller renders, read the field's own state: the React
+    // Compiler memoises the outer formState read, so errors never showed.
+    const fieldError = (
+        field: keyof CampaignFormValues,
+        fieldState: { error?: { message?: string } },
+    ) =>
+        fieldState.error?.message
+            ? t(String(fieldState.error.message))
+            : serverErrors[field];
+    const allErrors: Record<string, unknown> = {
+        ...serverErrors,
+        ...errors,
+        ...(advertiserError ? { advertiser_id: advertiserError } : {}),
     };
-    const onSubmit = (values: CampaignFormValues) => {
+
+    const steps: (StepItem & { heading: string; icon: ReactNode })[] = [
+        {
+            id: 'essentials',
+            title: t('The essentials'),
+            heading: t('Name, description and schedule'),
+            icon: <Megaphone />,
+        },
+        {
+            id: 'audience',
+            title: t('Audience & targeting'),
+            heading: t('Countries, devices and tags'),
+            icon: <Globe2 />,
+        },
+        {
+            id: 'budget',
+            title: t('Budget & terms'),
+            heading: t('Optional limits and agreements'),
+            icon: <Wallet />,
+        },
+        {
+            id: 'review',
+            title: t('Check details'),
+            heading: t(isEditing ? 'Review and save' : 'Review and create'),
+            icon: <CheckCircle2 />,
+        },
+    ].map((step, index) => ({
+        ...step,
+        description:
+            index < 3 && firstStepWithError(allErrors) === index
+                ? t('Check details')
+                : step.heading,
+    }));
+    const stepTones = ['brand', 'analytics', 'finance', 'partners'] as const;
+    const lastStep = steps.length - 1;
+
+    const validateAdvertiser = () => {
+        if (!isEditing && canSelectAdvertiser && !advertiserId) {
+            setAdvertiserError(t('Select an advertiser.'));
+            return false;
+        }
+        setAdvertiserError(undefined);
+        return true;
+    };
+    const validateStep = async (step: number) => {
+        const fields = STEP_FIELDS[step].filter(
+            (field): field is keyof CampaignFormValues =>
+                field !== 'advertiser_id',
+        );
+        const valid = fields.length ? await trigger(fields) : true;
+        return step === 0 ? validateAdvertiser() && valid : valid;
+    };
+    const goTo = async (next: number) => {
+        if (isSubmitting) return;
+        if (next > currentStep) {
+            for (let step = currentStep; step < next; step++) {
+                if (!(await validateStep(step))) {
+                    setCurrentStep(step);
+                    focusFirstInvalid();
+                    return;
+                }
+            }
+        }
+        setCurrentStep(next);
+    };
+    const showFirstError = (validationErrors: FieldErrors | object) => {
+        const step = firstStepWithError(validationErrors);
+        if (step !== null) setCurrentStep(step);
+    };
+    const onSubmit = (formValues: CampaignFormValues) => {
+        if (!validateAdvertiser()) {
+            setCurrentStep(0);
+            return;
+        }
         setIsSubmitting(true);
         router.post(
             campaign
                 ? advertiser.campaign.update(campaign.id)
                 : advertiser.campaign.store(),
             {
-                ...values,
-                ...(campaign
-                    ? { campaign_status: campaignStatus }
-                    : canSelectAdvertiser
-                      ? { advertiser_id: advertiserId }
-                      : {}),
-                total_budget: values.total_budget || null,
-                daily_budget: values.daily_budget || null,
-                start_date: format(values.start_date, 'yyyy-MM-dd'),
-                end_date: values.no_end_date
+                ...formValues,
+                campaign_status: campaignStatus,
+                ...(!campaign && canSelectAdvertiser
+                    ? { advertiser_id: advertiserId }
+                    : {}),
+                total_budget: formValues.total_budget || null,
+                daily_budget: formValues.daily_budget || null,
+                start_date: format(formValues.start_date, 'yyyy-MM-dd'),
+                end_date: formValues.no_end_date
                     ? '2100-12-31'
-                    : values.end_date
-                      ? format(values.end_date, 'yyyy-MM-dd')
+                    : formValues.end_date
+                      ? format(formValues.end_date, 'yyyy-MM-dd')
                       : null,
-                terms: values.terms?.length
-                    ? JSON.stringify({ terms: values.terms })
+                terms: formValues.terms?.length
+                    ? JSON.stringify({ terms: formValues.terms })
                     : null,
-                geo_targeting: values.geo_targeting?.length
-                    ? JSON.stringify({ countries: values.geo_targeting })
+                geo_targeting: formValues.geo_targeting?.length
+                    ? JSON.stringify({ countries: formValues.geo_targeting })
                     : null,
-                device_targeting: values.device_targeting?.length
-                    ? JSON.stringify({ devices: values.device_targeting })
+                device_targeting: formValues.device_targeting?.length
+                    ? JSON.stringify({ devices: formValues.device_targeting })
                     : null,
-                metadata: values.metadata?.length
-                    ? JSON.stringify({ tags: values.metadata })
+                metadata: formValues.metadata?.length
+                    ? JSON.stringify({ tags: formValues.metadata })
                     : null,
             },
             {
-                onError: (submissionErrors) => {
-                    const step = Object.entries(STEP_FIELDS).find(
-                        ([, fields]) =>
-                            fields.some((field) => field in submissionErrors),
-                    );
-                    setCurrentStep(step ? Number(step[0]) : 1);
-                },
+                onError: showFirstError,
                 onFinish: () => setIsSubmitting(false),
             },
         );
     };
 
+    const statusOptions = [
+        {
+            value: 'A',
+            title: t('Active'),
+            hint: t('Can receive traffic during its dates'),
+            tone: 'partners' as const,
+        },
+        {
+            value: 'P',
+            title: t('Paused'),
+            hint: t('Visible, but no traffic is accepted'),
+            tone: 'finance' as const,
+        },
+        {
+            value: 'I',
+            title: t('Inactive'),
+            hint: t('Hidden for now'),
+            tone: 'brand' as const,
+        },
+    ];
+    const countryNames = (codes: string[] = []) =>
+        codes.length
+            ? codes
+                  .map(
+                      (code) =>
+                          countries.find(
+                              (country) => country.country_iso === code,
+                          )?.country_name ?? code,
+                  )
+                  .join(', ')
+            : t('All countries');
+    const deviceNames = (devices: string[] = []) =>
+        devices.length
+            ? devices
+                  .map((device) =>
+                      t(
+                          DEVICES.find((item) => item.value === device)
+                              ?.label ?? device,
+                      ),
+                  )
+                  .join(', ')
+            : t('All devices');
+    const limit = (value?: string) =>
+        value && Number(value) > 0 ? money(Number(value)) : t('No limit');
+
+    const reviewSection = (
+        step: number,
+        rows: { label: string; value: ReactNode }[],
+    ) => (
+        <section
+            aria-labelledby={`review-${steps[step].id}`}
+            className="rounded-card border border-border"
+        >
+            <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+                <h3
+                    id={`review-${steps[step].id}`}
+                    className="text-sm font-bold"
+                >
+                    {steps[step].title}
+                </h3>
+                <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    onClick={() => setCurrentStep(step)}
+                    aria-label={t('Edit {{section}}', {
+                        section: steps[step].title,
+                    })}
+                >
+                    {t('Edit')}
+                </Button>
+            </header>
+            <div className="px-4 py-3">
+                <DetailList rows={rows} />
+            </div>
+        </section>
+    );
+
     return (
         <AppLayout>
             <Head title={title} />
-            <div className="workspace-page flex h-full flex-1 flex-col gap-6">
-                <ReusablePageTitle
+            <div className="workspace-page flex flex-col gap-6">
+                <PageHeader
                     title={title}
-                    description={
-                        isEditing
-                            ? t(
-                                  'Update your campaign details, budget and targeting.',
-                              )
-                            : t(
-                                  'Build your campaign in three simple steps. You can fine-tune it later.',
-                              )
-                    }
-                    breadcrumbs={breadcrumbs}
+                    description={t(
+                        'Four short steps. Fields marked * are required.',
+                    )}
+                    breadcrumbs={[
+                        {
+                            title: t('Campaigns'),
+                            href: advertiser.campaign.index.url(),
+                        },
+                        ...(campaign
+                            ? [
+                                  {
+                                      title: campaign.name,
+                                      href: advertiser.campaign.show.url(
+                                          campaign.id,
+                                      ),
+                                  },
+                              ]
+                            : []),
+                        {
+                            title,
+                            href: campaign
+                                ? advertiser.campaign.edit.url(campaign.id)
+                                : advertiser.campaign.create.url(),
+                        },
+                    ]}
                 />
-                <form
-                    onSubmit={handleSubmit(onSubmit, (validationErrors) => {
-                        const step = Object.entries(STEP_FIELDS).find(
-                            ([, fields]) =>
-                                fields.some(
-                                    (field) => field in validationErrors,
-                                ),
-                        );
-                        if (step) setCurrentStep(Number(step[0]));
-                    })}
-                    className="overflow-hidden rounded-2xl border bg-card shadow-sm"
-                >
-                    <nav
-                        aria-label={t('Campaign setup steps')}
-                        className="border-b bg-muted/30 p-3 sm:p-5"
+                <div className="grid items-start gap-5 lg:grid-cols-[240px_minmax(0,1fr)] min-[87.5rem]:grid-cols-[240px_minmax(0,1fr)_280px]">
+                    <div className="min-w-0 rounded-card border border-border bg-surface p-3.5 shadow-card lg:sticky lg:top-24">
+                        <Stepper
+                            steps={steps}
+                            current={currentStep}
+                            label={t('Campaign setup steps')}
+                            onStepSelect={(index) => goTo(index)}
+                            allowForward
+                        />
+                    </div>
+                    <form
+                        noValidate
+                        onSubmit={handleSubmit(onSubmit, showFirstError)}
+                        className="flex min-w-0 flex-col overflow-hidden rounded-card border border-border bg-surface shadow-card"
                     >
-                        <ol className="grid grid-cols-3 gap-2 sm:gap-3">
-                            {steps.map(
-                                ({ title, description, icon: Icon }, index) => {
-                                    const step = index + 1;
-                                    const active = currentStep === step;
-                                    const hasError = STEP_FIELDS[step].some(
-                                        (field) => !!errors[field],
-                                    );
-                                    return (
-                                        <li key={title}>
-                                            <button
-                                                id={`campaign-step-${step}`}
-                                                type="button"
-                                                aria-current={
-                                                    active ? 'step' : undefined
-                                                }
-                                                aria-controls="campaign-step-content"
-                                                onClick={() =>
-                                                    setCurrentStep(step)
-                                                }
-                                                disabled={isSubmitting}
-                                                className={cn(
-                                                    'flex h-full w-full cursor-pointer flex-col items-center gap-2 rounded-xl border p-3 text-center transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:flex-row sm:gap-3 sm:p-4 sm:text-left',
-                                                    active
-                                                        ? 'border-primary bg-primary/5 shadow-sm'
-                                                        : 'border-transparent hover:border-border hover:bg-card',
-                                                    hasError &&
-                                                        'border-destructive/50',
-                                                )}
-                                            >
-                                                <span
-                                                    className={cn(
-                                                        'flex size-9 shrink-0 items-center justify-center rounded-lg sm:size-10',
-                                                        active
-                                                            ? 'bg-primary text-primary-foreground'
-                                                            : 'border bg-card text-muted-foreground',
-                                                    )}
-                                                >
-                                                    <Icon
-                                                        className="size-5"
-                                                        aria-hidden="true"
-                                                    />
-                                                </span>
-                                                <span className="min-w-0">
-                                                    <span
-                                                        className={cn(
-                                                            'block text-xs font-semibold sm:text-sm',
-                                                            active
-                                                                ? 'text-primary'
-                                                                : 'text-foreground',
-                                                        )}
-                                                    >
-                                                        <span className="mr-1.5 opacity-60">
-                                                            {String(
-                                                                step,
-                                                            ).padStart(2, '0')}
-                                                        </span>
-                                                        {title}
-                                                    </span>
-                                                    <span className="mt-1 hidden text-xs leading-relaxed text-muted-foreground lg:block">
-                                                        {description}
-                                                    </span>
-                                                    {hasError && (
-                                                        <span className="mt-1 block text-xs text-destructive">
-                                                            {t('Check details')}
-                                                        </span>
-                                                    )}
-                                                </span>
-                                            </button>
-                                        </li>
-                                    );
-                                },
-                            )}
-                        </ol>
-                    </nav>
-
-                    <fieldset
-                        disabled={isSubmitting}
-                        className="min-w-0 space-y-6 p-4 sm:p-6 lg:p-8 [&_[data-slot=label]]:mb-2"
-                    >
-                        {Object.keys(serverErrors).length > 0 && (
-                            <div
-                                role="alert"
-                                className="space-y-1 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
+                        <div className="flex items-center gap-3.5 border-b border-border px-6 py-[22px]">
+                            <IconTile
+                                size={44}
+                                variant="solid"
+                                tone={stepTones[currentStep]}
                             >
-                                {Object.entries(serverErrors).map(
-                                    ([field, error]) => (
-                                        <p key={field}>{error}</p>
-                                    ),
-                                )}
-                            </div>
-                        )}
-                        {!isEditing && canSelectAdvertiser && (
-                            <div className="flex flex-col gap-4 rounded-xl border bg-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between">
-                                <div className="flex items-start gap-3">
-                                    <Building2
-                                        className="mt-1 size-5 shrink-0 text-muted-foreground"
-                                        aria-hidden="true"
-                                    />
-                                    <div>
-                                        <Label htmlFor="advertiser_id">
-                                            {t('Advertiser')}{' '}
-                                            <span className="text-destructive">
-                                                *
-                                            </span>
-                                        </Label>
-                                        <p className="text-xs text-muted-foreground">
-                                            {t(
-                                                'The business this campaign belongs to.',
-                                            )}
-                                        </p>
-                                    </div>
-                                </div>
-                                <select
-                                    id="advertiser_id"
-                                    required
-                                    value={advertiserId}
-                                    onChange={(event) => {
-                                        setAdvertiserId(event.target.value);
-                                        const selected = advertisers.find(
-                                            (item) =>
-                                                String(item.id) ===
-                                                event.target.value,
-                                        );
-                                        if (selected)
-                                            setValue(
-                                                'currency',
-                                                selected.currency,
-                                            );
-                                    }}
-                                    className="h-10 w-full rounded-lg border border-input bg-card px-3 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:max-w-sm"
+                                {steps[currentStep].icon}
+                            </IconTile>
+                            <div>
+                                <h2
+                                    id="campaign-step-title"
+                                    ref={stepTitleRef}
+                                    tabIndex={-1}
+                                    className="text-lg font-extrabold outline-none"
                                 >
-                                    <option value="">
-                                        {t('Select Advertiser')}
-                                    </option>
-                                    {advertisers?.map((item) => (
-                                        <option key={item.id} value={item.id}>
-                                            {item.business_name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                        )}
-                        <div
-                            id="campaign-step-content"
-                            aria-labelledby={`campaign-step-${currentStep}`}
-                            className="space-y-6"
-                        >
-                            <div className="flex flex-wrap items-baseline justify-between gap-2">
-                                <h2 className="text-xl font-semibold">
-                                    {steps[currentStep - 1].title}
+                                    {steps[currentStep].title}
                                 </h2>
-                                <p className="text-xs text-muted-foreground">
-                                    {t('Fields marked * are required')}
+                                <p className="text-[13px] text-ink-muted">
+                                    {steps[currentStep].heading}
                                 </p>
                             </div>
-                            {currentStep === 1 && (
-                                <>
-                                    <FormSection
-                                        icon={FileText}
-                                        title={t('The essentials')}
-                                        description={t(
-                                            'Give publishers a clear introduction to your campaign.',
-                                        )}
-                                    >
-                                        <Controller
-                                            name="name"
-                                            control={control}
-                                            render={({ field }) => (
-                                                <ReusableTextInput
+                        </div>
+                        <fieldset
+                            ref={stepFieldsRef}
+                            disabled={isSubmitting}
+                            aria-labelledby="campaign-step-title"
+                            className="flex min-w-0 flex-col gap-6 p-6"
+                        >
+                            {Object.keys(serverErrors).length > 0 && (
+                                <Alert variant="danger" role="alert">
+                                    <AlertTitle>
+                                        {t('Check the highlighted fields')}
+                                    </AlertTitle>
+                                    <AlertDescription>
+                                        <ul className="list-disc pl-4">
+                                            {Object.entries(serverErrors).map(
+                                                ([field, error]) => (
+                                                    <li key={field}>{error}</li>
+                                                ),
+                                            )}
+                                        </ul>
+                                    </AlertDescription>
+                                </Alert>
+                            )}
+                            {currentStep === 0 && (
+                                <div className="grid gap-[18px] sm:grid-cols-2">
+                                    <Controller
+                                        name="name"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <FormRow
+                                                id="name"
+                                                label={t('Campaign name')}
+                                                required
+                                                error={errorFor('name')}
+                                                wide
+                                            >
+                                                <Input
                                                     id="name"
-                                                    label={t('Campaign Name')}
-                                                    required
+                                                    value={field.value}
+                                                    onChange={field.onChange}
+                                                    onBlur={field.onBlur}
+                                                    aria-required
+                                                    aria-invalid={
+                                                        !!errorFor('name')
+                                                    }
+                                                    aria-describedby={
+                                                        errorFor('name')
+                                                            ? 'name-error'
+                                                            : undefined
+                                                    }
                                                     placeholder={t(
                                                         'e.g. Winter collection launch',
                                                     )}
-                                                    value={field.value}
-                                                    onChange={field.onChange}
-                                                    error={errors.name?.message}
+                                                    maxLength={200}
                                                 />
-                                            )}
-                                        />
-                                        <Controller
-                                            name="description"
-                                            control={control}
-                                            render={({ field }) => (
-                                                <ReusableTextarea
+                                            </FormRow>
+                                        )}
+                                    />
+                                    <FormRow
+                                        id="advertiser_id"
+                                        label={t('Advertiser')}
+                                        required={
+                                            !isEditing && canSelectAdvertiser
+                                        }
+                                        error={
+                                            advertiserError ??
+                                            serverErrors.advertiser_id
+                                        }
+                                        hint={
+                                            isEditing
+                                                ? t(
+                                                      'The advertiser cannot be changed after creation.',
+                                                  )
+                                                : undefined
+                                        }
+                                    >
+                                        {!isEditing && canSelectAdvertiser ? (
+                                            <Select
+                                                value={advertiserId}
+                                                onValueChange={(value) => {
+                                                    setAdvertiserId(value);
+                                                    setAdvertiserError(
+                                                        undefined,
+                                                    );
+                                                    const selected =
+                                                        advertisers.find(
+                                                            (item) =>
+                                                                String(
+                                                                    item.id,
+                                                                ) === value,
+                                                        );
+                                                    if (selected)
+                                                        setValue(
+                                                            'currency',
+                                                            selected.currency,
+                                                        );
+                                                }}
+                                            >
+                                                <SelectTrigger
+                                                    id="advertiser_id"
+                                                    aria-invalid={
+                                                        !!advertiserError
+                                                    }
+                                                    aria-required
+                                                >
+                                                    <SelectValue
+                                                        placeholder={t(
+                                                            'Select advertiser',
+                                                        )}
+                                                    />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {advertisers.map((item) => (
+                                                        <SelectItem
+                                                            key={item.id}
+                                                            value={String(
+                                                                item.id,
+                                                            )}
+                                                        >
+                                                            {item.business_name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        ) : (
+                                            <Input
+                                                id="advertiser_id"
+                                                value={advertiserLabel ?? ''}
+                                                readOnly
+                                                aria-describedby={
+                                                    isEditing
+                                                        ? 'advertiser_id-hint'
+                                                        : undefined
+                                                }
+                                            />
+                                        )}
+                                    </FormRow>
+                                    <Controller
+                                        name="currency"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <FormRow
+                                                id="currency"
+                                                label={t('Currency')}
+                                                required
+                                                error={errorFor('currency')}
+                                            >
+                                                <Select
+                                                    value={field.value}
+                                                    onValueChange={
+                                                        field.onChange
+                                                    }
+                                                >
+                                                    <SelectTrigger
+                                                        id="currency"
+                                                        aria-required
+                                                        aria-invalid={
+                                                            !!errorFor(
+                                                                'currency',
+                                                            )
+                                                        }
+                                                    >
+                                                        <SelectValue
+                                                            placeholder={t(
+                                                                'Select currency',
+                                                            )}
+                                                        />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {currencies.map(
+                                                            (currency) => (
+                                                                <SelectItem
+                                                                    key={
+                                                                        currency.currency_code
+                                                                    }
+                                                                    value={
+                                                                        currency.currency_code
+                                                                    }
+                                                                >
+                                                                    {`${currency.currency_code} · ${currency.currency_name}`}
+                                                                </SelectItem>
+                                                            ),
+                                                        )}
+                                                    </SelectContent>
+                                                </Select>
+                                            </FormRow>
+                                        )}
+                                    />
+                                    <Controller
+                                        name="description"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <FormRow
+                                                id="description"
+                                                label={t('Description')}
+                                                error={errorFor('description')}
+                                                wide
+                                            >
+                                                <Textarea
                                                     id="description"
-                                                    label={t('Description')}
                                                     rows={4}
+                                                    value={field.value ?? ''}
+                                                    onChange={field.onChange}
                                                     placeholder={t(
                                                         'Describe your campaign, what you are promoting, and what makes it a good fit for publishers.',
                                                     )}
-                                                    value={field.value}
-                                                    onChange={field.onChange}
-                                                    error={
-                                                        errors.description
-                                                            ?.message
-                                                    }
                                                 />
-                                            )}
-                                        />
-                                    </FormSection>
-                                    {isEditing && (
-                                        <FormSection
-                                            icon={Activity}
-                                            title={t('Campaign status')}
-                                            description={t(
-                                                'Control whether your campaign is active, inactive or pending.',
-                                            )}
-                                            help={t(
-                                                'Only active campaigns can receive eligible traffic during their scheduled dates. Save your changes to apply a new status.',
-                                            )}
-                                        >
-                                            <div className="max-w-sm">
-                                                <ReusableSearchSelect
-                                                    id="campaign_status"
-                                                    label={t('Status')}
-                                                    required
-                                                    data={[
-                                                        {
-                                                            value: 'A',
-                                                            label: t('Active'),
-                                                        },
-                                                        {
-                                                            value: 'I',
-                                                            label: t(
-                                                                'Inactive',
-                                                            ),
-                                                        },
-                                                        {
-                                                            value: 'P',
-                                                            label: t('Pending'),
-                                                        },
-                                                    ]}
-                                                    value={campaignStatus}
-                                                    onChange={setCampaignStatus}
-                                                    error={
-                                                        serverErrors.campaign_status
-                                                    }
-                                                />
-                                            </div>
-                                        </FormSection>
-                                    )}
-                                    <FormSection
-                                        icon={CalendarDays}
-                                        title={t('Campaign schedule')}
-                                        description={t(
-                                            'Choose when your campaign runs.',
+                                                <span className="self-end text-xs text-ink-muted tabular-nums">
+                                                    {t('{{count}} characters', {
+                                                        count: (
+                                                            field.value ?? ''
+                                                        ).length,
+                                                    })}
+                                                </span>
+                                            </FormRow>
                                         )}
-                                        help={t(
-                                            'Your campaign is eligible for traffic only during its active dates. Choose a start date and an end date, or leave it running with no end date.',
+                                    />
+                                    <Controller
+                                        name="start_date"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <CampaignDate
+                                                id="start_date"
+                                                required
+                                                allowPast={isEditing}
+                                                label={t('Start date')}
+                                                value={field.value}
+                                                onChange={field.onChange}
+                                                error={errorFor('start_date')}
+                                            />
                                         )}
-                                    >
-                                        <div className="grid gap-6 md:grid-cols-2">
+                                    />
+                                    <div className="flex flex-col gap-3">
+                                        {!values.no_end_date ? (
                                             <Controller
-                                                name="start_date"
+                                                name="end_date"
                                                 control={control}
                                                 render={({ field }) => (
                                                     <CampaignDate
-                                                        id="start_date"
+                                                        id="end_date"
+                                                        required
                                                         allowPast={isEditing}
-                                                        label={t('Start Date')}
+                                                        label={t('End date')}
                                                         value={field.value}
                                                         onChange={
                                                             field.onChange
                                                         }
-                                                        error={
-                                                            errors.start_date
-                                                                ?.message
-                                                        }
+                                                        min={values.start_date}
+                                                        error={errorFor(
+                                                            'end_date',
+                                                        )}
                                                     />
                                                 )}
                                             />
-                                            <div className="space-y-3">
-                                                {!noEndDate ? (
-                                                    <Controller
-                                                        name="end_date"
-                                                        control={control}
-                                                        render={({ field }) => (
-                                                            <CampaignDate
-                                                                id="end_date"
-                                                                allowPast={
-                                                                    isEditing
-                                                                }
-                                                                label={t(
-                                                                    'End Date',
-                                                                )}
-                                                                value={
-                                                                    field.value
-                                                                }
-                                                                onChange={
-                                                                    field.onChange
-                                                                }
-                                                                min={startDate}
-                                                                error={
-                                                                    errors
-                                                                        .end_date
-                                                                        ?.message
-                                                                }
-                                                            />
-                                                        )}
+                                        ) : (
+                                            <div className="flex flex-col gap-1.5">
+                                                <span className="text-[13px] font-bold">
+                                                    {t('End date')}
+                                                </span>
+                                                <p className="flex h-11 items-center gap-2 rounded-control border border-dashed border-border-strong px-3.5 text-sm text-ink-muted">
+                                                    <CalendarIcon
+                                                        className="size-4"
+                                                        aria-hidden="true"
                                                     />
-                                                ) : (
-                                                    <div className="flex h-[68px] items-center gap-2 rounded-lg border border-dashed bg-muted/30 px-3 text-sm text-muted-foreground">
-                                                        <CalendarDays
-                                                            className="size-4"
-                                                            aria-hidden="true"
-                                                        />
-                                                        {t(
-                                                            'This campaign has no end date.',
-                                                        )}
-                                                    </div>
-                                                )}
-                                                <ReusableCheckbox
-                                                    id="no_end_date"
-                                                    label={t(
-                                                        'Never ending campaign',
+                                                    {t(
+                                                        'This campaign has no end date.',
                                                     )}
-                                                    checked={noEndDate ?? false}
-                                                    onChange={(checked) => {
-                                                        setValue(
-                                                            'no_end_date',
-                                                            checked,
-                                                        );
-                                                        if (checked)
-                                                            setValue(
-                                                                'end_date',
-                                                                undefined,
-                                                            );
-                                                    }}
-                                                />
+                                                </p>
                                             </div>
-                                        </div>
-                                    </FormSection>
-                                </>
+                                        )}
+                                        <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-semibold">
+                                            <Checkbox
+                                                id="no_end_date"
+                                                checked={
+                                                    values.no_end_date ?? false
+                                                }
+                                                onCheckedChange={(checked) => {
+                                                    setValue(
+                                                        'no_end_date',
+                                                        checked === true,
+                                                    );
+                                                    if (checked)
+                                                        setValue(
+                                                            'end_date',
+                                                            undefined,
+                                                        );
+                                                }}
+                                            />
+                                            {t('Never ending campaign')}
+                                        </label>
+                                    </div>
+                                    <fieldset className="flex flex-col gap-2 sm:col-span-2">
+                                        <legend className="mb-2 text-[13px] font-bold">
+                                            {t('Campaign status')}
+                                        </legend>
+                                        <RadioCardGroup
+                                            name="campaign_status"
+                                            value={campaignStatus}
+                                            onValueChange={setCampaignStatus}
+                                            className="sm:grid-cols-3"
+                                        >
+                                            {statusOptions.map((option) => (
+                                                <RadioCard
+                                                    key={option.value}
+                                                    value={option.value}
+                                                    title={option.title}
+                                                    hint={option.hint}
+                                                    tone={option.tone}
+                                                />
+                                            ))}
+                                        </RadioCardGroup>
+                                        <FieldError
+                                            id="campaign_status-error"
+                                            message={
+                                                serverErrors.campaign_status
+                                            }
+                                        />
+                                    </fieldset>
+                                </div>
+                            )}
+                            {currentStep === 1 && (
+                                <div className="flex flex-col gap-6">
+                                    <div className="flex flex-col gap-2">
+                                        <h3 className="text-[13px] font-bold">
+                                            {t('Country targeting')}
+                                        </h3>
+                                        <p className="text-xs text-ink-muted">
+                                            {t(
+                                                'Select regions or individual countries, or leave empty for all countries. Country restrictions need trusted country detection in your tracking integration.',
+                                            )}
+                                        </p>
+                                        <Controller
+                                            name="geo_targeting"
+                                            control={control}
+                                            render={({ field }) => (
+                                                <CountryTargeting
+                                                    countries={countries}
+                                                    value={field.value}
+                                                    onChange={field.onChange}
+                                                    error={errorFor(
+                                                        'geo_targeting',
+                                                    )}
+                                                />
+                                            )}
+                                        />
+                                    </div>
+                                    <Controller
+                                        name="device_targeting"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <fieldset className="flex flex-col gap-2">
+                                                <legend className="mb-1 text-[13px] font-bold">
+                                                    {t('Device targeting')}
+                                                </legend>
+                                                <p className="text-xs text-ink-muted">
+                                                    {t(
+                                                        'Select eligible devices, or leave all unchecked to allow any device.',
+                                                    )}
+                                                </p>
+                                                <div className="grid gap-3 sm:grid-cols-3">
+                                                    {DEVICES.map((device) => {
+                                                        const Icon =
+                                                            deviceIcons[
+                                                                device.value
+                                                            ] ?? Monitor;
+                                                        const checked =
+                                                            field.value?.includes(
+                                                                device.value,
+                                                            ) ?? false;
+                                                        return (
+                                                            <label
+                                                                key={
+                                                                    device.value
+                                                                }
+                                                                className={cn(
+                                                                    'flex min-h-11 cursor-pointer items-center gap-3 rounded-[14px] border p-4 text-sm font-bold transition-colors has-[:focus-visible]:shadow-[0_0_0_4px_var(--focus-halo)]',
+                                                                    checked
+                                                                        ? 'border-2 border-analytics bg-analytics-soft p-[15px]'
+                                                                        : 'border-border-strong hover:bg-surface-muted',
+                                                                )}
+                                                            >
+                                                                <Checkbox
+                                                                    id={`device_${device.value}`}
+                                                                    checked={
+                                                                        checked
+                                                                    }
+                                                                    onCheckedChange={(
+                                                                        next,
+                                                                    ) =>
+                                                                        field.onChange(
+                                                                            next
+                                                                                ? [
+                                                                                      ...(field.value ??
+                                                                                          []),
+                                                                                      device.value,
+                                                                                  ]
+                                                                                : (
+                                                                                      field.value ??
+                                                                                      []
+                                                                                  ).filter(
+                                                                                      (
+                                                                                          value,
+                                                                                      ) =>
+                                                                                          value !==
+                                                                                          device.value,
+                                                                                  ),
+                                                                        )
+                                                                    }
+                                                                />
+                                                                <Icon
+                                                                    className="size-4 text-analytics"
+                                                                    aria-hidden="true"
+                                                                />
+                                                                {t(
+                                                                    device.label,
+                                                                )}
+                                                            </label>
+                                                        );
+                                                    })}
+                                                </div>
+                                                <FieldError
+                                                    id="device_targeting-error"
+                                                    message={errorFor(
+                                                        'device_targeting',
+                                                    )}
+                                                />
+                                            </fieldset>
+                                        )}
+                                    />
+                                    <Controller
+                                        name="metadata"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <FormRow
+                                                id="metadata"
+                                                label={t('Campaign tags')}
+                                                hint={t(
+                                                    'Type a tag and press Enter, or pick a suggestion.',
+                                                )}
+                                                error={errorFor('metadata')}
+                                            >
+                                                <TagInput
+                                                    id="metadata"
+                                                    value={field.value ?? []}
+                                                    onChange={field.onChange}
+                                                    describedBy="metadata-hint"
+                                                    suggestions={CAMPAIGN_METADATA.map(
+                                                        (option) => ({
+                                                            value: option.value,
+                                                            label: t(
+                                                                option.label,
+                                                            ),
+                                                        }),
+                                                    )}
+                                                />
+                                            </FormRow>
+                                        )}
+                                    />
+                                </div>
                             )}
                             {currentStep === 2 && (
-                                <>
-                                    <FormSection
-                                        icon={Wallet}
-                                        title={t('Spending limits')}
-                                        description={t(
-                                            'Budgets are optional. Leave a field blank or enter 0 for no limit.',
-                                        )}
-                                        help={t(
-                                            'Total budget caps spending across the campaign. Daily budget caps spending per UTC day. These limits do not add money to your advertiser balance.',
-                                        )}
-                                    >
-                                        <div className="grid items-start gap-6 xl:grid-cols-3 [&_[data-slot=label]]:mb-0! [&_[data-slot=label]]:h-6 [&_[data-slot=select-trigger]]:h-10!">
-                                            <Controller
-                                                name="currency"
-                                                control={control}
-                                                render={({ field }) => (
-                                                    <ReusableSearchSelect
-                                                        id="currency"
-                                                        label={t('Currency')}
-                                                        required
-                                                        data={currencies.map(
-                                                            (currency) => ({
-                                                                value: currency.currency_code,
-                                                                label: `${currency.currency_code} - ${currency.currency_name}`,
-                                                            }),
-                                                        )}
-                                                        placeholder={t(
-                                                            'Select Currency',
-                                                        )}
-                                                        value={field.value}
-                                                        onChange={
-                                                            field.onChange
-                                                        }
-                                                        error={
-                                                            errors.currency
-                                                                ?.message
-                                                        }
-                                                    />
-                                                )}
-                                            />
-                                            {(
+                                <div className="flex flex-col gap-6">
+                                    <div className="grid gap-[18px] sm:grid-cols-2">
+                                        {(
+                                            [
                                                 [
                                                     'total_budget',
+                                                    'Total budget',
+                                                    'Maximum spend over the entire campaign. Leave blank or enter 0 for no total cap.',
+                                                ],
+                                                [
                                                     'daily_budget',
-                                                ] as const
-                                            ).map((name) => (
+                                                    'Daily budget',
+                                                    'Maximum spend per day, resetting at midnight UTC. Leave blank or enter 0 for no daily cap.',
+                                                ],
+                                            ] as const
+                                        ).map(([name, label, hint]) => (
+                                            <Controller
+                                                key={name}
+                                                name={name}
+                                                control={control}
+                                                render={({
+                                                    field,
+                                                    fieldState,
+                                                }) => (
+                                                    <FormRow
+                                                        id={name}
+                                                        label={`${t(label)} (${values.currency})`}
+                                                        hint={t(hint)}
+                                                        error={fieldError(
+                                                            name,
+                                                            fieldState,
+                                                        )}
+                                                    >
+                                                        <Input
+                                                            id={name}
+                                                            type="number"
+                                                            inputMode="decimal"
+                                                            min={0}
+                                                            step="0.01"
+                                                            placeholder={t(
+                                                                'No limit',
+                                                            )}
+                                                            value={
+                                                                field.value ??
+                                                                ''
+                                                            }
+                                                            onChange={(event) =>
+                                                                field.onChange(
+                                                                    event.target
+                                                                        .value,
+                                                                )
+                                                            }
+                                                            aria-invalid={
+                                                                !!fieldError(
+                                                                    name,
+                                                                    fieldState,
+                                                                )
+                                                            }
+                                                            aria-describedby={`${name}-hint${fieldError(name, fieldState) ? ` ${name}-error` : ''}`}
+                                                        />
+                                                    </FormRow>
+                                                )}
+                                            />
+                                        ))}
+                                    </div>
+                                    <CampaignFunding
+                                        funding={funding ?? selectedAdvertiser}
+                                    />
+                                    <div className="grid gap-[18px] sm:grid-cols-3">
+                                        {(
+                                            [
+                                                [
+                                                    'target_conversions',
+                                                    'Target conversions',
+                                                    'e.g. 100',
+                                                    '1',
+                                                ],
+                                                [
+                                                    'max_publishers',
+                                                    'Max publishers',
+                                                    'e.g. 20',
+                                                    '1',
+                                                ],
+                                                [
+                                                    'target_roi',
+                                                    'Target ROI (%)',
+                                                    '0.00',
+                                                    '0.01',
+                                                ],
+                                            ] as const
+                                        ).map(
+                                            ([
+                                                name,
+                                                label,
+                                                placeholder,
+                                                step,
+                                            ]) => (
                                                 <Controller
                                                     key={name}
                                                     name={name}
                                                     control={control}
-                                                    render={({ field }) => (
-                                                        <div className="space-y-1.5">
-                                                            <div className="flex items-center justify-between gap-2">
-                                                                <Label
-                                                                    htmlFor={
-                                                                        name
-                                                                    }
-                                                                >
-                                                                    {name ===
-                                                                    'total_budget'
-                                                                        ? t(
-                                                                              'Total Budget',
-                                                                          )
-                                                                        : t(
-                                                                              'Daily Budget',
-                                                                          )}{' '}
-                                                                    <span className="text-xs font-normal text-muted-foreground">
-                                                                        {t(
-                                                                            '(optional)',
-                                                                        )}
-                                                                    </span>
-                                                                </Label>
-                                                                <HelpTip
-                                                                    label={
-                                                                        name ===
-                                                                        'total_budget'
-                                                                            ? t(
-                                                                                  'Total Budget',
-                                                                              )
-                                                                            : t(
-                                                                                  'Daily Budget',
-                                                                              )
-                                                                    }
-                                                                >
-                                                                    {name ===
-                                                                    'total_budget'
-                                                                        ? t(
-                                                                              'Maximum spend over the entire campaign. Leave blank or enter 0 for no total cap.',
-                                                                          )
-                                                                        : t(
-                                                                              'Maximum spend per day, resetting at midnight UTC. Leave blank or enter 0 for no daily cap.',
-                                                                          )}
-                                                                </HelpTip>
-                                                            </div>
+                                                    render={({
+                                                        field,
+                                                        fieldState,
+                                                    }) => (
+                                                        <FormRow
+                                                            id={name}
+                                                            label={t(label)}
+                                                            error={fieldError(
+                                                                name,
+                                                                fieldState,
+                                                            )}
+                                                        >
                                                             <Input
                                                                 id={name}
                                                                 type="number"
                                                                 min={0}
-                                                                step="0.01"
+                                                                step={step}
                                                                 placeholder={t(
-                                                                    'No limit',
+                                                                    placeholder,
                                                                 )}
                                                                 value={
                                                                     field.value ??
@@ -862,147 +1229,32 @@ const CampaignForm = ({
                                                                     )
                                                                 }
                                                                 aria-invalid={
-                                                                    !!errors[
-                                                                        name
-                                                                    ]
-                                                                }
-                                                                aria-describedby={
-                                                                    errors[name]
-                                                                        ? `${name}-error`
-                                                                        : undefined
+                                                                    !!fieldError(
+                                                                        name,
+                                                                        fieldState,
+                                                                    )
                                                                 }
                                                             />
-                                                            {errors[name] && (
-                                                                <p
-                                                                    id={`${name}-error`}
-                                                                    className="text-sm text-destructive"
-                                                                >
-                                                                    {
-                                                                        errors[
-                                                                            name
-                                                                        ]
-                                                                            ?.message
-                                                                    }
-                                                                </p>
-                                                            )}
-                                                        </div>
+                                                        </FormRow>
                                                     )}
                                                 />
-                                            ))}
-                                        </div>
-                                        <CampaignFunding
-                                            funding={
-                                                funding ??
-                                                advertisers.find(
-                                                    (item) =>
-                                                        String(item.id) ===
-                                                        advertiserId,
-                                                )
-                                            }
-                                        />
-                                    </FormSection>
-                                    <FormSection
-                                        icon={Target}
-                                        title={t('Performance goals')}
-                                        description={t(
-                                            'Optional planning targets for your campaign.',
+                                            ),
                                         )}
-                                        help={t(
+                                    </div>
+                                    <p className="-mt-3 text-xs text-ink-muted">
+                                        {t(
                                             'Targets help describe your goals. They do not guarantee results or replace campaign spending limits.',
                                         )}
-                                    >
-                                        <div className="grid gap-6 md:grid-cols-3">
-                                            <Controller
-                                                name="target_conversions"
-                                                control={control}
-                                                render={({ field }) => (
-                                                    <ReusableNumberInput
-                                                        id="target_conversions"
-                                                        label={t(
-                                                            'Target Conversions',
-                                                        )}
-                                                        min={0}
-                                                        placeholder={t(
-                                                            'e.g. 100',
-                                                        )}
-                                                        value={field.value}
-                                                        onChange={
-                                                            field.onChange
-                                                        }
-                                                        error={
-                                                            errors
-                                                                .target_conversions
-                                                                ?.message
-                                                        }
-                                                    />
-                                                )}
-                                            />
-                                            <Controller
-                                                name="max_publishers"
-                                                control={control}
-                                                render={({ field }) => (
-                                                    <ReusableNumberInput
-                                                        id="max_publishers"
-                                                        label={t(
-                                                            'Max Publishers',
-                                                        )}
-                                                        min={0}
-                                                        placeholder={t(
-                                                            'e.g. 20',
-                                                        )}
-                                                        value={field.value}
-                                                        onChange={
-                                                            field.onChange
-                                                        }
-                                                        error={
-                                                            errors
-                                                                .max_publishers
-                                                                ?.message
-                                                        }
-                                                    />
-                                                )}
-                                            />
-                                            <Controller
-                                                name="target_roi"
-                                                control={control}
-                                                render={({ field }) => (
-                                                    <ReusableNumberInput
-                                                        id="target_roi"
-                                                        label={t('Target ROI')}
-                                                        min={0}
-                                                        step={0.01}
-                                                        placeholder="0.00"
-                                                        value={field.value}
-                                                        onChange={
-                                                            field.onChange
-                                                        }
-                                                        error={
-                                                            errors.target_roi
-                                                                ?.message
-                                                        }
-                                                    />
-                                                )}
-                                            />
-                                        </div>
-                                    </FormSection>
-                                    <FormSection
-                                        icon={FileText}
-                                        title={t('Campaign terms')}
-                                        description={t(
-                                            'Choose any agreements that publishers should follow.',
-                                        )}
-                                        help={t(
-                                            'Terms are optional. Create or update them in a separate tab, then refresh the list without losing this draft.',
-                                        )}
-                                    >
+                                    </p>
+                                    <div className="flex flex-col gap-2">
                                         <Controller
                                             name="terms"
                                             control={control}
                                             render={({ field }) => (
-                                                <ReusableSearchMultiSelect
+                                                <MultiSelect
                                                     id="terms"
-                                                    label={t('Terms')}
-                                                    data={(terms ?? [])
+                                                    label={t('Campaign terms')}
+                                                    options={(terms ?? [])
                                                         .filter(
                                                             (term) =>
                                                                 isEditing ||
@@ -1022,9 +1274,7 @@ const CampaignForm = ({
                                                     value={field.value}
                                                     onChange={field.onChange}
                                                     multiple
-                                                    error={
-                                                        errors.terms?.message
-                                                    }
+                                                    error={errorFor('terms')}
                                                 />
                                             )}
                                         />
@@ -1033,7 +1283,7 @@ const CampaignForm = ({
                                                 href="/advertiser/terms"
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="text-primary underline underline-offset-4"
+                                                className="font-bold text-brand-ink underline underline-offset-4"
                                             >
                                                 {t('Manage terms in a new tab')}
                                             </a>
@@ -1047,146 +1297,107 @@ const CampaignForm = ({
                                                     })
                                                 }
                                             >
-                                                <RefreshCw
-                                                    className="size-3.5"
-                                                    aria-hidden="true"
-                                                />
+                                                <RefreshCw aria-hidden="true" />
                                                 {t('Refresh terms')}
                                             </Button>
                                         </div>
-                                    </FormSection>
-                                </>
+                                    </div>
+                                </div>
                             )}
                             {currentStep === 3 && (
-                                <>
-                                    <FormSection
-                                        icon={Globe2}
-                                        title={t('Country targeting')}
-                                        description={t(
-                                            'Select regions or individual countries, or leave empty for all countries.',
-                                        )}
-                                        help={t(
-                                            'Country restrictions require trusted country detection in your tracking integration. Confirm support with your network before applying restrictions.',
-                                        )}
-                                    >
-                                        <Controller
-                                            name="geo_targeting"
-                                            control={control}
-                                            render={({ field }) => (
-                                                <CountryTargeting
-                                                    countries={countries}
-                                                    value={field.value}
-                                                    onChange={field.onChange}
-                                                    error={
-                                                        errors.geo_targeting
-                                                            ?.message
-                                                    }
-                                                />
-                                            )}
-                                        />
-                                    </FormSection>
-                                    <FormSection
-                                        icon={Monitor}
-                                        title={t('Device Targeting')}
-                                        description={t(
-                                            'Select eligible devices, or leave all unchecked to allow any device.',
-                                        )}
-                                    >
-                                        <Controller
-                                            name="device_targeting"
-                                            control={control}
-                                            render={({ field }) => (
-                                                <div className="grid gap-3 sm:grid-cols-3">
-                                                    {DEVICES.map((device) => (
-                                                        <div
-                                                            key={device.value}
-                                                            className={cn(
-                                                                'rounded-lg border p-4 transition-colors [&_label]:cursor-pointer',
-                                                                field.value?.includes(
-                                                                    device.value,
-                                                                )
-                                                                    ? 'border-primary/50 bg-primary/5'
-                                                                    : 'bg-muted/20',
-                                                            )}
-                                                        >
-                                                            <ReusableCheckbox
-                                                                id={`device_${device.value}`}
-                                                                label={t(
-                                                                    device.label,
-                                                                )}
-                                                                checked={
-                                                                    field.value?.includes(
-                                                                        device.value,
-                                                                    ) ?? false
-                                                                }
-                                                                onChange={(
-                                                                    checked,
-                                                                ) =>
-                                                                    field.onChange(
-                                                                        checked
-                                                                            ? [
-                                                                                  ...(field.value ??
-                                                                                      []),
-                                                                                  device.value,
-                                                                              ]
-                                                                            : field.value?.filter(
-                                                                                  (
-                                                                                      value,
-                                                                                  ) =>
-                                                                                      value !==
-                                                                                      device.value,
-                                                                              ),
-                                                                    )
-                                                                }
-                                                            />
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        />
-                                        {errors.device_targeting && (
-                                            <p className="text-sm text-destructive">
-                                                {
-                                                    errors.device_targeting
-                                                        .message
-                                                }
-                                            </p>
-                                        )}
-                                    </FormSection>
-                                    <FormSection
-                                        icon={Tags}
-                                        title={t('Campaign Tags')}
-                                        description={t(
-                                            'Add optional tags to describe and organize your campaign.',
-                                        )}
-                                    >
-                                        <Controller
-                                            name="metadata"
-                                            control={control}
-                                            render={({ field }) => (
-                                                <ReusableSearchMultiSelect
-                                                    id="metadata"
-                                                    label={t('Tags')}
-                                                    data={CAMPAIGN_METADATA}
-                                                    placeholder={t(
-                                                        'Select tags...',
+                                <div className="flex flex-col gap-4">
+                                    {reviewSection(0, [
+                                        {
+                                            label: t('Campaign name'),
+                                            value: values.name,
+                                        },
+                                        {
+                                            label: t('Advertiser'),
+                                            value: advertiserLabel,
+                                        },
+                                        {
+                                            label: t('Currency'),
+                                            value: values.currency,
+                                        },
+                                        {
+                                            label: t('Schedule'),
+                                            value: `${
+                                                values.start_date
+                                                    ? formatDate(
+                                                          format(
+                                                              values.start_date,
+                                                              'yyyy-MM-dd',
+                                                          ),
+                                                      )
+                                                    : '—'
+                                            } – ${
+                                                values.no_end_date
+                                                    ? t('No end date')
+                                                    : values.end_date
+                                                      ? formatDate(
+                                                            format(
+                                                                values.end_date,
+                                                                'yyyy-MM-dd',
+                                                            ),
+                                                        )
+                                                      : '—'
+                                            }`,
+                                        },
+                                        {
+                                            label: t('Status'),
+                                            value: (
+                                                <StatusBadge
+                                                    status={campaignStatusKey(
+                                                        campaignStatus,
                                                     )}
-                                                    value={field.value}
-                                                    onChange={field.onChange}
-                                                    multiple
-                                                    error={
-                                                        errors.metadata?.message
-                                                    }
                                                 />
-                                            )}
-                                        />
-                                    </FormSection>
-                                    <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
-                                        <Rocket
-                                            className="mt-0.5 size-5 shrink-0 text-primary"
-                                            aria-hidden="true"
-                                        />
-                                        <p className="text-sm leading-relaxed text-muted-foreground">
+                                            ),
+                                        },
+                                    ])}
+                                    {reviewSection(1, [
+                                        {
+                                            label: t('Countries'),
+                                            value: countryNames(
+                                                values.geo_targeting,
+                                            ),
+                                        },
+                                        {
+                                            label: t('Devices'),
+                                            value: deviceNames(
+                                                values.device_targeting,
+                                            ),
+                                        },
+                                        {
+                                            label: t('Tags'),
+                                            value: values.metadata?.length
+                                                ? values.metadata
+                                                      .map(tagLabel)
+                                                      .join(', ')
+                                                : t('None'),
+                                        },
+                                    ])}
+                                    {reviewSection(2, [
+                                        {
+                                            label: t('Total budget'),
+                                            value: limit(values.total_budget),
+                                        },
+                                        {
+                                            label: t('Daily budget'),
+                                            value: limit(values.daily_budget),
+                                        },
+                                        {
+                                            label: t('Campaign terms'),
+                                            value: values.terms?.length
+                                                ? t('{{count}} selected', {
+                                                      count: values.terms
+                                                          .length,
+                                                  })
+                                                : t('None'),
+                                        },
+                                    ])}
+                                    <Alert variant="info" role="note">
+                                        <Rocket />
+                                        <AlertDescription>
                                             {isEditing
                                                 ? t(
                                                       'Changes take effect when you save. You can return to any step to review your updates.',
@@ -1194,69 +1405,102 @@ const CampaignForm = ({
                                                 : t(
                                                       'Ready to create? You can add offers and invite publishers after saving your campaign. No advertiser balance is required to create it.',
                                                   )}
-                                        </p>
-                                    </div>
-                                </>
+                                        </AlertDescription>
+                                    </Alert>
+                                </div>
                             )}
-                        </div>
-                    </fieldset>
-                    <div className="flex items-center justify-between gap-3 border-t bg-muted/20 px-4 py-5 sm:px-6 lg:px-8">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            disabled={currentStep === 1 || isSubmitting}
-                            onClick={() =>
-                                setCurrentStep((step) => Math.max(step - 1, 1))
-                            }
-                        >
-                            <ArrowLeft className="size-4" aria-hidden="true" />
-                            {t('Back')}
-                        </Button>
-                        <span className="hidden text-xs text-muted-foreground sm:block">
-                            {currentStep} / 3
-                        </span>
-                        {currentStep < 3 ? (
-                            <Button
-                                key="next"
-                                type="button"
-                                onClick={handleNext}
-                                disabled={isSubmitting}
-                            >
-                                {t('Continue')}
-                                <ArrowRight
-                                    className="size-4"
-                                    aria-hidden="true"
-                                />
+                        </fieldset>
+                        <div className="sticky bottom-0 mt-auto flex flex-wrap items-center justify-between gap-2.5 border-t border-border bg-surface-muted px-6 py-4">
+                            <Button variant="ghost" asChild>
+                                <Link
+                                    href={
+                                        campaign
+                                            ? advertiser.campaign.show.url(
+                                                  campaign.id,
+                                              )
+                                            : advertiser.campaign.index.url()
+                                    }
+                                >
+                                    {t('Cancel')}
+                                </Link>
                             </Button>
-                        ) : (
-                            <Button
-                                key="submit"
-                                type="submit"
-                                disabled={isSubmitting}
-                            >
-                                {isSubmitting ? (
-                                    <Loader2
-                                        className="size-4 animate-spin"
-                                        aria-hidden="true"
-                                    />
-                                ) : isEditing ? (
-                                    <Save
-                                        className="size-4"
-                                        aria-hidden="true"
-                                    />
-                                ) : (
-                                    <Rocket
-                                        className="size-4"
-                                        aria-hidden="true"
-                                    />
+                            <div className="flex flex-wrap gap-2.5">
+                                {currentStep > 0 && (
+                                    <Button
+                                        type="button"
+                                        variant="secondary"
+                                        disabled={isSubmitting}
+                                        onClick={() =>
+                                            setCurrentStep((step) =>
+                                                Math.max(step - 1, 0),
+                                            )
+                                        }
+                                    >
+                                        <ArrowLeft aria-hidden="true" />
+                                        {t('Back')}
+                                    </Button>
                                 )}
-                                {isEditing
-                                    ? t('Save Changes')
-                                    : t('Create Campaign')}
-                            </Button>
-                        )}
-                    </div>
-                </form>
+                                {currentStep < lastStep ? (
+                                    <Button
+                                        key="next"
+                                        type="button"
+                                        onClick={() => goTo(currentStep + 1)}
+                                        disabled={isSubmitting}
+                                    >
+                                        {t('Continue')}
+                                        <ArrowRight aria-hidden="true" />
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        key="submit"
+                                        type="submit"
+                                        disabled={isSubmitting}
+                                    >
+                                        {isSubmitting ? (
+                                            <Loader2
+                                                className="animate-spin"
+                                                aria-hidden="true"
+                                            />
+                                        ) : isEditing ? (
+                                            <Save aria-hidden="true" />
+                                        ) : (
+                                            <Rocket aria-hidden="true" />
+                                        )}
+                                        {isEditing
+                                            ? t('Save changes')
+                                            : t('Create campaign')}
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+                    </form>
+                    <aside
+                        aria-label={t('Marketplace preview')}
+                        className="flex min-w-0 flex-col gap-3 lg:col-start-2 min-[87.5rem]:col-start-auto"
+                    >
+                        <span className="text-[11px] font-bold tracking-[0.08em] text-ink-muted uppercase">
+                            {t('Live preview · marketplace card')}
+                        </span>
+                        <CampaignPreviewCard
+                            name={values.name}
+                            advertiser={advertiserLabel}
+                            tags={(values.metadata ?? []).map(tagLabel)}
+                            startDate={
+                                values.start_date
+                                    ? format(values.start_date, 'yyyy-MM-dd')
+                                    : null
+                            }
+                        />
+                        <Alert variant="info" role="note">
+                            <Info />
+                            <AlertDescription>
+                                {t(
+                                    'Offers and payouts are added after the campaign is saved.',
+                                )}
+                            </AlertDescription>
+                        </Alert>
+                    </aside>
+                </div>
             </div>
         </AppLayout>
     );

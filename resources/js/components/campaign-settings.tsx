@@ -5,6 +5,13 @@ import {
     PopoverTrigger,
 } from '@/components/ui/popover';
 import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import {
     Sheet,
     SheetContent,
     SheetDescription,
@@ -412,20 +419,29 @@ export function CampaignSettings({
                         {field(
                             'campaign_status',
                             'Configured status',
-                            <select
-                                {...inputProps('campaign_status')}
+                            <Select
                                 value={form.data.campaign_status}
-                                onChange={(event) =>
-                                    form.setData(
-                                        'campaign_status',
-                                        event.target.value,
-                                    )
+                                onValueChange={(value) =>
+                                    form.setData('campaign_status', value)
                                 }
                             >
-                                <option value="A">{t('Active')}</option>
-                                <option value="I">{t('Inactive')}</option>
-                                <option value="P">{t('Paused')}</option>
-                            </select>,
+                                <SelectTrigger
+                                    {...inputProps('campaign_status')}
+                                >
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="A">
+                                        {t('Active')}
+                                    </SelectItem>
+                                    <SelectItem value="I">
+                                        {t('Inactive')}
+                                    </SelectItem>
+                                    <SelectItem value="P">
+                                        {t('Paused')}
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>,
                             true,
                             'campaign-settings-short',
                         )}
@@ -581,25 +597,29 @@ export function CampaignSettings({
                             'country_filter',
                             'Country filter',
                             <>
-                                <select
-                                    {...inputProps('country_filter')}
+                                <Select
                                     value={form.data.country_filter}
-                                    onChange={(event) =>
+                                    onValueChange={(value) =>
                                         form.setData(
                                             'country_filter',
-                                            event.target.value as
-                                                | 'all'
-                                                | 'selected',
+                                            value as 'all' | 'selected',
                                         )
                                     }
                                 >
-                                    <option value="all">
-                                        {t('All countries')}
-                                    </option>
-                                    <option value="selected">
-                                        {t('Selected countries')}
-                                    </option>
-                                </select>
+                                    <SelectTrigger
+                                        {...inputProps('country_filter')}
+                                    >
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">
+                                            {t('All countries')}
+                                        </SelectItem>
+                                        <SelectItem value="selected">
+                                            {t('Selected countries')}
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
                                 {form.data.country_filter === 'selected' && (
                                     <>
                                         <div className="campaign-settings-chips">
@@ -792,7 +812,7 @@ export function CampaignSettings({
                                         key={term.id}
                                         className="rounded-md border p-3"
                                     >
-                                        <p className="text-xs text-muted-foreground">
+                                        <p className="text-xs text-ink-muted">
                                             {t('Terms #{{id}}', {
                                                 id: term.id,
                                             })}
@@ -824,7 +844,7 @@ export function CampaignSettings({
                                     </div>
                                 ))
                             ) : (
-                                <p className="text-sm text-muted-foreground">
+                                <p className="text-sm text-ink-muted">
                                     {t('No saved terms yet.')}
                                 </p>
                             )}
@@ -862,7 +882,7 @@ export function CampaignSettings({
                             {termsForm.errors.description && (
                                 <p
                                     role="alert"
-                                    className="text-sm text-destructive"
+                                    className="text-sm text-danger-ink"
                                 >
                                     {termsForm.errors.description}
                                 </p>

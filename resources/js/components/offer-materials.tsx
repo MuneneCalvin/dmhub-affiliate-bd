@@ -1,9 +1,11 @@
+import { DirectoryPager, EmptyState, SectionCard } from '@/components/app';
+import { useConfirmationDialog } from '@/components/app/confirm-dialog';
+import { CreativeCard } from '@/components/creatives';
 import { Button } from '@/components/ui/button';
-import { useConfirmationDialog } from '@/dev/core';
 import advertiser from '@/routes/advertiser';
 import type { Creative } from '@/types';
 import { Link, router } from '@inertiajs/react';
-import { FileText, Plus } from 'lucide-react';
+import { Image, Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 export type MaterialsPage = {
@@ -15,6 +17,7 @@ export type MaterialsPage = {
     next_page_url: string | null;
 };
 
+/** Offer page "Promotional materials" tab: the offer's creatives as library cards. */
 export function OfferMaterials({
     offerId,
     materials,
@@ -28,191 +31,95 @@ export function OfferMaterials({
 }) {
     const { t } = useTranslation();
     const { confirm, ConfirmDialog } = useConfirmationDialog();
+    // The paginator uses `materials_page` (OffersController@show).
+    const goToPage = (page: number) => {
+        const base = materials.next_page_url ?? materials.prev_page_url;
+        if (!base) return;
+        const url = new URL(base, window.location.origin);
+        url.searchParams.set('materials_page', String(page));
+        router.visit(url.pathname + url.search, { preserveScroll: true });
+    };
+
     return (
-        <section className="space-y-5">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-                <div className="space-y-1">
-                    <h2 className="text-lg font-semibold">
-                        {t('Promotional materials')}
-                    </h2>
-                    <p className="max-w-2xl text-sm text-muted-foreground">
-                        {t(
-                            'Optional banners, videos and copy for publishers. Tracking links work without promotional materials.',
-                        )}
-                    </p>
-                </div>
-                {canUpload && (
+        <SectionCard
+            title={t('Promotional materials')}
+            description={t(
+                'Optional banners, videos and copy for publishers. Tracking links work without promotional materials.',
+            )}
+            icon={<Image />}
+            tone="admin"
+            action={
+                canUpload ? (
                     <Button asChild>
                         <Link
                             href={advertiser.creatives.create.url({
                                 query: { offer_id: offerId },
                             })}
                         >
-                            <Plus className="size-4" />
+                            <Plus />
                             {t('Add promotional material')}
                         </Link>
                     </Button>
-                )}
-            </div>
+                ) : undefined
+            }
+            bodyClassName="flex flex-col gap-5"
+        >
             {materials.data.length === 0 ? (
-                <div className="rounded-xl border border-dashed p-10 text-center">
-                    <FileText className="mx-auto mb-3 size-8 text-muted-foreground" />
-                    <h3 className="font-medium">
-                        {t('No promotional materials yet')}
-                    </h3>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                        {t(
-                            'You can start promoting this offer with a tracking link and add materials later.',
-                        )}
-                    </p>
-                </div>
+                <EmptyState
+                    icon={<Image />}
+                    tone="admin"
+                    title={t('No promotional materials yet')}
+                    description={t(
+                        'You can start promoting this offer with a tracking link and add materials later.',
+                    )}
+                />
             ) : (
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-[18px]">
                     {materials.data.map((material) => (
-                        <article
+                        <CreativeCard
                             key={material.id}
-                            className="flex min-w-0 flex-col overflow-hidden rounded-xl border bg-card"
-                        >
-                            <div className="flex h-40 items-center justify-center bg-muted/40 p-4">
-                                {material.preview_url ||
-                                (['banner', 'image', 'email'].includes(
-                                    material.type,
-                                ) &&
-                                    material.file_url) ? (
-                                    <img
-                                        src={
-                                            material.preview_url ||
-                                            material.file_url
-                                        }
-                                        alt={material.alt_text || material.name}
-                                        className="max-h-full max-w-full object-contain"
-                                    />
-                                ) : (
-                                    <FileText className="size-8 text-muted-foreground" />
-                                )}
-                            </div>
-                            <div className="flex flex-1 flex-col gap-3 p-4">
-                                <div>
-                                    <h3 className="font-medium break-words">
-                                        {material.name}
-                                    </h3>
-                                    <p className="text-sm text-muted-foreground">
-                                        {t(material.type)}
-                                        {material.width && material.height
-                                            ? ` · ${material.width} × ${material.height}`
-                                            : ''}{' '}
-                                        ·{' '}
-                                        {t(
-                                            material.status === 'A'
-                                                ? 'Active'
-                                                : 'Inactive',
-                                        )}
-                                    </p>
-                                </div>
-                                <p className="text-sm text-muted-foreground">
-                                    {t('Clicks')}: {material.clicks ?? 0} ·{' '}
-                                    {t('Impressions')}:{' '}
-                                    {material.impressions ?? 0}
-                                </p>
-                                {canManage && (
-                                    <div className="mt-auto flex flex-wrap gap-2">
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            asChild
-                                        >
-                                            <Link
-                                                href={advertiser.creatives.show.url(
-                                                    material.id,
-                                                )}
-                                            >
-                                                {t('View Codes')}
-                                            </Link>
-                                        </Button>
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            asChild
-                                        >
-                                            <Link
-                                                href={advertiser.creatives.edit.url(
-                                                    material.id,
-                                                )}
-                                            >
-                                                {t('Edit')}
-                                            </Link>
-                                        </Button>
-                                        <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            className="text-destructive"
-                                            onClick={() =>
-                                                confirm({
-                                                    title: t(
-                                                        'Delete promotional material',
-                                                    ),
-                                                    description: t(
-                                                        'Are you sure you want to delete this promotional material? Existing embeds for it will stop working.',
-                                                    ),
-                                                    confirmLabel: t('Delete'),
-                                                    cancelLabel: t('Cancel'),
-                                                    variant: 'destructive',
-                                                    onConfirm: () =>
-                                                        router.delete(
-                                                            advertiser.creatives.delete.url(
-                                                                material.id,
-                                                            ),
-                                                            {
-                                                                preserveScroll: true,
-                                                            },
-                                                        ),
-                                                })
-                                            }
-                                        >
-                                            {t('Delete')}
-                                        </Button>
-                                    </div>
-                                )}
-                            </div>
-                        </article>
+                            creative={material}
+                            href={advertiser.creatives.show.url(material.id)}
+                            editHref={
+                                canManage
+                                    ? advertiser.creatives.edit.url(material.id)
+                                    : undefined
+                            }
+                            onDelete={
+                                canManage
+                                    ? () =>
+                                          confirm({
+                                              title: t(
+                                                  'Delete promotional material',
+                                              ),
+                                              description: t(
+                                                  'Are you sure you want to delete this promotional material? Existing embeds for it will stop working.',
+                                              ),
+                                              confirmLabel: t('Delete'),
+                                              cancelLabel: t('Cancel'),
+                                              variant: 'destructive',
+                                              onConfirm: () =>
+                                                  router.delete(
+                                                      advertiser.creatives.delete.url(
+                                                          material.id,
+                                                      ),
+                                                      { preserveScroll: true },
+                                                  ),
+                                          })
+                                    : undefined
+                            }
+                        />
                     ))}
                 </div>
             )}
             {materials.last_page > 1 && (
-                <nav
-                    aria-label={t('Promotional materials pages')}
-                    className="flex items-center justify-between gap-3"
-                >
-                    <Button
-                        variant="outline"
-                        disabled={!materials.prev_page_url}
-                        onClick={() =>
-                            materials.prev_page_url &&
-                            router.visit(materials.prev_page_url, {
-                                preserveScroll: true,
-                            })
-                        }
-                    >
-                        {t('Previous')}
-                    </Button>
-                    <span className="text-sm">
-                        {materials.current_page} / {materials.last_page}
-                    </span>
-                    <Button
-                        variant="outline"
-                        disabled={!materials.next_page_url}
-                        onClick={() =>
-                            materials.next_page_url &&
-                            router.visit(materials.next_page_url, {
-                                preserveScroll: true,
-                            })
-                        }
-                    >
-                        {t('Next')}
-                    </Button>
-                </nav>
+                <DirectoryPager
+                    page={materials.current_page}
+                    pageCount={materials.last_page}
+                    onPageChange={goToPage}
+                />
             )}
             <ConfirmDialog />
-        </section>
+        </SectionCard>
     );
 }

@@ -66,7 +66,16 @@ class AdvertiserController extends Controller
     {
         $pageSize = $request->get('pageSize', 10);
         $user = Auth::user();
+        $status = in_array($request->query('status'), ['active', 'inactive'], true) ? $request->query('status') : 'all';
         try {
+            // Same scope as the list, used for the status tiles (counts across every page).
+            $scoped = fn () => DB::table('advertisers')->where('advertisers.is_verified', true)
+                ->tap(fn ($q) => $this->scopeToNetwork($q));
+            $statusCounts = [
+                'all' => $scoped()->count(),
+                'active' => $scoped()->where('advertisers.status', 'A')->count(),
+                'inactive' => $scoped()->where('advertisers.status', '!=', 'A')->count(),
+            ];
             $adverts = DB::table('advertisers')
                 ->select([
                     'advertisers.*',
@@ -78,18 +87,25 @@ class AdvertiserController extends Controller
                     'users.last_name',
                     'users.email',
                     'users.id as userId',
+                    // Approved advertisers that are no longer active are deactivated, not pending approval.
+                    DB::raw("CASE WHEN advertisers.status = 'A' THEN 'A' ELSE 'D' END as status"),
+                    DB::raw('(select count(*) from campaigns where campaigns.advertiser_id = advertisers.id) as campaigns_count'),
                 ])
                 ->join('users', 'advertisers.user_id', '=', 'users.id')
                 ->join('currencies', 'advertisers.currency', '=', 'currencies.currency_code')
                 ->leftJoin('networks', 'advertisers.network_id', '=', 'networks.id')
-                ->where('advertisers.status', 'A')
                 ->where('advertisers.is_verified', true)
                 ->tap(fn ($q) => $this->scopeToNetwork($q))
+                ->when($status === 'active', fn ($q) => $q->where('advertisers.status', 'A'))
+                ->when($status === 'inactive', fn ($q) => $q->where('advertisers.status', '!=', 'A'))
                 ->orderByDesc('advertisers.created_at')
-                ->paginate($pageSize);
+                ->paginate($pageSize)
+                ->withQueryString();
 
             return Inertia::render('advertisers/index', [
                 'advrts' => $adverts,
+                'status' => $status,
+                'statusCounts' => $statusCounts,
                 'networks' => $this->networkOptions(),
                 'extingNetwork' => $user->is_network ? UserNetworks::where('user_id', $user->id)->with('network')->first() : null,
                 'currencies' => Currency::all(),
@@ -330,9 +346,9 @@ class AdvertiserController extends Controller
             $advertiser = $this->findManaged($id);
 
             DB::transaction(function () use ($advertiser) {
+                // Stay verified so the advertiser remains in the list and can be reactivated.
                 $advertiser->update([
                     'status' => 'P',
-                    'is_verified' => false,
                 ]);
                 $advertiser->user()->update([
                     'status' => 'P',

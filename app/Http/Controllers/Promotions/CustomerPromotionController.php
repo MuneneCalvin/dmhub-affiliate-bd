@@ -3,17 +3,34 @@
 namespace App\Http\Controllers\Promotions;
 
 use App\Http\Controllers\Controller;
+use App\Models\Campaign;
 use App\Models\CustomerPromotion;
 use App\Models\Offer;
 use App\Models\StoreConnection;
+use App\Services\CampaignOffersService;
 use App\Services\Promotions\PromotionConfiguration;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
+use Inertia\Inertia;
 
 class CustomerPromotionController extends Controller
 {
+    public function edit(Request $request, Campaign $campaign, CampaignOffersService $offers)
+    {
+        Campaign::visibleTo($request->user())->findOrFail($campaign->id);
+        $offer = $request->filled('offer')
+            ? $campaign->offers()->with('customerPromotion.stores')->findOrFail($request->integer('offer'))
+            : null;
+
+        return Inertia::render('advertisercampaigns/offers/promotions', [
+            'campaign' => $campaign->only('id', 'name', 'currency'),
+            'offer' => $offer ? [...$offer->only('id', 'name'), 'customer_promotion' => $offer->customerPromotion] : null,
+            'stores' => $offers->stores($campaign),
+        ]);
+    }
+
     public function update(Request $request, Offer $offer)
     {
         Offer::visibleTo($request->user())->findOrFail($offer->id);
@@ -27,7 +44,9 @@ class CustomerPromotionController extends Controller
         $c = PromotionConfiguration::validate($input['configuration'], $offer->campaign->currency);
         $stores = StoreConnection::whereIn('id', $input['store_ids'])->where('advertiser_id', $offer->campaign->advertiser_id)
             ->where('network_id', $offer->network_id)->get();
-        abort_unless($stores->count() === count($input['store_ids']), 422, 'Invalid store selection.');
+        if ($stores->count() !== count($input['store_ids'])) {
+            throw ValidationException::withMessages(['store_ids' => 'Choose stores available to this campaign.']);
+        }
         if ($stores->count() > 1 && ($c['scope'] !== 'all' || count($c['excluded_product_ids']))) {
             throw ValidationException::withMessages(['stores' => 'Product and category IDs belong to a specific store. Select one store for these rules.']);
         }

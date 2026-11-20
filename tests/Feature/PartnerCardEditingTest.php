@@ -84,6 +84,20 @@ it('checks activation and deactivation grants independently when editing readine
     expect($f['advertiser']->fresh()->auto_approve_publishers)->toBeTrue();
 });
 
+it('keeps an advertiser verified and listed when it is deactivated from the readiness card', function () {
+    $this->withoutVite();
+    $f = conversionFixture();
+    $f['advertiser']->update(['is_verified' => true]);
+    $operator = cardOperator($f, ['view_advertisers', 'manage_advertisers', 'approve_advertisers']);
+    $url = route('advertisers.cards.update', ['id' => $f['advertiser']->user_id, 'card' => 'readiness']);
+    $this->actingAs($operator)->patch($url, ['status' => 'P'])->assertSessionHasNoErrors();
+    expect($f['advertiser']->fresh())->status->toBe('P')->is_verified->toBeTrue();
+    $this->get(route('advertisers.index'))->assertOk()->assertInertia(fn ($page) => $page
+        ->has('advrts.data', 1)->where('advrts.data.0.id', $f['advertiser']->id)->where('advrts.data.0.status', 'D'));
+    $this->patch($url, ['status' => 'A'])->assertSessionHasNoErrors();
+    expect($f['advertiser']->fresh())->status->toBe('A')->is_verified->toBeTrue();
+});
+
 it('requires fresh email verification after a profile edit and ignores privilege fields', function () {
     $f = conversionFixture();
     $owner = $f['publisher']->user;
@@ -122,9 +136,79 @@ it('allows publisher profile grants without silently granting site or payout edi
         'business_name' => 'My business', 'website_url' => 'https://injected.example'])->assertSessionHasNoErrors();
     expect($f['publisher']->fresh()->business_name)->toBe('My business')
         ->and($f['publisher']->fresh()->website_url)->toBe('https://publisher.example');
-    $this->patch($route('site'), [])->assertForbidden();
+    $this->patch($route('site'), ['business_name' => 'Updated company', 'website_url' => 'https://injected.example'])->assertSessionHasNoErrors();
+    expect($f['publisher']->fresh()->business_name)->toBe('Updated company')
+        ->and($f['publisher']->fresh()->website_url)->toBe('https://publisher.example');
     $this->patch($route('payout'), [])->assertForbidden();
     $owner->givePermissionTo('manage_payouts');
     $this->patch($route('payout'), ['payout_threshold' => '30.00', 'payout_method' => 'bank_transfer'])->assertSessionHasNoErrors();
     expect($f['publisher']->fresh()->payout_threshold)->toBe('30.00');
+});
+
+it('lets advertisers edit their own company without administrative privileges', function () {
+    $f = conversionFixture();
+    $foreign = conversionFixture();
+    $owner = $f['advertiser']->user;
+    $owner->assignRoleById(Role::findByName('advertiser')->id);
+    $url = route('advertisers.cards.update', ['id' => $owner->id, 'card' => 'business']);
+    $back = route('profile.edit');
+    $data = ['business_name' => 'My updated company', 'industry' => 'Travel',
+        'website_name' => 'https://company.example', 'coc_number' => '12345678',
+        'network_id' => $foreign['network']->id, 'available_budget' => 99999,
+        'is_verified' => true, 'status' => 'P', 'credit_limit' => 99999];
+    $this->actingAs($owner)->from($back)->patch($url, $data)->assertRedirect($back)->assertSessionHasNoErrors();
+    expect($f['advertiser']->fresh()->business_name)->toBe('My updated company')
+        ->and($f['advertiser']->fresh()->coc_number)->toBe('12345678')
+        ->and($f['advertiser']->fresh()->network_id)->toBe($f['network']->id)
+        ->and($f['advertiser']->fresh()->available_budget)->toBe('1000.00')
+        ->and($f['advertiser']->fresh()->status)->toBe('A')
+        ->and($f['advertiser']->fresh()->credit_limit)->toBe('0.00');
+    $this->patch(route('advertisers.cards.update', ['id' => $foreign['advertiser']->user_id, 'card' => 'business']), $data)->assertNotFound();
+    $this->patch(route('advertisers.cards.update', ['id' => $owner->id, 'card' => 'readiness']), ['status' => 'P'])->assertForbidden();
+    $this->patch($url, [...$data, 'website_name' => 'javascript:alert(1)', 'coc_number' => str_repeat('1', 11)])
+        ->assertSessionHasErrors(['website_name', 'coc_number']);
+});
+
+it('exposes company editing in profile settings for both partner roles', function (string $kind) {
+    $f = conversionFixture();
+    $owner = $f[$kind]->user;
+    $owner->assignRoleById(Role::findByName($kind)->id);
+    $id = $kind === 'advertiser' ? $owner->id : $f[$kind]->id;
+    $url = route($kind.'s.cards.update', ['id' => $id, 'card' => 'business']);
+    $this->actingAs($owner)->get(route('settings.company'))->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->component('settings/company')->has('companies', 1)
+        ->where('companies.0.kind', $kind)->where('companies.0.updateUrl', $url));
+    $data = ['business_name' => 'Company from settings', 'industry' => 'Travel', 'coc_number' => '98765432',
+        $kind === 'advertiser' ? 'website_name' : 'website_url' => 'https://company.example'];
+    $this->from(route('profile.edit'))->patch($url, $data)->assertRedirect(route('profile.edit'))->assertSessionHasNoErrors();
+    $this->actingAs($owner->fresh())->get(route('settings.company'))->assertInertia(fn (Assert $page) => $page
+        ->where('companies.0.business_name', 'Company from settings')->where('companies.0.website', 'https://company.example'));
+    $foreign = conversionFixture();
+    $foreign[$kind]->update(['coc_number' => '11111111']);
+    $this->patch($url, [...$data, 'business_name' => 'Must not save', 'coc_number' => '11111111'])->assertSessionHasErrors('coc_number');
+    expect($f[$kind]->fresh()->business_name)->toBe('Company from settings');
+})->with(['advertiser', 'publisher']);
+
+it('keeps deactivated publishers in the list so they can be found and reactivated', function () {
+    $this->withoutVite();
+    $f = conversionFixture();
+    $f['publisher']->update(['is_verified' => true]);
+    $admin = User::factory()->create(['is_super_admin' => true]);
+    $inactive = fn ($page) => $page->where('statusCounts.inactive', 1)->has('pbshers.data', 1)
+        ->where('pbshers.data.0.id', $f['publisher']->id)->where('pbshers.data.0.status', 'P');
+    $this->actingAs($admin)->post(route('publishers.deactivate', $f['publisher']->id))->assertSessionHas('success');
+    expect($f['publisher']->fresh())->is_verified->toBeTrue()->and($f['publisher']->user->fresh()->status)->toBe('P');
+    $this->get(route('publishers.index'))->assertOk()->assertInertia($inactive);
+    $this->get(route('publishers.index', ['status' => 'inactive']))->assertInertia($inactive);
+    $this->post(route('publishers.activate', $f['publisher']->id))->assertSessionHas('success');
+    $this->get(route('publishers.index'))->assertInertia(fn ($page) => $page->where('statusCounts.active', 1)->where('statusCounts.inactive', 0));
+    // The status toggle and the readiness card must behave the same way.
+    $this->post(route('publishers.change.status', $f['publisher']->id))->assertSessionHas('success');
+    expect($f['publisher']->fresh()->is_verified)->toBeTrue()->and($f['publisher']->user->fresh()->status)->toBe('P');
+    $this->get(route('publishers.index'))->assertInertia($inactive);
+    $this->post(route('publishers.change.status', $f['publisher']->id))->assertSessionHas('success');
+    expect($f['publisher']->user->fresh()->status)->toBe('A');
+    $this->patch(route('publishers.cards.update', ['id' => $f['publisher']->id, 'card' => 'readiness']), ['status' => 'P'])->assertSessionHasNoErrors();
+    expect($f['publisher']->fresh()->is_verified)->toBeTrue();
+    $this->get(route('publishers.index'))->assertInertia($inactive);
 });

@@ -42,6 +42,7 @@ Route::middleware(['auth', 'ensure.network'])->group(function () {
     Route::get('applications/index', [PublisherApplicationController::class, 'index'])->middleware('business.permission:review_applications')->name('applications.index');
     Route::get('applications/show/{id}', [PublisherApplicationController::class, 'show'])->middleware('business.permission:review_applications')->name('applications.show');
     Route::post('applications/approve/{id}', [PublisherApplicationController::class, 'approve'])->middleware('business.permission:approve_applications')->name('applications.approve');
+    Route::post('applications/bulk-review', [PublisherApplicationController::class, 'bulkReview'])->middleware('business.permission:review_applications')->name('applications.bulk-review');
     Route::post('applications/reject/{id}', [PublisherApplicationController::class, 'reject'])->middleware('business.permission:reject_applications')->name('applications.reject');
 
     // pool
@@ -72,6 +73,7 @@ Route::middleware(['auth', 'ensure.network'])->group(function () {
     Route::get('admin/invoices', [AdminInvoiceController::class, 'index'])->middleware('business.permission:view_network_invoices')->name('admin.invoices.index');
     Route::get('admin/invoices/export', [AdminInvoiceController::class, 'export'])->middleware('business.permission:view_network_invoices')->name('admin.invoices.export');
     Route::get('admin/invoices/{id}', [AdminInvoiceController::class, 'show'])->middleware('business.permission:view_network_invoices')->name('admin.invoices.show');
+    Route::get('admin/invoices/{id}/pdf', [AdminInvoiceController::class, 'pdf'])->middleware('business.permission:view_network_invoices')->name('admin.invoices.pdf');
     Route::post('admin/invoices/{id}/approve', [AdminInvoiceController::class, 'approve'])->middleware('business.permission:approve_network_invoices')->middleware(HandleFinanceErrors::class)->name('admin.invoices.approve');
     Route::post('admin/invoices/{id}/reject', [AdminInvoiceController::class, 'reject'])->middleware('business.permission:approve_network_invoices')->middleware(HandleFinanceErrors::class)->name('admin.invoices.reject');
     Route::post('admin/invoices/{id}/mark-paid', [AdminInvoiceController::class, 'markPaid'])->middleware('business.permission:approve_network_invoices')->middleware(HandleFinanceErrors::class)->name('admin.invoices.mark-paid');

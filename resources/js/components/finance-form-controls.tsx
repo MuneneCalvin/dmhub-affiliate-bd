@@ -1,64 +1,61 @@
-import { cn } from '@/lib/utils';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { RadioCard, RadioCardGroup } from '@/components/ui/radio-card';
+import type { DomainTone } from '@/lib/tones';
+import { AlertTriangle } from 'lucide-react';
 
+/** Stacked radio cards for finance decisions (review, funding operation). */
 export function OptionCards<T extends string>({
     name,
     value,
     onChange,
     options,
+    label,
+    tone = 'finance',
 }: {
     name: string;
     value: T;
     onChange: (value: T) => void;
     options: { value: T; label: string; description: string }[];
+    label?: string;
+    tone?: DomainTone;
 }) {
     return (
-        <div role="radiogroup" className="grid gap-2">
-            {options.map((option) => {
-                const checked = option.value === value;
-                return (
-                    <label
-                        key={option.value}
-                        className={cn(
-                            'flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring',
-                            checked
-                                ? 'border-primary bg-primary/5'
-                                : 'hover:bg-muted/50',
-                        )}
-                    >
-                        <input
-                            type="radio"
-                            name={name}
-                            value={option.value}
-                            checked={checked}
-                            onChange={() => onChange(option.value)}
-                            className="mt-0.5 size-4 accent-primary"
-                        />
-                        <span>
-                            <span className="block text-sm font-medium first-letter:uppercase">
-                                {option.label}
-                            </span>
-                            <span className="block text-xs text-muted-foreground">
-                                {option.description}
-                            </span>
+        <RadioCardGroup
+            name={name}
+            value={value}
+            onValueChange={(next) => onChange(next as T)}
+            label={label}
+            className="grid gap-2.5 sm:grid-cols-1"
+        >
+            {options.map((option) => (
+                <RadioCard
+                    key={option.value}
+                    value={option.value}
+                    tone={tone}
+                    title={
+                        <span className="inline-block first-letter:uppercase">
+                            {option.label}
                         </span>
-                    </label>
-                );
-            })}
-        </div>
+                    }
+                    hint={option.description}
+                />
+            ))}
+        </RadioCardGroup>
     );
 }
 
+/** Every validation or finance error of a form, in one danger alert. */
 export function FormErrors({ errors }: { errors: Record<string, string> }) {
     const entries = Object.entries(errors);
     if (!entries.length) return null;
     return (
-        <div
-            role="alert"
-            className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"
-        >
-            {entries.map(([key, error]) => (
-                <p key={key}>{error}</p>
-            ))}
-        </div>
+        <Alert variant="danger">
+            <AlertTriangle />
+            <AlertDescription>
+                {entries.map(([key, error]) => (
+                    <p key={key}>{error}</p>
+                ))}
+            </AlertDescription>
+        </Alert>
     );
 }

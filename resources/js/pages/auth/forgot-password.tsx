@@ -1,73 +1,90 @@
-// Components
+import InputError from '@/components/input-error';
+import TextLink from '@/components/text-link';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Input, InputGroup } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Spinner } from '@/components/ui/spinner';
+import AuthLayout from '@/layouts/auth-layout';
 import { login } from '@/routes';
 import { email } from '@/routes/password';
 import { Form, Head } from '@inertiajs/react';
-import { LoaderCircle } from 'lucide-react';
-
-import InputError from '@/components/input-error';
-import TextLink from '@/components/text-link';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import AuthLayout from '@/layouts/auth-layout';
-import { useLanguage } from '@/context/language-context';
+import { ArrowLeft, CircleCheck, Mail } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export default function ForgotPassword({ status }: { status?: string }) {
-    const { __ } = useLanguage();
+    const { t } = useTranslation();
+
     return (
         <AuthLayout
-            title="Forgot password"
-            description="Enter your email to receive a password reset link"
+            title={t('Forgot your password?')}
+            description={t(
+                "Enter your email address and we'll send you a link to choose a new password.",
+            )}
         >
-            <Head title="Forgot password" />
+            <Head title={t('Forgot password')} />
 
             {status && (
-                <div className="mb-4 text-center text-sm font-medium text-green-600">
-                    {status}
-                </div>
+                <Alert variant="success">
+                    <CircleCheck aria-hidden="true" />
+                    <AlertDescription>{status}</AlertDescription>
+                </Alert>
             )}
 
-            <div className="space-y-6">
-                <Form {...email.form()}>
-                    {({ processing, errors }) => (
-                        <>
-                            <div className="grid gap-2">
-                                <Label htmlFor="email">
-                                    {__('Email address')}
-                                </Label>
+            <Form {...email.form()} className="flex flex-col gap-[18px]">
+                {({ processing, errors }) => (
+                    <>
+                        <div className="grid gap-1.5">
+                            <Label htmlFor="email">{t('Email address')}</Label>
+                            <InputGroup
+                                leading={
+                                    <Mail
+                                        className="text-brand"
+                                        aria-hidden="true"
+                                    />
+                                }
+                            >
                                 <Input
                                     id="email"
                                     type="email"
                                     name="email"
-                                    autoComplete="off"
+                                    required
+                                    autoComplete="email"
                                     autoFocus
-                                    placeholder="email@example.com"
+                                    placeholder="you@company.com"
+                                    aria-invalid={
+                                        errors.email ? true : undefined
+                                    }
+                                    aria-describedby={
+                                        errors.email ? 'email-error' : undefined
+                                    }
                                 />
+                            </InputGroup>
+                            <InputError
+                                id="email-error"
+                                message={errors.email}
+                            />
+                        </div>
 
-                                <InputError message={errors.email} />
-                            </div>
+                        <Button
+                            className="w-full"
+                            disabled={processing}
+                            data-test="email-password-reset-link-button"
+                        >
+                            {processing && <Spinner />}
+                            {t('Email password reset link')}
+                        </Button>
+                    </>
+                )}
+            </Form>
 
-                            <div className="my-6 flex items-center justify-start">
-                                <Button
-                                    className="w-full"
-                                    disabled={processing}
-                                    data-test="email-password-reset-link-button"
-                                >
-                                    {processing && (
-                                        <LoaderCircle className="h-4 w-4 animate-spin" />
-                                    )}
-                                    {__('Email password reset link')}
-                                </Button>
-                            </div>
-                        </>
-                    )}
-                </Form>
-
-                <div className="space-x-1 text-center text-sm text-muted-foreground">
-                    <span>{__('Or, return to')}</span>
-                    <TextLink href={login()}>{__('log in')} </TextLink>
-                </div>
-            </div>
+            <TextLink
+                href={login()}
+                className="inline-flex min-h-11 items-center gap-1.5 self-center"
+            >
+                <ArrowLeft className="size-4" aria-hidden="true" />
+                {t('Back to sign in')}
+            </TextLink>
         </AuthLayout>
     );
 }

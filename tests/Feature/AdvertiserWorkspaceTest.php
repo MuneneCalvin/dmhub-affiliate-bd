@@ -169,3 +169,26 @@ it('requires the workspace entry permission for both owners and network staff', 
     }
     $this->actingAs($actor)->get(route('advertisers.show', $own['advertiser']->user_id))->assertForbidden();
 })->with(['owner', 'network']);
+
+it('keeps deactivated advertisers in the list so they can be reactivated', function () {
+    $this->withoutVite();
+    $f = conversionFixture();
+    $f['advertiser']->update(['is_verified' => true]);
+    $admin = User::factory()->create(['is_super_admin' => true]);
+    $this->actingAs($admin)->post(route('advertisers.deactivate', $f['advertiser']->id))->assertSessionHas('success');
+    expect($f['advertiser']->fresh())->status->toBe('P')->is_verified->toBeTrue();
+    $this->get(route('advertisers.index'))->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->has('advrts.data', 1)->where('advrts.data.0.id', $f['advertiser']->id)->where('advrts.data.0.status', 'D'));
+    $this->post(route('advertisers.activate', $f['advertiser']->id))->assertSessionHas('success');
+    $this->get(route('advertisers.index'))->assertInertia(fn (Assert $page) => $page
+        ->has('advrts.data', 1)->where('advrts.data.0.status', 'A'));
+});
+
+it('opens a network that has no country assigned', function () {
+    $this->withoutVite();
+    $f = conversionFixture();
+    $f['network']->update(['country_iso' => null]);
+    $this->actingAs(User::factory()->create(['is_super_admin' => true]))->get(route('networks.show', $f['network']->id))
+        ->assertOk()->assertInertia(fn (Assert $page) => $page->component('networks/show')
+        ->where('network.id', $f['network']->id)->where('network.country_name', null));
+});

@@ -64,8 +64,8 @@
         box.id = 'dmhub-offer-notice';
         box.className = `dmhub-notice dmhub-${c.display}`;
         box.setAttribute('role', 'status');
-        box.style.backgroundColor = c.background_color || '#ffffff';
-        box.style.color = c.text_color || '#17202a';
+        if (c.background_color) box.style.backgroundColor = c.background_color;
+        if (c.text_color) box.style.color = c.text_color;
         const nl = document.documentElement.lang?.startsWith('nl');
         const message = document.createElement('span');
         message.textContent = (

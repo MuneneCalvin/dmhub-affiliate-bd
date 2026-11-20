@@ -1,286 +1,209 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { CustomDialogComponent, InfoRow, ReusablePageTitle, useConfirmationDialog } from '@/dev/core';
-import { useCustomDialogContextFactory } from '@/hooks';
-import AppLayout from '@/layouts/app-layout';
-import { BreadcrumbItem } from '@/types';
-import { Head, router, usePage } from '@inertiajs/react';
-import { Calendar, Globe, Mail, User, Users, DollarSign, BarChart3, Activity } from 'lucide-react';
+import { PoolProfile } from '@/components/pool-profile';
+import { useCount, useDate } from '@/lib/format';
+import { trafficSourceLabels } from '@/utils/campaign-display';
+import { usePage } from '@inertiajs/react';
+import { Activity, Globe2, ShieldCheck, UserRound } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import RejectModal from './modals/reject';
-import networks from '@/routes/networks';
-import { formatDate } from '@/utils/utils';
-import { StatusBadge } from '@/dev/statusBadge';
 
-
-const PublisherShowPage = () => {
-    const { t } = useTranslation();
-    const { publisher } = usePage<any>().props;
-    const { confirm, ConfirmDialog } = useConfirmationDialog();
-
-    const breadcrumbs: BreadcrumbItem[] = [
-        {
-            title: t('Pool'),
-            href: networks.pool.publishers.url(),
-        },
-        {
-            title: t('Publishers'),
-            href: networks.pool.publishers.url(),
-        },
-        {
-            title: `${publisher.user?.first_name} ${publisher.user?.last_name}`,
-            href: '',
-        },
-    ];
-
-    const { handleDialogContextSwitch, dialogContent, dialogOpen } =
-        useCustomDialogContextFactory<{
-            publisher?: any;
-            type?: 'advertiser' | 'publisher';
-        }>();
-
-
-    const handleApprove = () => {
-        confirm({
-            title: t('Approve Publisher'),
-            description: `Are you sure you want to approve ${publisher.user?.first_name} ${publisher.user?.last_name} and assign them to your network?`,
-            confirmLabel: t('Approve'),
-            cancelLabel: t('Cancel'),
-            onConfirm: () => {
-                router.post(networks.pool.publishers.approve(publisher?.id));
-            },
-        });
-    };
-
-    return (
-        <AppLayout>
-            <Head title={`${t('Publisher')} - ${publisher.user?.first_name} ${publisher.user?.last_name}`} />
-            <div className="workspace-page flex h-full flex-1 flex-col gap-4">
-                <ReusablePageTitle
-                    title={t('Publisher Details')}
-                    breadcrumbs={breadcrumbs}
-                >
-                    {!publisher.is_verified && (
-                        <div className="flex items-center gap-2">
-                            <Button
-                                onClick={handleApprove}
-                                className="bg-green-600 hover:bg-green-700"
-                            >
-                                {t('Approve & Add to Network')}
-                            </Button>
-                            <Button
-                                variant="destructive"
-                                onClick={() => handleDialogContextSwitch({
-                                    Component: RejectModal,
-                                    componentProps: {
-                                        publisher,
-                                        type: 'publisher',
-                                    },
-                                })}
-                            >
-                                {t('Reject')}
-                            </Button>
-                        </div>
-                    )}
-                </ReusablePageTitle>
-
-                <div className="w-full">
-                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <User className="h-5 w-5" />
-                                    {t('Contact Information')}
-                                </CardTitle>
-                                <CardDescription>{t('Details about the publisher')}</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-1">
-                                <InfoRow
-                                    label={t('Name')}
-                                    value={`${publisher.user?.first_name} ${publisher.user?.last_name}`}
-                                    icon={User}
-                                />
-                                <Separator />
-                                <InfoRow
-                                    label={t('Email')}
-                                    value={publisher.user?.email}
-                                    icon={Mail}
-                                />
-                                <Separator />
-                                <InfoRow
-                                    label={t('Registered At')}
-                                    value={formatDate(publisher.user?.created_at)}
-                                    icon={Calendar}
-                                />
-                                <Separator />
-                                <InfoRow
-                                    label={t('COC Number')}
-                                    value={publisher.coc_number || 'N/A'}
-                                />
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Globe className="h-5 w-5" />
-                                    {t('Website Information')}
-                                </CardTitle>
-                                <CardDescription>{t('Traffic and website details')}</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-1">
-                                <InfoRow
-                                    label={t('Website')}
-                                    value={
-                                        publisher.website_url ? (
-                                            <a href={publisher.website_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                                                {publisher.website_url}
-                                            </a>
-                                        ) : 'N/A'
-                                    }
-                                    icon={Globe}
-                                />
-                                <Separator />
-                                <InfoRow
-                                    label={t('Monthly Visitors')}
-                                    value={publisher.monthly_visitors ? publisher.monthly_visitors.toLocaleString() : 'N/A'}
-                                    icon={Users}
-                                />
-                                <Separator />
-                                <InfoRow
-                                    label={t('Traffic Sources')}
-                                    value={Array.isArray(publisher.traffic_sources) ? publisher.traffic_sources.join(', ') : (publisher.traffic_sources || 'N/A')}
-                                />
-                                <Separator />
-                                <InfoRow
-                                    label={t('Primary Verticals')}
-                                    value={publisher.primary_verticals || 'N/A'}
-                                />
-                                <Separator />
-                                <InfoRow
-                                    label={t('Secondary Verticals')}
-                                    value={publisher.secondary_verticals || 'N/A'}
-                                />
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <DollarSign className="h-5 w-5" />
-                                    {t('Payout Settings')}
-                                </CardTitle>
-                                <CardDescription>{t('Payment preferences')}</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-1">
-                                <InfoRow
-                                    label={t('Payout Method')}
-                                    value={publisher.payout_method || 'N/A'}
-                                />
-                                <Separator />
-                                <InfoRow
-                                    label={t('Payout Threshold')}
-                                    value={publisher.payout_threshold ? `$${parseFloat(String(publisher.payout_threshold)).toFixed(2)}` : 'N/A'}
-                                    icon={DollarSign}
-                                />
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <BarChart3 className="h-5 w-5" />
-                                    {t('Performance Stats')}
-                                </CardTitle>
-                                <CardDescription>{t('Historical performance')}</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-1">
-                                <InfoRow
-                                    label={t('Total Clicks')}
-                                    value={publisher.total_clicks?.toLocaleString() || '0'}
-                                />
-                                <Separator />
-                                <InfoRow
-                                    label={t('Total Conversions')}
-                                    value={publisher.total_conversions?.toLocaleString() || '0'}
-                                />
-                                <Separator />
-                                <InfoRow
-                                    label={t('Total Earnings')}
-                                    value={publisher.total_earnings ? `$${parseFloat(String(publisher.total_earnings)).toFixed(2)}` : '$0.00'}
-                                    icon={DollarSign}
-                                />
-                                <Separator />
-                                <InfoRow
-                                    label={t('Conversion Rate')}
-                                    value={publisher.conversion_rate ? `${parseFloat(String(publisher.conversion_rate)).toFixed(2)}%` : '0%'}
-                                />
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Activity className="h-5 w-5" />
-                                    {t('Status')}
-                                </CardTitle>
-                                <CardDescription>{t('Current status and verification')}</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-1">
-                                <InfoRow
-                                    label={t('User Status')}
-                                     value={<StatusBadge status={publisher.user?.status} />}
-                                />
-                                <Separator />
-                                <InfoRow
-                                    label={t('Verified')}
-                                    value={publisher.is_verified ? 'Yes' : 'No'}
-                                />
-                                {publisher.verified_at && (
-                                    <>
-                                        <Separator />
-                                        <InfoRow
-                                            label={t('Verified At')}
-                                            value={formatDate(publisher.verified_at)}
-                                            icon={Calendar}
-                                        />
-                                    </>
-                                )}
-                                <Separator />
-                                <InfoRow
-                                    label={t('Account Health Score')}
-                                    value={publisher.account_health_score ? `${parseFloat(String(publisher.account_health_score)).toFixed(1)}/100` : 'N/A'}
-                                />
-                                <Separator />
-                                <InfoRow
-                                    label={t('Last Active')}
-                                    value={formatDate(publisher.last_active_at)}
-                                    icon={Calendar}
-                                />
-                            </CardContent>
-                        </Card>
-                    </div>
-                </div>
-
-                <CustomDialogComponent
-                    {...{ handleDialogContextSwitch, dialogOpen }}
-                    className='sm:max-w-[500px]'>
-                    {dialogContent?.Component && (
-                        <dialogContent.Component
-                            {...{
-                                componentProps: dialogContent.componentProps,
-                                handleDialogContextSwitch,
-                            }}
-                        />
-                    )}
-                </CustomDialogComponent>
-
-                <ConfirmDialog />
-            </div>
-        </AppLayout>
-    );
+type PoolPublisher = {
+    id: number;
+    business_name?: string | null;
+    coc_number: string | null;
+    website_url: string | null;
+    monthly_visitors: number | null;
+    traffic_sources: string[] | string | null;
+    primary_verticals: string | string[] | null;
+    secondary_verticals: string | string[] | null;
+    payout_method: string | null;
+    payout_threshold: string | number | null;
+    total_clicks: number | null;
+    total_conversions: number | null;
+    total_earnings: string | number | null;
+    conversion_rate: string | number | null;
+    account_health_score: string | number | null;
+    is_verified: boolean;
+    verified_at: string | null;
+    last_active_at: string | null;
+    user?: {
+        first_name: string | null;
+        last_name: string | null;
+        email: string;
+        status: string;
+        created_at: string;
+    } | null;
 };
 
-export default PublisherShowPage;
+const list = (value: string | string[] | null) =>
+    Array.isArray(value) ? value.join(', ') : value;
+
+export default function PoolPublisherShow() {
+    const { t, i18n } = useTranslation();
+    const { publisher: p } = usePage<{ publisher: PoolPublisher }>().props;
+    const formatDate = useDate();
+    const count = useCount();
+    const decimal = (value: string | number | null, digits = 2) =>
+        value == null || value === ''
+            ? null
+            : new Intl.NumberFormat(i18n.language, {
+                  minimumFractionDigits: digits,
+                  maximumFractionDigits: digits,
+              }).format(Number(value));
+    const contact = [p.user?.first_name, p.user?.last_name]
+        .filter(Boolean)
+        .join(' ');
+    const name = p.business_name || contact || p.user?.email || '—';
+    const sources = Array.isArray(p.traffic_sources) ? p.traffic_sources : [];
+
+    return (
+        <PoolProfile
+            kind="publisher"
+            entity={p}
+            name={name}
+            verified={p.is_verified}
+            chips={[
+                { label: t('Publisher'), tone: 'partners' },
+                ...sources.slice(0, 3).map((source) => ({
+                    label: (
+                        <span className="capitalize">
+                            {String(source).replaceAll('_', ' ')}
+                        </span>
+                    ),
+                    tone: 'analytics' as const,
+                })),
+            ]}
+            sections={[
+                {
+                    title: t('Contact information'),
+                    icon: <UserRound />,
+                    tone: 'partners',
+                    rows: [
+                        { label: t('Name'), value: contact },
+                        { label: t('Email'), value: p.user?.email },
+                        {
+                            label: t('Registered'),
+                            value: formatDate(p.user?.created_at),
+                        },
+                        {
+                            label: t('Chamber of Commerce number'),
+                            value: p.coc_number,
+                        },
+                    ],
+                },
+                {
+                    title: t('Audience & sites'),
+                    icon: <Globe2 />,
+                    tone: 'analytics',
+                    rows: [
+                        {
+                            label: t('Website'),
+                            value:
+                                p.website_url &&
+                                /^https?:\/\//i.test(p.website_url) ? (
+                                    <a
+                                        href={p.website_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-brand-ink hover:underline"
+                                    >
+                                        {p.website_url}
+                                    </a>
+                                ) : (
+                                    p.website_url
+                                ),
+                        },
+                        {
+                            label: t('Monthly visitors'),
+                            value: p.monthly_visitors
+                                ? count(p.monthly_visitors)
+                                : null,
+                        },
+                        {
+                            label: t('Traffic sources'),
+                            value: (
+                                <span className="capitalize">
+                                    {trafficSourceLabels(
+                                        p.traffic_sources,
+                                        '',
+                                    ) || null}
+                                </span>
+                            ),
+                        },
+                        {
+                            label: t('Primary verticals'),
+                            value: list(p.primary_verticals),
+                        },
+                        {
+                            label: t('Secondary verticals'),
+                            value: list(p.secondary_verticals),
+                        },
+                    ],
+                },
+                {
+                    title: t('Performance'),
+                    icon: <Activity />,
+                    tone: 'brand',
+                    rows: [
+                        {
+                            label: t('Total Clicks'),
+                            value: count(p.total_clicks),
+                        },
+                        {
+                            label: t('Total Conversions'),
+                            value: count(p.total_conversions),
+                        },
+                        {
+                            label: t('Total Earnings'),
+                            value: decimal(p.total_earnings ?? 0),
+                        },
+                        {
+                            label: t('Conversion Rate'),
+                            value: `${decimal(p.conversion_rate ?? 0)}%`,
+                        },
+                        {
+                            label: t('Payout method'),
+                            value: p.payout_method,
+                        },
+                        {
+                            label: t('Payout threshold'),
+                            value: decimal(p.payout_threshold),
+                        },
+                    ],
+                },
+                {
+                    title: t('Verification'),
+                    icon: <ShieldCheck />,
+                    tone: 'success',
+                    rows: [
+                        {
+                            label: t('User status'),
+                            value:
+                                p.user?.status === 'A'
+                                    ? t('Active')
+                                    : t('Inactive'),
+                        },
+                        {
+                            label: t('Verified'),
+                            value: t(p.is_verified ? 'Yes' : 'No'),
+                        },
+                        p.verified_at && {
+                            label: t('Verified at'),
+                            value: formatDate(p.verified_at),
+                        },
+                        {
+                            label: t('Account health score'),
+                            value: p.account_health_score
+                                ? `${decimal(p.account_health_score, 1)}/100`
+                                : null,
+                        },
+                        {
+                            label: t('Last Active'),
+                            value: p.last_active_at
+                                ? formatDate(p.last_active_at)
+                                : null,
+                        },
+                    ],
+                },
+            ]}
+        />
+    );
+}

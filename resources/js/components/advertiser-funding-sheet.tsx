@@ -166,7 +166,7 @@ export function FundingSheet({
                                             )
                                         }
                                     />
-                                    <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-xs font-medium text-muted-foreground">
+                                    <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-xs font-medium text-ink-muted">
                                         {funding.data.currency}
                                     </span>
                                 </div>

@@ -25,7 +25,7 @@
     margin-right: 12px;
 }
 .campaign-settings-actions button {
-    border-radius: 6px;
+    border-radius: var(--radius-control);
 }
 .campaign-settings-grid {
     display: grid;
@@ -35,7 +35,7 @@
 }
 .campaign-settings-card {
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 14px;
     background: var(--card);
     padding: 16px;
     min-width: 0;
@@ -62,12 +62,12 @@
     min-width: 0;
 }
 .campaign-settings-required {
-    color: #b42335;
+    color: var(--danger-ink);
 }
 .campaign-settings
     :is(
         input:not([type='checkbox']),
-        select,
+        [data-slot='select-trigger'],
         textarea,
         .campaign-settings-select
     ) {
@@ -75,7 +75,7 @@
     min-width: 0;
     border: 1px solid
         color-mix(in srgb, var(--muted-foreground) 45%, var(--border));
-    border-radius: 6px;
+    border-radius: var(--radius-control);
     background: var(--background);
     color: var(--foreground);
     font-size: 14px;
@@ -88,17 +88,19 @@
     min-height: 60px;
     display: block;
 }
-.campaign-settings select {
+.campaign-settings [data-slot='select-trigger'] {
     padding-right: 22px;
 }
-.campaign-settings :is(input, textarea, select):focus-visible {
+.campaign-settings
+    :is(input, textarea, [data-slot='select-trigger']):focus-visible {
     outline: 2px solid var(--primary);
     outline-offset: 2px;
 }
-.campaign-settings :is(input, select, textarea)[aria-invalid='true'] {
+.campaign-settings
+    :is(input, [data-slot='select-trigger'], textarea)[aria-invalid='true'] {
     border-color: var(--destructive);
 }
-.campaign-settings :is(button, input, select, textarea):disabled {
+.campaign-settings :is(button, input, textarea):disabled {
     cursor: not-allowed;
     opacity: 0.65;
 }
@@ -181,7 +183,7 @@
     position: relative;
     border: 1px solid
         color-mix(in srgb, var(--muted-foreground) 45%, var(--border));
-    border-radius: 6px;
+    border-radius: var(--radius-control);
     background: var(--background);
     overflow: hidden;
 }
@@ -257,15 +259,15 @@
     display: flex;
     align-items: flex-start;
     gap: 12px;
-    background: #fff6e6;
-    border: 1px solid #ffd18a;
-    border-radius: 6px;
+    background: var(--warning-soft);
+    border: 1px solid var(--warning-dot);
+    border-radius: var(--radius-control);
     padding: 12px;
     margin: 20px 0 23px;
-    color: #452b10;
+    color: var(--warning-ink);
 }
 .campaign-settings-warning > svg {
-    color: #c88100;
+    color: var(--warning-ink);
     flex-shrink: 0;
 }
 .campaign-settings-warning p {
@@ -302,7 +304,7 @@
     padding: 9px 12px;
     margin: 20px 0 0;
     border: 1px solid var(--border);
-    border-radius: 7px;
+    border-radius: var(--radius-control);
     background: var(--muted);
     color: var(--muted-foreground);
     font-size: 13px;

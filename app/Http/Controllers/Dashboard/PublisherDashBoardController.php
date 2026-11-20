@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Models\Advertiser;
 use App\Models\Campaign;
 use App\Models\Publisher;
 use App\Models\User;
 use App\Notifications\PublisherApplicationReceived;
 use App\Services\PartnerEnrollmentService;
+use App\Services\PartnerReportingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -32,15 +34,26 @@ class PublisherDashBoardController extends Controller
         $filters = $request->validate([
             'campaign_status' => 'nullable|in:A,I', 'application_status' => 'nullable|in:P,A,R,I,none',
             'start_date' => 'nullable|date', 'applied_start_date' => 'nullable|date',
+            'search' => 'nullable|string|max:100', 'industry' => 'nullable|string|max:200',
         ]);
         $applications = DB::table('publisher_campaigns')->where('publisher_id', $publisher->id);
-        $query = Campaign::where('network_id', $publisher->network_id ?? 0)
+        $network = Campaign::where('network_id', $publisher->network_id ?? 0);
+        $query = (clone $network)
             ->where('campaign_status', $filters['campaign_status'] ?? 'A')
-            ->with(['offers' => fn ($q) => $q->where('offer_status', 'A')->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>=', now()))->with('commissions.commissionType')]);
+            ->with(['advertiser:id,business_name,industry', 'offers' => fn ($q) => $q->where('offer_status', 'A')->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>=', now()))->with('commissions.commissionType')]);
         if (($filters['application_status'] ?? null) === 'none') {
             $query->whereNotIn('id', (clone $applications)->select('campaign_id'));
         } elseif (! empty($filters['application_status'])) {
             $query->whereIn('id', (clone $applications)->where('status', $filters['application_status'])->select('campaign_id'));
+        }
+        if (! empty($filters['search'])) {
+            $term = '%'.mb_strtolower($filters['search']).'%';
+            $query->where(fn ($q) => $q->whereRaw('LOWER(name) LIKE ?', [$term])
+                ->orWhereRaw('LOWER(description) LIKE ?', [$term])
+                ->orWhereHas('advertiser', fn ($a) => $a->whereRaw('LOWER(business_name) LIKE ?', [$term])));
+        }
+        if (! empty($filters['industry'])) {
+            $query->whereHas('advertiser', fn ($a) => $a->where('industry', $filters['industry']));
         }
         if (! empty($filters['start_date'])) {
             $query->whereDate('start_date', '>=', $filters['start_date']);
@@ -49,14 +62,22 @@ class PublisherDashBoardController extends Controller
             $query->whereIn('id', (clone $applications)->whereDate('applied_at', '>=', $filters['applied_start_date'])->select('campaign_id'));
         }
         $campaigns = $query->latest()->paginate(12)->withQueryString();
-        $enrollments = $applications->whereIn('campaign_id', $campaigns->pluck('id'))->get()->keyBy('campaign_id');
-        $campaigns->getCollection()->each(function ($campaign) use ($enrollments) {
+        $enrollments = (clone $applications)->whereIn('campaign_id', $campaigns->pluck('id'))->get()->keyBy('campaign_id');
+        $epc = app(PartnerReportingService::class)->campaignEpc($campaigns->getCollection());
+        $campaigns->getCollection()->each(function ($campaign) use ($enrollments, $epc) {
             $enrollment = $enrollments->get($campaign->id);
             $campaign->enrollment = $enrollment ? (array) $enrollment : null;
+            $campaign->epc = $epc[$campaign->id] ?? null;
         });
+        // Industries of advertisers with live campaigns in this network, for the category chips.
+        $industries = Advertiser::whereIn('id', (clone $network)->where('campaign_status', 'A')->select('advertiser_id'))
+            ->whereNotNull('industry')->where('industry', '!=', '')
+            ->distinct()->orderBy('industry')->pluck('industry');
 
         return Inertia::render('publisher_dashboard/dashboard', [
             'campaigns' => $campaigns, 'filters' => $filters, 'publisher_id' => $publisher->id,
+            'industries' => $industries,
+            'myCampaignsCount' => (clone $applications)->where('status', 'A')->count(),
         ]);
     }
 

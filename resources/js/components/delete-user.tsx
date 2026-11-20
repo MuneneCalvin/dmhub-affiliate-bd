@@ -1,6 +1,5 @@
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
-import HeadingSmall from '@/components/heading-small';
-import InputError from '@/components/input-error';
+import { FormField, IconTile } from '@/components/app';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -8,114 +7,116 @@ import {
     DialogContent,
     DialogDescription,
     DialogFooter,
+    DialogHeader,
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Form } from '@inertiajs/react';
-import { useRef } from 'react';
+import { Trash2 } from 'lucide-react';
+import { useId, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
+/**
+ * Danger zone card: closing the account ends access but keeps financial and
+ * attribution records, so the copy says "close", not "delete". The dialog asks
+ * for the current password.
+ */
 export default function DeleteUser() {
+    const { t } = useTranslation();
+    const titleId = useId();
     const passwordInput = useRef<HTMLInputElement>(null);
 
     return (
-        <div className="space-y-6">
-            <HeadingSmall
-                title="Close account"
-                description="Close access to your account. Financial and attribution records are retained."
-            />
-            <div className="space-y-4 rounded-lg border border-red-100 bg-red-50 p-4 dark:border-red-200/10 dark:bg-red-700/10">
-                <div className="relative space-y-0.5 text-red-600 dark:text-red-100">
-                    <p className="font-medium">Warning</p>
-                    <p className="text-sm">
-                        Please proceed with caution, this cannot be undone.
-                    </p>
-                </div>
-
-                <Dialog>
-                    <DialogTrigger asChild>
-                        <Button
-                            variant="destructive"
-                            data-test="delete-user-button"
-                        >
-                            Close account
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogTitle>
-                            Are you sure you want to close your account?
-                        </DialogTitle>
-                        <DialogDescription>
-                            Closing your account ends access and disables
-                            tracking and postback credentials. Financial and
-                            attribution records, including outstanding balances,
-                            are retained for settlement. Enter your password to
-                            confirm permanent closure.
-                        </DialogDescription>
-
-                        <Form
-                            {...ProfileController.destroy.form()}
-                            options={{
-                                preserveScroll: true,
-                            }}
-                            onError={() => passwordInput.current?.focus()}
-                            resetOnSuccess
-                            className="space-y-6"
-                        >
-                            {({ resetAndClearErrors, processing, errors }) => (
-                                <>
-                                    <div className="grid gap-2">
-                                        <Label
-                                            htmlFor="password"
-                                            className="sr-only"
-                                        >
-                                            Password
-                                        </Label>
-
-                                        <Input
-                                            id="password"
-                                            type="password"
-                                            name="password"
-                                            ref={passwordInput}
-                                            placeholder="Password"
-                                            autoComplete="current-password"
-                                        />
-
-                                        <InputError message={errors.password} />
-                                    </div>
-
-                                    <DialogFooter className="gap-2">
-                                        <DialogClose asChild>
-                                            <Button
-                                                variant="secondary"
-                                                onClick={() =>
-                                                    resetAndClearErrors()
-                                                }
-                                            >
-                                                Cancel
-                                            </Button>
-                                        </DialogClose>
-
-                                        <Button
-                                            variant="destructive"
-                                            disabled={processing}
-                                            asChild
-                                        >
-                                            <button
-                                                type="submit"
-                                                data-test="confirm-delete-user-button"
-                                            >
-                                                Close account
-                                            </button>
-                                        </Button>
-                                    </DialogFooter>
-                                </>
-                            )}
-                        </Form>
-                    </DialogContent>
-                </Dialog>
+        <section
+            aria-labelledby={titleId}
+            className="flex flex-wrap items-center gap-4 rounded-card border border-danger-dot/30 bg-danger-soft/40 p-[22px]"
+        >
+            <IconTile size={40} tone="danger">
+                <Trash2 />
+            </IconTile>
+            <div className="min-w-[220px] flex-1">
+                <h2
+                    id={titleId}
+                    className="text-base font-bold text-danger-ink"
+                >
+                    {t('Close account')}
+                </h2>
+                <p className="text-[13px] text-ink-muted">
+                    {t(
+                        'Ends your access for good. Financial and attribution records are kept for settlement.',
+                    )}
+                </p>
             </div>
-        </div>
+            <Dialog>
+                <DialogTrigger asChild>
+                    <Button
+                        variant="destructive"
+                        data-test="delete-user-button"
+                    >
+                        {t('Close account')}
+                    </Button>
+                </DialogTrigger>
+                <DialogContent>
+                    <Form
+                        {...ProfileController.destroy.form()}
+                        options={{ preserveScroll: true }}
+                        onError={() => passwordInput.current?.focus()}
+                        resetOnSuccess
+                        className="flex flex-col gap-5"
+                    >
+                        {({ resetAndClearErrors, processing, errors }) => (
+                            <>
+                                <DialogHeader icon={<Trash2 />} tone="danger">
+                                    <DialogTitle>
+                                        {t(
+                                            'Are you sure you want to close your account?',
+                                        )}
+                                    </DialogTitle>
+                                    <DialogDescription>
+                                        {t(
+                                            'Closing your account ends access and disables tracking and postback credentials. Financial and attribution records, including outstanding balances, are retained for settlement. Enter your password to confirm permanent closure.',
+                                        )}
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <FormField
+                                    id="delete-account-password"
+                                    label={t('Password')}
+                                    error={errors.password}
+                                >
+                                    <PasswordInput
+                                        id="delete-account-password"
+                                        name="password"
+                                        ref={passwordInput}
+                                        autoComplete="current-password"
+                                    />
+                                </FormField>
+                                <DialogFooter>
+                                    <DialogClose asChild>
+                                        <Button
+                                            type="button"
+                                            variant="secondary"
+                                            onClick={() =>
+                                                resetAndClearErrors()
+                                            }
+                                        >
+                                            {t('Cancel')}
+                                        </Button>
+                                    </DialogClose>
+                                    <Button
+                                        type="submit"
+                                        variant="destructive"
+                                        disabled={processing}
+                                        data-test="confirm-delete-user-button"
+                                    >
+                                        {t('Close account')}
+                                    </Button>
+                                </DialogFooter>
+                            </>
+                        )}
+                    </Form>
+                </DialogContent>
+            </Dialog>
+        </section>
     );
 }

@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { EADVERTISERSTATUS_TYPE, HTTP_VERBS, SORT_ORDER } from '@/utils/enums';
+import { SORT_ORDER } from '@/utils/enums';
 import { InertiaLinkProps } from '@inertiajs/react';
 import { LucideIcon } from 'lucide-react';
 import { ReactNode } from 'react';
-import { NavigateFunction } from 'react-router-dom';
 
 export interface Auth {
     user: User;
+    permissions: string[];
 }
 
 export interface LanguageProviderProps {
@@ -32,18 +32,12 @@ export interface LanguageContextType {
     isLocale: (code: string) => boolean;
     loading: boolean;
 }
-export type Translations = Record<string, string>;
-export type TQueryFieldProps = {} & Partial<TClassType> & TSearchToolProps;
 export type TClassType = { className: string };
 export interface LoginProps {
     status?: string;
     canResetPassword: boolean;
     canRegister: boolean;
 }
-export type TNodeChildrentType<T = ReactNode> = {
-    children: T;
-};
-export type TCommandOption<T = string> = { label: string; value?: T };
 export type TKeyValueStringType = Record<string, string>;
 export type TKeyValueAnyType = Record<string, any>;
 
@@ -112,45 +106,6 @@ export type User = {
     [key: string]: unknown;
 } & BASE_PAYLOAD_TYPES;
 
-export interface SystemUserPagination {
-    data: User[];
-    current_page: number;
-    last_page: number;
-    per_page: number;
-    total: number;
-    from: number;
-    to: number;
-}
-
-export interface SystemUser {
-    users: SystemUserPagination;
-    roles: TRoles;
-    [key: string]: unknown;
-}
-
-export type TReusablePageProps = {
-    description?: string;
-    title: string;
-    breadcrumbs: any;
-} & Partial<TNodeChildrentType>;
-
-export type TReusableDropdownProp<T> = {
-    className?: string;
-} & Pick<TDropDownProps<T>, 'triggerEl'> &
-    TActionColumnGenProps<T>;
-
-export type TReusableModalHeaderProps = {
-    title: string;
-    className?: string;
-};
-
-export type TLANG = {
-    code: string;
-    name: string;
-};
-
-export type TReusableDropdownCheckProp<T> = {} & TReusableDropdownProp<T>;
-
 export type TNotifs = {
     message: string;
     unread: boolean;
@@ -159,114 +114,6 @@ export type TNotifs = {
     time: string;
     type: string;
 } & Pick<BASE_PAYLOAD_TYPES>;
-
-export type TActionColumnGenProps<T = string> = {
-    ActionsHandlerMapping: SingleActionsHandler<T>[];
-};
-
-export type SingleActionsHandler<T = string> = {
-    href?: (payload: T) => string;
-    conditional?: (payload: T) => boolean;
-} & TCommandOption<T> &
-    Pick<TDropDownProps<T>, 'onSelect'>;
-
-export type TDropDownProps<T = string> = {
-    commandOptions: TCommandOption[];
-    onSelect: (val: T) => void;
-    selectedOption?: string;
-    includeSearch?: boolean;
-    triggerEl: ReactNode;
-} & Partial<TClassType>;
-
-export type TReusablePopupProps = {
-    onOpenChange?: (state: boolean) => void;
-    open?: boolean;
-} & Pick<TDropDownProps, 'triggerEl'> &
-    TNodeChildrentType &
-    Partial<TClassType>;
-
-export type TAvatartTypes = {
-    alt?: string;
-    url?: string;
-} & Partial<TClassType>;
-
-export type TNavBarUrlType = {
-    child_urls?: Pick<
-        TNavBarUrlType,
-        'Icon' | 'child_urls' | 'roles' | 'is_enabled' | 'label' | 'url'
-    >[];
-    // user_info: TOKEN_USER_INFO;
-    Icon?: React.FC<IconProps>;
-    current_path: string;
-    roles?: ROLE_LIST[];
-    is_enabled: boolean;
-    label: string;
-    url?: string;
-};
-
-export type TTableReusableComponent<T = any> = {
-    presentation?: 'cards' | 'table';
-    OtherTools?: React.ComponentType<Partial<TClassType> & TSearchToolProps>;
-    onRowSelectionChange?: OnChangeFn<RowSelectionState>;
-    OtherToolsProps: Partial<TSearchToolProps>;
-    setPageSize: (page: number) => void;
-
-    onPageChange: (page: number) => void;
-    rowSelection?: RowSelectionState;
-    onClick?: (row: Row<T>) => void;
-    columns: ColumnDef<any, any>[];
-    showPagination?: boolean;
-    title?: string | ReactNode;
-    pageCount: number;
-    isLoading?: boolean;
-    pageSize: number;
-    isError?: boolean;
-    page?: number;
-    data: T[];
-};
-
-export type TSearchToolProps = {
-    onChange: (value: string) => void;
-    onDateChange?: (dates: { startDate?: string; endDate?: string }) => void;
-    advancedHandler?: () => any;
-    includeFilter?: boolean;
-    placeholder?: string;
-    title?: string;
-} & Partial<TClassType> &
-    Pick<TNavBarUrlType, 'Icon'>;
-
-export type TRoles = {
-    name: string;
-    data: PaginatedRoles;
-    permissions: TPermissions;
-    [key: string]: any;
-} & BASE_PAYLOAD_TYPES;
-
-export interface PaginatedRoles {
-    results: any;
-    total: number;
-    pageCount: number;
-    pageSize: number;
-    currentPage: number;
-    from: number;
-    to: number;
-    [key: string]: any;
-}
-
-export type TPermissions = {
-    name: string;
-    data: PaginatedRoles;
-    [key: string]: any;
-} & BASE_PAYLOAD_TYPES;
-
-export interface RoleFormModalProps {
-    componentProps: {
-        role?: TRoles;
-        allPermissions: TPermissions[];
-        isEdit?: boolean;
-    };
-    handleDialogContextSwitch: (data: { open: boolean }) => void;
-}
 
 export type TDebounceprops<T> = {
     debounceTimeOut?: number;
@@ -284,76 +131,6 @@ export type TFilterOptions = {
 export type TActionType<S> = {
     payload: Partial<S>;
     type: keyof S;
-};
-export type TPaginationFilters = { page: number; pageSize: number };
-
-export type TTab<KeyType = string> = {
-    Tab: React.ComponentType<any>;
-    key: KeyType;
-    title: string;
-};
-
-export type TUseTabsProps<KeyType = string> = {
-    tabs: TTab<KeyType>[];
-    defaultTab: KeyType;
-};
-
-export type ReusableTabComponentProps<KeyType extends string = string> = {
-    Children?: React.ComponentType<any>;
-    tabProps?: Record<string, any>;
-    tabs: TTab<KeyType>[];
-    defaultTab: KeyType;
-    onTabChange?: (key: KeyType) => void;
-    header?: ReactNode;
-} & Partial<TClassType>;
-
-export type TReusableSelectProps = {
-    parentClassName?: string;
-    title: string;
-} & TReusableSelectProp<string>;
-
-export type TReusableSelectProp<T> = {
-    isLoading?: boolean;
-    actionsMap: Required<Pick<SingleActionsHandler<T>, 'label' | 'value'>>[];
-    onValueChange: (val: T) => void;
-} & Pick<TDropDownProps, 'triggerEl' | 'className'>;
-
-export type SingleActionsHandler<T = string> = {
-    href?: (payload: T) => string;
-    conditional?: (payload: T) => boolean;
-} & TCommandOption<T> &
-    Pick<TDropDownProps<T>, 'onSelect'>;
-
-export type TDropDownProps<T = string> = {
-    commandOptions: TCommandOption[];
-    onSelect: (val: T) => void;
-    selectedOption?: string;
-    includeSearch?: boolean;
-    triggerEl: ReactNode;
-} & Partial<TClassType>;
-
-export type TMemberSummaryProps = {
-    optionsDispatcherDebounce: (
-        args: TActionType<
-            TPaginationFilters & {
-                order: {
-                    direction: SORT_ORDER;
-                    orderField: string;
-                };
-                date: Date[];
-                term: string;
-            } & Record<string, any>
-        >,
-    ) => void;
-
-    filters: {
-        order: {
-            direction: SORT_ORDER;
-            orderField: string;
-        };
-        date: Date[];
-        term: string;
-    } & Record<string, any>;
 };
 
 export type TCustomDialogPropsContextProps<T = TKeyValueStringType> = {
@@ -409,61 +186,8 @@ export type TModalPropsW<T, ComponentProps> = {} & Pick<
 
 export type TQParamsGenProps = TKeyValueUnkownType;
 
-export type THttpClientConfigProps = {
-    configs?: Partial<TKeyValueStringType & TKeyValueAnyType>;
-    navigate?: NavigateFunction;
-    auth_required?: boolean;
-    redirect_url?: string;
-    is_graphql?: boolean;
-    url?: string;
-};
-
-export type THttpHookProps<T extends BASE_PAYLOAD_TYPES = BASE_PAYLOAD_TYPES> =
-    {
-        query_params: TKeyValueAnyType;
-        path: string | ((props: T) => string);
-        payload?: TKeyValueAnyType;
-        method?: HTTP_VERBS;
-        cacheName: string;
-        enabled?: boolean;
-        retry?: boolean;
-        depArr: any[];
-    } & Pick<THttpClientConfigProps, 'redirect_url' | 'auth_required'>;
-
 export const httpQueryParamsGenerator = (params: TQParamsGenProps) =>
     qs.stringify(params, { encode: true });
-
-export interface NetworksTableContentProps {
-    filter?: ENETWORKSTATUS_TYPE;
-    tab?: ENETWORKSTATUS_TYPE;
-}
-
-export interface AdvertisersTableContentProps {
-    filter?: EADVERTISERSTATUS_TYPE;
-    tab?: EADVERTISERSTATUS_TYPE;
-    advertisers: TResponseDataWrapper<TAdvertiser>;
-}
-
-export type TResponseDataWrapper<TDataType = any> = TResponseWrapper<{
-    results: TDataType;
-}> & {
-    currentPage: number;
-    pageCount: number;
-    pageSize: number;
-    count: number;
-};
-
-export interface ReusableAlertModalProps {
-    componentProps?: {
-        title: string;
-        description: string;
-        confirmText?: string;
-        cancelText?: string;
-        onConfirm?: () => void;
-        onClose?: () => void;
-        variant?: 'default' | 'delete' | 'update';
-    };
-}
 
 export type TAdvertiser = {
     user_id: number;
@@ -484,142 +208,12 @@ export type TAdvertiser = {
 
 export type TPublisher = {} & BASE_PAYLOAD_TYPES;
 
-export interface ReusableSearchSelectProps {
-    data: Array<{ value: string; label: string }>;
-    placeholder?: string;
-    onChange?: (value: string) => void;
-    value?: string;
-    emptyMessage?: string;
-    searchPlaceholder?: string;
-}
-
 export type EditAdvertiserProps = {
     componentProps: {
         data: any;
     };
     handleDialogContextSwitch: (payload: any) => void;
 };
-
-export interface ReusableSearchSelectProps {
-    data: Array<{ value: string; label: string }>;
-    placeholder?: string;
-    onChange?: (value: string) => void;
-    value?: string;
-    emptyMessage?: string;
-    searchPlaceholder?: string;
-    required?: boolean;
-    error?: string;
-    id: string;
-    label: string;
-}
-
-export type ReusableTextInputProps = {
-    id: string;
-    label: string;
-    value?: string;
-    required?: boolean;
-    placeholder?: string;
-    error?: string;
-    type?: string;
-    onChange: (value: string) => void;
-};
-export interface ReusableFileInputProps {
-    id: string;
-    label?: string;
-    value?: File[]; // controlled files
-    onChange: (files: File[]) => void;
-    required?: boolean;
-    error?: string;
-    multiple?: boolean;
-}
-
-export interface ReusableNumberInputProps {
-    id: string;
-    label: string;
-    value?: number | string;
-    placeholder?: string;
-    required?: boolean;
-    min?: number;
-    max?: number;
-    step?: number;
-    error?: string;
-    onChange: (value: string) => void;
-}
-export interface ReusableDateInputProps {
-    id: string;
-    label: string;
-    value?: string;
-    required?: boolean;
-    min?: string;
-    max?: string;
-    error?: string;
-    onChange: (value: string) => void;
-}
-
-export interface ReusableCheckboxProps {
-    id: string;
-    label: string;
-    checked: boolean;
-    onChange: (value: boolean) => void;
-}
-
-export interface ReusableCheckBoxGroupOption<T = string> {
-    label: string;
-    value: T;
-    description?: string;
-    disabled?: boolean;
-}
-
-export interface ReusableCheckBoxGroupProps<T = string> {
-    options: ReusableCheckBoxGroupOption<T>[];
-    value: T[];
-    onChange: (value: T[]) => void;
-    name?: string;
-    className?: string;
-    single?: boolean;
-}
-export interface ReusableTextareaProps {
-    id: string;
-    label: string;
-    value?: string;
-    placeholder?: string;
-    required?: boolean;
-    rows?: number;
-    error?: string;
-    onChange: (value: string) => void;
-}
-export interface ReusableSearchMultiSelectProps {
-    id: string;
-    label: string;
-    data: { value: string; label: string }[];
-    value?: string | string[];
-    onChange?: (value: string | string[]) => void;
-    placeholder?: string;
-    required?: boolean;
-    error?: string;
-    emptyMessage?: string;
-    searchPlaceholder?: string;
-    multiple?: boolean;
-}
-export interface ReusableNormalSelectProps {
-    id: string;
-    label: string;
-    value?: string | number;
-    onChange: (value: string) => void;
-    data: { value: string | number; label: string }[];
-    placeholder?: string;
-    required?: boolean;
-    error?: string;
-}
-export interface ReusableEmailInputProps {
-    id: string;
-    label: string;
-    value: string;
-    placeholder?: string;
-    required?: boolean;
-    onChange: (value: string) => void;
-    error?: string;
-}
 export interface TPaginationResult<T> {
     results: T[];
     total: number;
@@ -636,22 +230,6 @@ export interface PublisherPagesTypes {
     extingNetwork?: TUserNetworks | null;
     [key: string]: any;
 }
-
-export interface ViewPublisherProps {
-    publisher: any;
-    [key: string]: any;
-}
-
-export interface viewAdvertiserProps {
-    advertiser: any;
-    [key: string]: any;
-}
-
-export interface viewNetworkProps {
-    network: any;
-    users: any;
-    [key: string]: any;
-}
 export interface NetworksDataResponse {
     results: TNetwork[];
     total: number;
@@ -665,15 +243,6 @@ export interface NetworkPageProps {
     networksData: NetworksDataResponse;
     countries: TCountry[];
     currencies: TCurrency[];
-    [key: string]: any;
-}
-export interface campaignsPageProps {
-    campaigns: any;
-    [key: string]: any;
-}
-
-export interface TermsPageProps {
-    terms: TTerms;
     [key: string]: any;
 }
 
@@ -728,6 +297,8 @@ export type TOffers = {
     earnings_per_click: number;
     expires_at: string | null;
     commissions?: TOfferCommission[];
+    /** Loaded on the offer show/edit pages. */
+    campaign?: { id: number; name: string; currency?: string } | null;
     // Display aliases derived from offer_commissions.
     commission_type_1?: number | string | null;
     commission_value_1?: number | string | null;
@@ -743,42 +314,6 @@ export type TOfferCommission = {
     commission_value: string;
     commission_type?: CommissionType;
 } & BASE_PAYLOAD_TYPES;
-
-export type DrawerPosition = 'left' | 'right' | 'top' | 'bottom';
-
-export interface ReusableSheetProps {
-    side?: 'top' | 'bottom' | 'left' | 'right';
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    title: string;
-    description?: string;
-    children: React.ReactNode;
-    footer?: React.ReactNode;
-    width?: string;
-}
-
-export interface SideDrawerProps {
-    campaign: any;
-}
-
-export type TSearchToolProps = {
-    onChange: (value: string) => void;
-    onDateChange?: (dates: { startDate?: string; endDate?: string }) => void;
-    advancedHandler?: () => any;
-    includeFilter?: boolean;
-    placeholder?: string;
-    title?: string;
-} & Partial<TClassType> &
-    Pick<TNavBarUrlType, 'Icon'>;
-
-export interface InfoCardProps {
-    title?: string;
-    description?: string;
-    icon?: React.ReactNode;
-    children?: any;
-    className?: string;
-    variant?: 'default' | 'elevated' | 'bordered';
-}
 
 export type StatCardProps = {
     title: string;
@@ -811,50 +346,6 @@ export interface PublisherEarning {
     invoice?: { invoice_number: string };
 }
 
-export interface PublisherEarningSummary {
-    total_earnings: number;
-    pending_earnings: number;
-    approved_earnings: number;
-    paid_earnings: number;
-}
-
-export interface PublisherInvoice {
-    invoice_details?: { recovery_minor?: number };
-    currency: string;
-    id: number;
-    invoice_number: string;
-    amount: string;
-    status: string;
-    created_at: string;
-    approved_at: string | null;
-    paid_at: string | null;
-    rejection_reason?: string | null;
-    notes?: string | null;
-    earnings?: PublisherEarning[];
-    approved_by_user?: { name: string };
-}
-
-export interface PublisherInvoiceSummary {
-    pending_count: number;
-    pending_amount: number;
-    approved_count: number;
-    approved_amount: number;
-    paid_count: number;
-    paid_amount: number;
-}
-
-export interface PublisherPayoutRequest {
-    can_request: boolean;
-    groups: {
-        network_id: number;
-        currency: string;
-        available_amount: string;
-        threshold: string;
-        remaining: string;
-        can_request: boolean;
-    }[];
-}
-
 export interface CampaignScript {
     id: number;
     campaign_name: string;
@@ -863,6 +354,11 @@ export interface CampaignScript {
     script_url: string;
     embed_tag: string;
     tracking_link: string;
+    /** `installed` once the SDK has loaded at least once. */
+    install_status?: 'installed' | 'not_seen';
+    script_loads?: number;
+    clicks?: number;
+    last_click_at?: string | null;
     sdk_config?: {
         sdk_version: number;
         popup_supported: boolean;
@@ -969,31 +465,6 @@ export interface ApplicationDetails extends ApplicationData {
     network_name?: string;
 }
 
-export interface ApplicationsPageProps {
-    applications: {
-        data: ApplicationData[];
-        current_page: number;
-        last_page: number;
-        per_page: number;
-        total: number;
-    };
-    currentStatus: string;
-    [key: string]: any;
-}
-
-export interface RejectApplicationModalProps {
-    componentProps: {
-        application: {
-            id: number;
-            first_name: string;
-            last_name: string;
-            campaign_name: string;
-            offer_name: string;
-        };
-    };
-    handleDialogContextSwitch: (data: any) => void;
-}
-
 // ==================== Creative Types ====================
 
 export interface Creative {
@@ -1034,90 +505,6 @@ export interface CommissionType {
     nice_name: string;
 }
 
-export interface AdminInvoice {
-    id: number;
-    invoice_number: string;
-    amount: string;
-    currency: string;
-    status: string;
-    requested_at: string;
-    approved_at: string | null;
-    paid_at: string | null;
-    publisher?: {
-        id: number;
-        user?: {
-            first_name: string;
-            last_name: string;
-            email: string;
-        };
-    };
-    network?: {
-        id: number;
-        network_name: string;
-    };
-}
-
-export interface AdminInvoiceStats {
-    pending: number;
-    pending_amount: number;
-    approved: number;
-    approved_amount: number;
-    paid_this_month: number;
-}
-
-export interface AdminInvoiceDetail {
-    invoice_details?: { recovery_minor?: number };
-    id: number;
-    invoice_number: string;
-    amount: string;
-    currency: string;
-    status: string;
-    requested_at: string;
-    approved_at: string | null;
-    paid_at: string | null;
-    rejection_reason: string | null;
-    payment_reference: string | null;
-    notes: string | null;
-    created_at: string;
-    publisher?: {
-        id: number;
-        website_url?: string;
-        user?: {
-            first_name: string;
-            last_name: string;
-            email: string;
-        };
-    };
-    network?: {
-        id: number;
-        network_name: string;
-    };
-    approved_by_user?: {
-        first_name: string;
-        last_name: string;
-    };
-    earnings?: {
-        invoice_amount?: string;
-        currency: string | null;
-        id: number;
-        amount: string;
-        commission_type: string;
-        created_at: string;
-        publisher_campaign?: {
-            campaign?: {
-                name: string;
-            };
-            offer?: {
-                name: string;
-            };
-        };
-    }[];
-}
-
-export type InvoiceEarning = NonNullable<
-    AdminInvoiceDetail['earnings']
->[number];
-
 export interface QrCodeModalProps {
     componentProps: {
         campaignId: number;
@@ -1131,30 +518,6 @@ export interface QrCodeData {
     trackingLink: string | null;
     campaignName: string;
     offerName: string;
-}
-
-export interface ConfirmationDialogProps {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    title: string;
-    description: string;
-    confirmLabel?: string;
-    cancelLabel?: string;
-    onConfirm: () => void;
-    onCancel?: () => void;
-    variant?: 'default' | 'destructive';
-    isLoading?: boolean;
-}
-
-export interface UseConfirmationDialogReturn {
-    isOpen: boolean;
-    confirm: (
-        config: Omit<
-            ConfirmationDialogProps,
-            'open' | 'onOpenChange' | 'onConfirm'
-        > & { onConfirm: () => void | Promise<void> },
-    ) => void;
-    ConfirmDialog: React.FC;
 }
 
 export interface NetworkSettingsData {
@@ -1171,18 +534,3 @@ export interface NetworkSettingsPageProps {
     network: NetworkSettingsData;
     [key: string]: any;
 }
-
-export type DateRange = {
-    from?: Date;
-    to?: Date;
-};
-
-export type ChangeNetworkModalProps = {
-    componentProps?: {
-        entityType?: 'publisher' | 'advertiser';
-        entityId?: number | string;
-        currentNetworkId?: number | string | null;
-        data?: Record<string, any>;
-    };
-    handleDialogContextSwitch?: (payload?: { state?: boolean }) => void;
-};

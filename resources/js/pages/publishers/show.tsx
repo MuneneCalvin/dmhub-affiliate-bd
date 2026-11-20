@@ -1,31 +1,57 @@
+import {
+    ActionTile,
+    LinkTabs,
+    ProfileBanner,
+    StatCard,
+} from '@/components/app';
+import { Breadcrumbs } from '@/components/breadcrumbs';
+import { ChangeNetworkForm } from '@/components/change-network-form';
 import { publisherCardEditors } from '@/components/partner-card-config';
 import {
     PartnerCardEditor,
     type CardEditorConfig,
 } from '@/components/partner-card-editor';
+import { PartnerProfile } from '@/components/partner-profile';
 import {
     Details,
     Empty,
     Paging,
     Panel,
 } from '@/components/partner-workspace-ui';
+import { ProfileCard, ProfileDetails } from '@/components/profile-ui';
 import { PublisherSettings } from '@/components/publisher-settings';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { BreadCrumbComponent } from '@/dev/core';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { StatusBadge } from '@/components/ui/status-badge';
+import {
+    TableHead,
+    TableHeader,
+    TableRow,
+    Table as UiTable,
+} from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
 import type { PublisherWorkspaceProps } from '@/types/publisher-workspace';
 import { Head, Link, usePage } from '@inertiajs/react';
 import {
+    ArrowLeftRight,
     ArrowRight,
+    Coins,
     ExternalLink,
     FileText,
+    Globe2,
     Megaphone,
     MousePointerClick,
+    Newspaper,
+    Pencil,
+    Receipt,
+    Settings,
+    ShieldCheck,
     Target,
+    UserRound,
 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import '../../../css/campaign-workspace.css';
 
 const states: Record<string, string> = {
     A: 'Active',
@@ -41,14 +67,20 @@ const states: Record<string, string> = {
     rejected: 'Rejected',
     reversed: 'Reversed',
 };
+const keywords: Record<string, string> = {
+    A: 'active',
+    P: 'pending',
+    R: 'rejected',
+    I: 'inactive',
+    C: 'inactive',
+};
 function Status({ value }: { value: string }) {
     const { t } = useTranslation();
     return (
-        <span
-            className={`campaign-badge ${['A', 'approved', 'paid'].includes(value) ? 'positive' : 'warning'}`}
-        >
-            {t(states[value] ?? value)}
-        </span>
+        <StatusBadge
+            status={keywords[value] ?? value}
+            label={t(states[value] ?? value)}
+        />
     );
 }
 function Table({
@@ -60,25 +92,30 @@ function Table({
 }) {
     const { t } = useTranslation();
     return (
-        <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-                <thead className="border-b bg-muted/40">
-                    <tr>
-                        {headings.map((label) => (
-                            <th
-                                key={label}
-                                className="px-5 py-3 font-medium whitespace-nowrap text-muted-foreground"
-                            >
-                                {t(label)}
-                            </th>
-                        ))}
-                    </tr>
-                </thead>
-                <tbody className="divide-y">{children}</tbody>
-            </table>
-        </div>
+        <UiTable className="[&_tbody_td]:px-4 [&_tbody_td]:py-3.5 [&_tbody_tr]:border-t [&_tbody_tr]:border-border [&_tbody_tr:hover]:bg-surface-muted">
+            <TableHeader>
+                <TableRow>
+                    {headings.map((label) => (
+                        <TableHead key={label}>{t(label)}</TableHead>
+                    ))}
+                </TableRow>
+            </TableHeader>
+            <tbody>{children}</tbody>
+        </UiTable>
     );
 }
+
+const TAB_ICONS: Record<string, ReactNode> = {
+    overview: <Newspaper />,
+    campaigns: <Megaphone />,
+    applications: <FileText />,
+    tracking: <MousePointerClick />,
+    earnings: <Coins />,
+    invoices: <Receipt />,
+    sites: <Globe2 />,
+    account: <UserRound />,
+    settings: <Settings />,
+};
 
 export default function Show() {
     const props = usePage<PublisherWorkspaceProps>().props;
@@ -86,6 +123,7 @@ export default function Show() {
     const { permissions: can, activeTab: tab, summary } = w;
     const { t, i18n } = useTranslation();
     const [cardEditor, setCardEditor] = useState<CardEditorConfig | null>(null);
+    const [changingNetwork, setChangingNetwork] = useState(false);
     const editors = publisherCardEditors(props);
     const editCard = (key: string) =>
         editors[key] ? () => setCardEditor(editors[key]) : undefined;
@@ -112,7 +150,7 @@ export default function Show() {
                 href={p.website_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-primary underline"
+                className="text-brand-ink underline"
             >
                 {p.website_url}
             </a>
@@ -123,12 +161,12 @@ export default function Show() {
         ...new Set(w.earningsSummary?.map((row) => row.currency) ?? []),
     ];
     const earningsSummary = (
-        <section className="campaign-panel overflow-hidden">
-            <div className="border-b p-5">
+        <section className="overflow-hidden rounded-card border border-border bg-surface shadow-card">
+            <div className="border-b border-border px-[22px] py-5">
                 <h2 className="text-lg font-semibold">
                     {t('Earnings by currency')}
                 </h2>
-                <p className="mt-1 text-sm text-muted-foreground">
+                <p className="mt-1 text-sm text-ink-muted">
                     {t(
                         'Recorded commissions after reversals. Payout eligibility is checked separately.',
                     )}
@@ -188,63 +226,87 @@ export default function Show() {
             <Head
                 title={`${name} · ${t(w.tabs.find((item) => item.key === tab)?.label ?? 'Overview')}`}
             />
-            <div className="workspace-page campaign-workspace">
-                <div className="campaign-heading">
-                    <div className="mb-4 text-xs">
-                        <BreadCrumbComponent
-                            breadcrumbs={[
-                                {
-                                    title: t(
-                                        can.directory
-                                            ? 'Publishers'
-                                            : 'Marketplace',
-                                    ),
-                                    href: can.directory
-                                        ? '/publishers/index'
-                                        : '/publisher_dashboard/dashboard',
-                                },
-                                { title: name, href: base },
-                            ]}
-                        />
-                    </div>
-                    <div className="campaign-title-row">
-                        <div className="campaign-title">
-                            <h1>{name}</h1>
-                            <Status value={p.status} />
-                        </div>
-                        <span className="campaign-role">{t(w.role)}</span>
-                    </div>
-                    <div className="campaign-meta">
-                        <span>{t('Publisher')}</span>
-                        <span>
-                            {p.network_name || t('No network assigned')}
-                        </span>
-                        <span>{p.industry || p.user_name}</span>
-                    </div>
-                </div>
-                <nav
-                    className="campaign-tabs"
-                    aria-label={t('Publisher navigation')}
-                >
-                    {w.tabs.map((item) => (
-                        <Link
-                            key={item.key}
-                            href={tabUrl(item.key)}
-                            preserveScroll
-                            aria-current={tab === item.key ? 'page' : undefined}
-                        >
-                            {t(item.label)}
-                        </Link>
-                    ))}
-                </nav>
+            <div className="workspace-page flex flex-col gap-[22px]">
+                <Breadcrumbs
+                    breadcrumbs={[
+                        {
+                            title: t(
+                                can.directory ? 'Publishers' : 'Marketplace',
+                            ),
+                            href: can.directory
+                                ? '/publishers/index'
+                                : '/publisher_dashboard/dashboard',
+                        },
+                        { title: name, href: base },
+                    ]}
+                />
+                <ProfileBanner
+                    name={name}
+                    status={<Status value={p.status} />}
+                    chips={[
+                        { label: t('Publisher'), tone: 'partners' },
+                        ...(p.traffic_sources ?? [])
+                            .slice(0, 3)
+                            .map((source) => ({
+                                label: (
+                                    <span className="capitalize">
+                                        {String(source).replaceAll('_', ' ')}
+                                    </span>
+                                ),
+                                tone: 'analytics' as const,
+                            })),
+                        { label: p.network_name || t('No network assigned') },
+                        {
+                            label: t('Member since {{date}}', {
+                                date: new Intl.DateTimeFormat(i18n.language, {
+                                    month: 'short',
+                                    year: 'numeric',
+                                    timeZone: 'UTC',
+                                }).format(new Date(p.publisher_created_at)),
+                            }),
+                        },
+                    ]}
+                    actions={
+                        <>
+                            <Badge variant="secondary" className="h-11 px-3.5">
+                                {t(w.role)}
+                            </Badge>
+                            {can.changeNetwork && (
+                                <Button
+                                    variant="secondary"
+                                    onClick={() => setChangingNetwork(true)}
+                                >
+                                    <ArrowLeftRight className="text-partners" />
+                                    {t('Change network')}
+                                </Button>
+                            )}
+                            {editors.profile && (
+                                <Button onClick={editCard('profile')}>
+                                    <Pencil />
+                                    {t('Edit profile')}
+                                </Button>
+                            )}
+                        </>
+                    }
+                />
+                <LinkTabs
+                    label={t('Publisher navigation')}
+                    current={tab}
+                    tabs={w.tabs.map((item) => ({
+                        key: item.key,
+                        label: t(item.label),
+                        href: tabUrl(item.key),
+                        icon: TAB_ICONS[item.key],
+                    }))}
+                />
                 <div
                     id="publisher-content"
                     tabIndex={-1}
-                    className="campaign-content"
+                    className="flex flex-col gap-[18px]"
                 >
                     {tab === 'overview' && (
                         <>
-                            <div className="campaign-overview-heading">
+                            <div className="flex flex-wrap items-end justify-between gap-4 [&_h2]:text-lg [&_h2]:font-extrabold [&_p]:text-sm [&_p]:text-ink-muted">
                                 <div>
                                     <h2>{t('Publisher overview')}</h2>
                                     <p>
@@ -262,79 +324,55 @@ export default function Show() {
                                     </Button>
                                 )}
                             </div>
-                            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                                {[
-                                    ...(can.campaigns
-                                        ? [
-                                              {
-                                                  label: 'Active campaigns',
-                                                  value: summary.activeCampaigns,
-                                                  icon: Megaphone,
-                                                  target: 'campaigns',
-                                              },
-                                          ]
-                                        : []),
-                                    ...(can.applications
-                                        ? [
-                                              {
-                                                  label: 'Pending applications',
-                                                  value: summary.pendingApplications,
-                                                  icon: FileText,
-                                                  target: 'applications',
-                                              },
-                                          ]
-                                        : []),
-                                    ...(can.performance
-                                        ? [
-                                              {
-                                                  label: 'Total Clicks',
-                                                  value: summary.clicks,
-                                                  icon: MousePointerClick,
-                                                  target: null,
-                                              },
-                                              {
-                                                  label: 'Approved conversions',
-                                                  value: summary.conversions,
-                                                  icon: Target,
-                                                  target: null,
-                                              },
-                                          ]
-                                        : []),
-                                ].map(
-                                    ({ label, value, icon: Icon, target }) => {
-                                        const content = (
-                                            <>
-                                                <div className="flex items-center justify-between gap-2 text-muted-foreground">
-                                                    <span>{t(label)}</span>
-                                                    <Icon size={18} />
-                                                </div>
-                                                <p className="mt-3 text-2xl font-semibold tabular-nums">
-                                                    {num(value ?? 0)}
-                                                </p>
-                                            </>
-                                        );
-                                        return target ? (
-                                            <Link
-                                                key={label}
-                                                className="campaign-panel p-5 hover:border-primary"
-                                                href={tabUrl(target)}
-                                            >
-                                                {content}
-                                            </Link>
-                                        ) : (
-                                            <div
-                                                key={label}
-                                                className="campaign-panel p-5"
-                                            >
-                                                {content}
-                                            </div>
-                                        );
-                                    },
+                            <section
+                                aria-label={t('Performance')}
+                                className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,200px),1fr))] gap-3.5"
+                            >
+                                {can.campaigns && (
+                                    <StatCard
+                                        variant="solid"
+                                        tone="brand"
+                                        label={t('Active campaigns')}
+                                        value={num(
+                                            summary.activeCampaigns ?? 0,
+                                        )}
+                                        icon={<Megaphone />}
+                                    />
                                 )}
-                            </div>
+                                {can.applications && (
+                                    <StatCard
+                                        tone="warning"
+                                        label={t('Pending applications')}
+                                        value={num(
+                                            summary.pendingApplications ?? 0,
+                                        )}
+                                        icon={<FileText />}
+                                    />
+                                )}
+                                {can.performance && (
+                                    <>
+                                        <StatCard
+                                            tone="analytics"
+                                            label={t('Total Clicks')}
+                                            value={num(summary.clicks ?? 0)}
+                                            icon={<MousePointerClick />}
+                                        />
+                                        <StatCard
+                                            tone="partners"
+                                            label={t('Approved conversions')}
+                                            value={num(
+                                                summary.conversions ?? 0,
+                                            )}
+                                            icon={<Target />}
+                                        />
+                                    </>
+                                )}
+                            </section>
                             <div className="grid gap-5 lg:grid-cols-2">
                                 <Panel
                                     title={t('Publisher details')}
+                                    icon={<UserRound />}
+                                    tone="partners"
                                     onEdit={editCard('details')}
                                 >
                                     <Details
@@ -358,6 +396,8 @@ export default function Show() {
                                 </Panel>
                                 <Panel
                                     title={t('Account readiness')}
+                                    icon={<ShieldCheck />}
+                                    tone="success"
                                     onEdit={editCard('readiness')}
                                 >
                                     <Details
@@ -385,7 +425,7 @@ export default function Show() {
                                     />
                                     <Link
                                         href={tabUrl('account')}
-                                        className="mt-5 inline-flex items-center gap-2 text-primary"
+                                        className="mt-5 inline-flex items-center gap-2 text-brand-ink"
                                     >
                                         {t('View account')}
                                         <ArrowRight size={16} />
@@ -393,8 +433,14 @@ export default function Show() {
                                 </Panel>
                             </div>
                             {can.earnings && earningsSummary}
-                            <Panel title={t('Publisher tools')}>
-                                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                            <section aria-labelledby="publisher-tools">
+                                <h2
+                                    id="publisher-tools"
+                                    className="mb-3 text-base font-bold"
+                                >
+                                    {t('Publisher tools')}
+                                </h2>
+                                <div className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
                                     {w.tabs
                                         .filter(
                                             (item) =>
@@ -404,18 +450,31 @@ export default function Show() {
                                                 ].includes(item.key),
                                         )
                                         .map((item) => (
-                                            <Link
+                                            <ActionTile
                                                 key={item.key}
                                                 href={tabUrl(item.key)}
-                                                className="flex items-center justify-between rounded-lg border p-4 hover:bg-muted/50"
-                                            >
-                                                <span>{t(item.label)}</span>
-                                                <ArrowRight size={16} />
-                                            </Link>
+                                                title={t(item.label)}
+                                                icon={
+                                                    TAB_ICONS[item.key] ?? (
+                                                        <FileText />
+                                                    )
+                                                }
+                                                tone={
+                                                    [
+                                                        'earnings',
+                                                        'invoices',
+                                                    ].includes(item.key)
+                                                        ? 'finance'
+                                                        : item.key ===
+                                                            'settings'
+                                                          ? 'admin'
+                                                          : 'brand'
+                                                }
+                                            />
                                         ))}
                                 </div>
-                            </Panel>
-                            <p className="text-sm text-muted-foreground">
+                            </section>
+                            <p className="text-sm text-ink-muted">
                                 {t(
                                     'Figures cover all time within your access. Financial amounts remain separate by currency.',
                                 )}
@@ -425,7 +484,7 @@ export default function Show() {
                     {['campaigns', 'applications', 'tracking'].includes(tab) &&
                         w.assignments && (
                             <>
-                                <div className="campaign-overview-heading">
+                                <div className="flex flex-wrap items-end justify-between gap-4 [&_h2]:text-lg [&_h2]:font-extrabold [&_p]:text-sm [&_p]:text-ink-muted">
                                     <div>
                                         <h2>
                                             {t(
@@ -454,7 +513,7 @@ export default function Show() {
                                         </Button>
                                     )}
                                 </div>
-                                <section className="campaign-panel overflow-hidden">
+                                <section className="overflow-hidden rounded-card border border-border bg-surface shadow-card">
                                     {w.assignments.data.length ? (
                                         <Table
                                             headings={[
@@ -473,7 +532,7 @@ export default function Show() {
                                                         </p>
                                                         {tab ===
                                                             'applications' && (
-                                                            <p className="mt-1 text-xs text-muted-foreground">
+                                                            <p className="mt-1 text-xs text-ink-muted">
                                                                 {t('Applied')}:{' '}
                                                                 {date(
                                                                     a.applied_at,
@@ -500,7 +559,7 @@ export default function Show() {
                                                                 'applications' &&
                                                                 a.application_href && (
                                                                     <Link
-                                                                        className="text-primary hover:underline"
+                                                                        className="text-brand-ink hover:underline"
                                                                         href={
                                                                             a.application_href
                                                                         }
@@ -516,7 +575,7 @@ export default function Show() {
                                                                 'tracking' &&
                                                                 a.tracking_href && (
                                                                     <Link
-                                                                        className="inline-flex items-center gap-2 text-primary hover:underline"
+                                                                        className="inline-flex items-center gap-2 text-brand-ink hover:underline"
                                                                         href={
                                                                             a.tracking_href
                                                                         }
@@ -535,7 +594,7 @@ export default function Show() {
                                                                 )}
                                                             {a.campaign_href && (
                                                                 <Link
-                                                                    className="text-primary hover:underline"
+                                                                    className="text-brand-ink hover:underline"
                                                                     href={
                                                                         a.campaign_href
                                                                     }
@@ -565,7 +624,7 @@ export default function Show() {
                         )}
                     {tab === 'earnings' && w.earnings && (
                         <>
-                            <div className="campaign-overview-heading">
+                            <div className="flex flex-wrap items-end justify-between gap-4 [&_h2]:text-lg [&_h2]:font-extrabold [&_p]:text-sm [&_p]:text-ink-muted">
                                 <div>
                                     <h2>{t('Publisher earnings')}</h2>
                                     <p>
@@ -583,7 +642,7 @@ export default function Show() {
                                 )}
                             </div>
                             {earningsSummary}
-                            <section className="campaign-panel overflow-hidden">
+                            <section className="overflow-hidden rounded-card border border-border bg-surface shadow-card">
                                 {w.earnings.data.length ? (
                                     <Table
                                         headings={[
@@ -624,7 +683,7 @@ export default function Show() {
                     )}
                     {tab === 'invoices' && w.invoices && (
                         <>
-                            <div className="campaign-overview-heading">
+                            <div className="flex flex-wrap items-end justify-between gap-4 [&_h2]:text-lg [&_h2]:font-extrabold [&_p]:text-sm [&_p]:text-ink-muted">
                                 <div>
                                     <h2>{t('Invoices & payouts')}</h2>
                                     <p>
@@ -666,7 +725,7 @@ export default function Show() {
                                             ],
                                         ]}
                                     />
-                                    <p className="mt-4 text-sm text-muted-foreground">
+                                    <p className="mt-4 text-sm text-ink-muted">
                                         {t(
                                             'The threshold applies separately to each network and currency.',
                                         )}
@@ -674,7 +733,7 @@ export default function Show() {
                                 </Panel>
                             )}
                             {w.payoutEligibility && (
-                                <section className="campaign-panel overflow-hidden">
+                                <section className="overflow-hidden rounded-card border border-border bg-surface shadow-card">
                                     <h3 className="border-b p-5 font-semibold">
                                         {t('Payout eligibility')}
                                     </h3>
@@ -726,7 +785,7 @@ export default function Show() {
                                     )}
                                 </section>
                             )}
-                            <section className="campaign-panel overflow-hidden">
+                            <section className="overflow-hidden rounded-card border border-border bg-surface shadow-card">
                                 {w.invoices.data.length ? (
                                     <Table
                                         headings={[
@@ -742,7 +801,7 @@ export default function Show() {
                                                 <td className="px-5 py-4">
                                                     <Link
                                                         href={invoice.href}
-                                                        className="font-semibold text-primary hover:underline"
+                                                        className="font-semibold text-brand-ink hover:underline"
                                                     >
                                                         {invoice.invoice_number}
                                                     </Link>
@@ -794,7 +853,7 @@ export default function Show() {
                                 {can.edit && (
                                     <Link
                                         href={tabUrl('settings')}
-                                        className="mt-5 inline-flex items-center gap-2 text-primary"
+                                        className="mt-5 inline-flex items-center gap-2 text-brand-ink"
                                     >
                                         {t('Edit details')}
                                         <ArrowRight size={16} />
@@ -827,7 +886,7 @@ export default function Show() {
                                         ],
                                     ]}
                                 />
-                                <p className="mt-4 text-sm text-muted-foreground">
+                                <p className="mt-4 text-sm text-ink-muted">
                                     {t(
                                         'Traffic profile figures are supplied by the publisher.',
                                     )}
@@ -836,89 +895,85 @@ export default function Show() {
                         </div>
                     )}
                     {tab === 'account' && (
-                        <div className="grid items-start gap-5 lg:grid-cols-2">
-                            <Panel
-                                title={t('User Information')}
-                                onEdit={editCard('profile')}
-                            >
-                                <Details
+                        <PartnerProfile
+                            account={p}
+                            kind="Publisher"
+                            website={website}
+                            onEditProfile={editCard('profile')}
+                            onEditBusiness={editCard('site')}
+                        >
+                            <ProfileCard title={t('Verification & security')}>
+                                <ProfileDetails
                                     rows={[
                                         [
-                                            t('Name'),
-                                            `${p.first_name} ${p.last_name}`,
+                                            t('Status'),
+                                            <Status
+                                                key="account-status"
+                                                value={p.status}
+                                            />,
                                         ],
-                                        [t('Username'), p.user_name],
-                                        [t('Email'), p.email],
-                                        [t('Title'), p.title],
-                                        [t('Country'), p.country_iso],
-                                        [t('Timezone'), p.timezone],
-                                        [t('Language'), p.language],
-                                        [t('Preferred currency'), p.currency],
+                                        [
+                                            t('Verified publisher'),
+                                            yes(p.is_verified),
+                                        ],
+                                        [
+                                            t('Email verified'),
+                                            yes(p.email_verified_at),
+                                        ],
+                                        [
+                                            t('Two-factor authentication'),
+                                            yes(p.two_factor_confirmed_at),
+                                        ],
+                                        [t('Verified at'), date(p.verified_at)],
+                                        [
+                                            t('Created'),
+                                            date(p.publisher_created_at),
+                                        ],
+                                        [
+                                            t('Updated'),
+                                            date(p.publisher_updated_at),
+                                        ],
                                     ]}
                                 />
-                            </Panel>
-                            <div className="space-y-5">
-                                <Panel title={t('Verification & security')}>
-                                    <Details
-                                        rows={[
-                                            [
-                                                t('Status'),
-                                                <Status
-                                                    key="account-status"
-                                                    value={p.status}
-                                                />,
-                                            ],
-                                            [
-                                                t('Verified publisher'),
-                                                yes(p.is_verified),
-                                            ],
-                                            [
-                                                t('Email verified'),
-                                                yes(p.email_verified_at),
-                                            ],
-                                            [
-                                                t('Two-factor authentication'),
-                                                yes(p.two_factor_confirmed_at),
-                                            ],
-                                            [
-                                                t('Verified at'),
-                                                date(p.verified_at),
-                                            ],
-                                            [
-                                                t('Created'),
-                                                date(p.publisher_created_at),
-                                            ],
-                                            [
-                                                t('Updated'),
-                                                date(p.publisher_updated_at),
-                                            ],
-                                        ]}
-                                    />
-                                </Panel>
-                                <Panel title={t('Account roles')}>
-                                    <div className="flex flex-wrap gap-3">
-                                        {[
-                                            [p.is_publisher, 'Publisher'],
-                                            [p.is_advertiser, 'Advertiser'],
-                                            [p.is_super_admin, 'Super Admin'],
-                                        ].map(([enabled, label]) =>
-                                            enabled ? (
-                                                <span
-                                                    key={String(label)}
-                                                    className="campaign-role"
-                                                >
-                                                    {t(String(label))}
-                                                </span>
-                                            ) : null,
-                                        )}
-                                    </div>
-                                </Panel>
-                            </div>
-                        </div>
+                            </ProfileCard>
+                            <ProfileCard title={t('Account roles')}>
+                                <div className="flex flex-wrap gap-3">
+                                    {[
+                                        [p.is_publisher, 'Publisher'],
+                                        [p.is_advertiser, 'Advertiser'],
+                                        [p.is_super_admin, 'Super Admin'],
+                                    ].map(([enabled, label]) =>
+                                        enabled ? (
+                                            <span
+                                                key={String(label)}
+                                                className="inline-flex h-7 items-center rounded-full bg-surface-tint px-3 text-xs font-bold"
+                                            >
+                                                {t(String(label))}
+                                            </span>
+                                        ) : null,
+                                    )}
+                                </div>
+                            </ProfileCard>
+                        </PartnerProfile>
                     )}
                     {tab === 'settings' && <PublisherSettings {...props} />}
                 </div>
             </div>
+            {can.changeNetwork && (
+                <Dialog
+                    open={changingNetwork}
+                    onOpenChange={setChangingNetwork}
+                >
+                    <DialogContent className="sm:max-w-[600px]">
+                        <ChangeNetworkForm
+                            kind="publisher"
+                            id={p.publisher_id}
+                            currentNetworkId={p.network_id}
+                            onDone={() => setChangingNetwork(false)}
+                        />
+                    </DialogContent>
+                </Dialog>
+            )}
             {cardEditor && (
                 <PartnerCardEditor
                     config={cardEditor}

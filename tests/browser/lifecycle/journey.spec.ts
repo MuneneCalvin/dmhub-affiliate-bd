@@ -10,6 +10,7 @@ import {
     apply,
     approveAccount,
     approveApplication,
+    campaignBudget,
     campaignStepTwo,
     createCampaign,
     createOffer,
@@ -173,10 +174,9 @@ test('onboarding → campaign enrollment → clicks, submissions, checkout and f
         await advertiser.goto(
             `${app}/advertiser/campaigns/show/${submissionCampaign}`,
         );
-        const offersTab = advertiser.getByRole('link', {
-            name: 'Offers & materials',
-            exact: true,
-        });
+        const offersTab = advertiser
+            .getByRole('navigation', { name: 'Campaign sections' })
+            .getByRole('link', { name: /^Offers/ });
         await offersTab.click();
         await expect(
             advertiser
@@ -236,7 +236,7 @@ test('onboarding → campaign enrollment → clicks, submissions, checkout and f
         await promoter
             .getByRole('row')
             .filter({ hasText: 'Lifecycle Submission Offer' })
-            .getByRole('link', { name: /View overview/ })
+            .getByRole('link', { name: /^Details for / })
             .click();
         await expect(promoter).toHaveURL(
             `${app}/publishers/my/campaigns/show/${submissionAssignment.id}`,
@@ -390,7 +390,8 @@ test('onboarding → campaign enrollment → clicks, submissions, checkout and f
     await test.step('Approve commissions and verify reports without labelling them paid', async () => {
         await promoter.goto(`${app}/publisher/earnings`);
         await expect(promoter.locator('main')).toContainText('$25.00');
-        await expect(promoter.locator('main')).toContainText('pending');
+        // Phase 09: earning statuses are StatusBadges ("Pending", sentence case).
+        await expect(promoter.locator('main')).toContainText(/pending/i);
         await network.goto(`${app}/finance`);
         for (let i = 0; i < 3; i++) {
             await network
@@ -420,14 +421,17 @@ test('onboarding → campaign enrollment → clicks, submissions, checkout and f
         expect(dashboard, 'B10: funding excludes the $160 fee').toContain(
             'Net funded budget\n$1,840.00',
         );
+        // Phase 05 dashboard: approved commissions draw down the funded
+        // budget as "Spent budget" (never labelled as paid).
         expect(
             dashboard,
             'B11: approved commissions are labelled accurately',
-        ).toContain('Net approved commissions\n$25.00');
+        ).toMatch(/Spent budget\s+\$25\.00/);
+        expect(dashboard).not.toMatch(/commissions paid/i);
         expect(dashboard).not.toContain('Total Commissions Paid');
         await screenshot(advertiser, 'approved-dashboard');
         await promoter.goto(`${app}/publisher/earnings`);
-        await expect(promoter.locator('main')).toContainText('approved');
+        await expect(promoter.locator('main')).toContainText(/approved/i);
     });
 
     await test.step('Inactive offer rejects traffic; reactivation restores it', async () => {
@@ -509,6 +513,7 @@ test('B03 invalid ROI stays on its wizard step', async ({ actor }) => {
     const page = await actor('roi-validation');
     await login(page, 'advertiser@dmhub.com', 'Abcd1234!');
     await campaignStepTwo(page, 'Unsaved invalid ROI');
+    await campaignBudget(page);
     await page.locator('#target_roi').fill('-1');
     await page.getByRole('button', { name: 'Continue', exact: true }).click();
     await expect(
@@ -518,8 +523,10 @@ test('B03 invalid ROI stays on its wizard step', async ({ actor }) => {
         page.getByRole('heading', { name: 'Budget & terms', exact: true }),
     ).toBeVisible();
     await expect(
-        page.getByRole('button', { name: /02Budget & terms/ }),
-    ).toHaveAttribute('aria-current', 'step');
+        page
+            .getByRole('navigation', { name: 'Campaign setup steps' })
+            .locator('[aria-current="step"]'),
+    ).toContainText('Budget & terms');
 });
 
 for (const role of ['advertiser', 'publisher']) {
@@ -539,7 +546,9 @@ for (const role of ['advertiser', 'publisher']) {
                     r.request().method() === 'POST' &&
                     r.url().endsWith('/register'),
             ),
-            page.getByRole('button', { name: 'Submit', exact: true }).click(),
+            page
+                .getByRole('button', { name: 'Create account', exact: true })
+                .click(),
         ]);
         expect(
             response.status(),
@@ -551,8 +560,9 @@ for (const role of ['advertiser', 'publisher']) {
             ),
         ).toBe(false);
         await page.waitForLoadState('networkidle');
+        // Server errors send the form back to the step that owns the field.
         await expect(
-            page.getByLabel('Chamber Of Commerce Number', { exact: true }),
+            page.getByLabel(/^Chamber of Commerce number/),
         ).toHaveValue('E2E999999');
         await expect(page.locator('body')).toContainText(
             /(?:company|coc)(?: number)? (?:has already been taken|is already (?:taken|registered|in use)|already exists)/i,
@@ -572,10 +582,12 @@ for (const role of ['advertiser', 'publisher']) {
             role === 'advertiser' ? 'E2E999998' : 'E2E999997',
         );
         expect(
-            await page.getByLabel('First Name', { exact: true }).count(),
+            await page.getByLabel(/^First name/).count(),
             'B15: associate labels with inputs',
         ).toBe(1);
-        await page.getByRole('button', { name: 'Submit', exact: true }).click();
+        await page
+            .getByRole('button', { name: 'Create account', exact: true })
+            .click();
         await page.waitForLoadState('networkidle');
         expect(
             await page
@@ -583,9 +595,9 @@ for (const role of ['advertiser', 'publisher']) {
                 .isVisible(),
             'B02: failed registration must not claim success',
         ).toBe(false);
-        await expect(
-            page.getByLabel('Email Address', { exact: true }),
-        ).toHaveValue('advertiser@dmhub.com');
+        await expect(page.getByLabel(/^Work email/)).toHaveValue(
+            'advertiser@dmhub.com',
+        );
         // Keep this phrase specific: a broad email.*already expression can
         // accidentally match "Email Address ... Already have an account?".
         await expect(
@@ -602,7 +614,8 @@ test('B14 valid website URL with explicit port is accepted', async ({
 }) => {
     const page = await actor('website-url');
     await page.goto(`${app}/register`);
-    await page.getByRole('tab', { name: 'advertiser', exact: true }).click();
+    await page.getByRole('radio', { name: 'Advertiser' }).check();
+    await page.getByRole('button', { name: 'Continue', exact: true }).click();
     for (const [name, value] of Object.entries({
         business_name: 'Port URL test',
         website_name: merchant,
@@ -611,6 +624,6 @@ test('B14 valid website URL with explicit port is accepted', async ({
     })) {
         await page.locator(`[name=${name}]`).fill(value);
     }
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
+    await page.getByRole('button', { name: 'Continue', exact: true }).click();
     await expect(page.locator('[name=first_name]')).toBeVisible();
 });

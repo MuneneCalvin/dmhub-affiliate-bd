@@ -11,12 +11,14 @@ use App\Models\FraudPolicyVersion;
 use App\Models\Network;
 use App\Models\PublisherCampaigns;
 use App\Models\PublisherEarning;
+use App\Models\User;
 use App\Services\Finance\LedgerService;
 use App\Services\Fraud\FraudAssessmentService;
 use App\Services\Fraud\FraudPolicyService;
 use App\Services\Fraud\FraudReportingService;
 use App\Services\Fraud\FraudRuleRegistry;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class FraudController extends Controller
@@ -37,6 +39,17 @@ class FraudController extends Controller
         }
 
         return [$networkId, $campaignId];
+    }
+
+    /**
+     * Add `actor_name` (first + last name) to records that carry an `actor_id`.
+     */
+    private function withActors(Collection $records): Collection
+    {
+        $names = User::whereIn('id', $records->pluck('actor_id')->filter()->unique())->get(['id', 'first_name', 'last_name', 'user_name'])
+            ->mapWithKeys(fn (User $user) => [$user->id => trim($user->first_name.' '.$user->last_name) ?: $user->user_name]);
+
+        return $records->map(fn ($record) => [...$record->toArray(), 'actor_name' => $names[$record->actor_id] ?? null]);
     }
 
     public function index(Request $request, FraudPolicyService $policies, FraudReportingService $reports)
@@ -63,7 +76,8 @@ class FraudController extends Controller
             'definitions' => app(FraudRuleRegistry::class)->definitions(), 'currencies' => config('finance.currencies'),
             'effective' => $policies->effective($networkId, $campaignId), 'inherited' => $policies->effective($networkId)['configuration'],
             'configuration' => $policy?->activeVersion?->configuration ?? [], 'activeVersionId' => $policy?->active_version_id,
-            'history' => $policy ? FraudPolicyVersion::where('fraud_policy_id', $policy->id)->latest('id')->limit(50)->get() : [],
+            'history' => $policy ? $this->withActors(FraudPolicyVersion::where('fraud_policy_id', $policy->id)->latest('id')->limit(50)
+                ->get(['id', 'version', 'reason', 'actor_id', 'created_at'])) : [],
             'statistics' => $reports->statistics($networkId, $campaignId),
             'health' => ['queued' => (clone $health)->whereIn('status', ['queued', 'running'])->count(),
                 'waiting' => (clone $health)->where('status', 'waiting')->count(), 'errors' => (clone $health)->where('status', 'error')->count()],
@@ -106,7 +120,7 @@ class FraudController extends Controller
         return inertia('admin/fraud/show', ['earning' => $earning->only(['id', 'status', 'currency', 'amount', 'network_id']),
             'order' => $earning->conversion?->order_code,
             'assessments' => $earning->fraudAssessments()->latest('id')->paginate(20),
-            'feedback' => FraudFeedback::where('earning_id', $earning->id)->latest('id')->limit(50)->get(),
+            'feedback' => $this->withActors(FraudFeedback::where('earning_id', $earning->id)->latest('id')->limit(50)->get()),
             'canManage' => $request->user()->is_super_admin || $request->user()->permissionNames()->contains('manage_fraud_rules'),
         ]);
     }

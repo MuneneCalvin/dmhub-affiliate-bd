@@ -10,6 +10,13 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useForm } from '@inertiajs/react';
 import { useId } from 'react';
@@ -40,6 +47,7 @@ export type CardEditorConfig = {
     url: string;
     fields: CardField[];
     description?: string;
+    data?: Record<string, string | boolean>;
 };
 export function PartnerCardEditor({
     config,
@@ -50,11 +58,12 @@ export function PartnerCardEditor({
 }) {
     const { t } = useTranslation();
     const prefix = useId();
-    const form = useForm<Record<string, string | boolean>>(
-        Object.fromEntries(
+    const form = useForm<Record<string, string | boolean>>({
+        ...config.data,
+        ...Object.fromEntries(
             config.fields.map((field) => [field.name, field.value]),
         ),
-    );
+    });
     return (
         <Dialog
             open
@@ -151,39 +160,52 @@ export function PartnerCardEditor({
                                                     }
                                                 />
                                             ) : field.type === 'select' ? (
-                                                <select
-                                                    {...accessibility}
-                                                    className="h-10 w-full rounded-md border bg-background px-3"
-                                                    value={String(
-                                                        form.data[field.name],
-                                                    )}
-                                                    onChange={(event) =>
+                                                <Select
+                                                    value={
+                                                        String(
+                                                            form.data[
+                                                                field.name
+                                                            ],
+                                                        ) || '__none__'
+                                                    }
+                                                    onValueChange={(value) =>
                                                         form.setData(
                                                             field.name,
-                                                            event.target.value,
+                                                            value === '__none__'
+                                                                ? ''
+                                                                : value,
                                                         )
                                                     }
                                                 >
-                                                    {field.options?.map(
-                                                        (option) => (
-                                                            <option
-                                                                key={
-                                                                    option.value
-                                                                }
-                                                                value={
-                                                                    option.value
-                                                                }
-                                                                disabled={
-                                                                    option.disabled
-                                                                }
-                                                            >
-                                                                {t(
-                                                                    option.label,
-                                                                )}
-                                                            </option>
-                                                        ),
-                                                    )}
-                                                </select>
+                                                    <SelectTrigger
+                                                        {...accessibility}
+                                                        className="h-10 w-full rounded-md border bg-surface px-3"
+                                                    >
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {field.options?.map(
+                                                            (option) => (
+                                                                <SelectItem
+                                                                    key={
+                                                                        option.value
+                                                                    }
+                                                                    value={
+                                                                        option.value ||
+                                                                        '__none__'
+                                                                    }
+                                                                    disabled={
+                                                                        option.disabled
+                                                                    }
+                                                                >
+                                                                    {t(
+                                                                        option.label,
+                                                                    )}
+                                                                </SelectItem>
+                                                            ),
+                                                        )}
+                                                    </SelectContent>
+                                                </Select>
                                             ) : (
                                                 <Input
                                                     {...accessibility}
@@ -209,7 +231,7 @@ export function PartnerCardEditor({
                                     {field.description && (
                                         <p
                                             id={hintId}
-                                            className="text-xs text-muted-foreground"
+                                            className="text-xs text-ink-muted"
                                         >
                                             {t(field.description)}
                                         </p>
@@ -233,7 +255,7 @@ export function PartnerCardEditor({
                             <p
                                 key={key}
                                 role="alert"
-                                className="text-sm text-destructive"
+                                className="text-sm text-danger-ink"
                             >
                                 {message}
                             </p>
@@ -273,21 +295,21 @@ export function profileCardFields(account: {
             label: 'First name',
             value: account.first_name,
             required: true,
-            maxLength: 255,
+            maxLength: 30,
         },
         {
             name: 'last_name',
             label: 'Last name',
             value: account.last_name,
             required: true,
-            maxLength: 255,
+            maxLength: 30,
         },
         {
             name: 'user_name',
             label: 'Username',
             value: account.user_name,
             required: true,
-            maxLength: 255,
+            maxLength: 50,
         },
         {
             name: 'email',
@@ -303,7 +325,7 @@ export function profileCardFields(account: {
             name: 'title',
             label: 'Title',
             value: account.title ?? '',
-            maxLength: 255,
+            maxLength: 50,
         },
         {
             name: 'country_iso',

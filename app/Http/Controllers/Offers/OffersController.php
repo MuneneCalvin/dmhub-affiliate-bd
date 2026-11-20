@@ -49,11 +49,12 @@ class OffersController extends Controller
 
     public function index($id)
     {
-        Campaign::visibleTo(auth()->user())->findOrFail($id);
+        $campaign = Campaign::visibleTo(auth()->user())->findOrFail($id);
 
         return inertia('advertisercampaigns/offers/index', [
             'commissions' => CommissionType::all(),
             'id' => $id,
+            'campaign' => ['id' => $campaign->id, 'name' => $campaign->name, 'currency' => $campaign->currency],
         ]);
     }
 

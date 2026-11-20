@@ -1,25 +1,52 @@
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
-import { EditableOverview } from '@/components/editable-overview';
-import { send } from '@/routes/verification';
-import { type BreadcrumbItem, type SharedData } from '@/types';
-import { Transition } from '@headlessui/react';
-import { Form, Head, Link, usePage } from '@inertiajs/react';
-
+import { FormField, SectionCard } from '@/components/app';
 import DeleteUser from '@/components/delete-user';
-import InputError from '@/components/input-error';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { StatusBadge } from '@/components/ui/status-badge';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
-import { edit } from '@/routes/profile';
+import { initialsFrom } from '@/lib/tones';
+import { send } from '@/routes/verification';
+import { type SharedData } from '@/types';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { Globe2, UserRound } from 'lucide-react';
+import { type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Profile settings',
-        href: edit().url,
-    },
-];
+type Account = {
+    first_name: string;
+    last_name: string;
+    name: string;
+    email: string;
+    title: string;
+    country_iso: string;
+    timezone: string;
+    language: string;
+};
+
+const text = (value: unknown) => (typeof value === 'string' ? value : '');
+
+/** "Saved" note announced after a successful save. */
+function SavedNote({ show }: { show: boolean }) {
+    const { t } = useTranslation();
+    return (
+        <p
+            role="status"
+            className="mr-auto text-[13px] font-semibold text-success-ink"
+        >
+            {show ? t('Saved') : ''}
+        </p>
+    );
+}
 
 export default function Profile({
     mustVerifyEmail,
@@ -28,135 +55,318 @@ export default function Profile({
     mustVerifyEmail: boolean;
     status?: string;
 }) {
+    const { t } = useTranslation();
     const { auth } = usePage<SharedData>().props;
+    const user = auth.user;
+    const account: Account = {
+        first_name: text(user.first_name),
+        last_name: text(user.last_name),
+        name: text(user.user_name),
+        email: user.email,
+        title: text(user.title),
+        country_iso: text(user.country_iso),
+        timezone: text(user.timezone),
+        language: text(user.language),
+    };
+    // Both cards send the username and email: the update request requires them.
+    const profile = useForm({
+        first_name: account.first_name,
+        last_name: account.last_name,
+        name: account.name,
+        email: account.email,
+        title: account.title,
+    });
+    const preferences = useForm({
+        name: account.name,
+        email: account.email,
+        country_iso: account.country_iso,
+        timezone: account.timezone,
+        language: account.language,
+    });
+    const submit =
+        (form: typeof profile | typeof preferences) => (event: FormEvent) => {
+            event.preventDefault();
+            form.patch(ProfileController.update().url, {
+                preserveScroll: true,
+            });
+        };
+    const displayName =
+        [account.first_name, account.last_name].filter(Boolean).join(' ') ||
+        account.name;
+    const unverified = mustVerifyEmail && user.email_verified_at === null;
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Profile settings" />
-
+        <AppLayout>
+            <Head title={t('Profile')} />
             <SettingsLayout>
-                <EditableOverview
-                    title="Profile information"
-                    description="Your personal details and account identity."
-                    summary={
-                        <div className="flex items-center gap-5">
-                            <div className="identity-tile tone-0">
-                                {String(auth.user.user_name)
-                                    .slice(0, 2)
-                                    .toUpperCase()}
-                            </div>
-                            <div>
-                                <p className="text-xl font-medium">
-                                    {String(auth.user.user_name)}
+                <form onSubmit={submit(profile)} noValidate>
+                    <SectionCard
+                        title={t('Profile')}
+                        description={t('How other partners see you')}
+                        icon={<UserRound />}
+                        tone="brand"
+                        bodyClassName="flex flex-col gap-5"
+                        footer={
+                            <>
+                                <SavedNote show={profile.recentlySuccessful} />
+                                <Button
+                                    type="submit"
+                                    className="ml-auto"
+                                    disabled={profile.processing}
+                                >
+                                    {t('Save changes')}
+                                </Button>
+                            </>
+                        }
+                    >
+                        <div className="flex flex-wrap items-center gap-4">
+                            <Avatar className="size-[72px] rounded-[22px] text-2xl">
+                                {user.avatar && (
+                                    <AvatarImage
+                                        src={user.avatar}
+                                        alt={displayName}
+                                    />
+                                )}
+                                <AvatarFallback className="rounded-[22px] bg-finance-soft font-extrabold text-finance-ink">
+                                    {initialsFrom(displayName)}
+                                </AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0">
+                                <p className="text-lg font-extrabold [overflow-wrap:anywhere]">
+                                    {displayName}
                                 </p>
-                                <p className="mt-1 text-muted-foreground">
-                                    {auth.user.email}
+                                <p className="text-[13px] text-ink-muted">
+                                    {account.title || account.email}
                                 </p>
                             </div>
                         </div>
-                    }
-                >
-                    <Form
-                        {...ProfileController.update.form()}
-                        options={{
-                            preserveScroll: true,
-                        }}
-                        className="space-y-6"
-                    >
-                        {({ processing, recentlySuccessful, errors }) => (
-                            <>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="name">Name</Label>
-
-                                    <Input
-                                        id="name"
-                                        className="mt-1 block w-full"
-                                        defaultValue={String(
-                                            auth?.user?.user_name,
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <FormField
+                                id="first_name"
+                                label={t('First name')}
+                                error={profile.errors.first_name}
+                            >
+                                <Input
+                                    id="first_name"
+                                    required
+                                    maxLength={30}
+                                    autoComplete="given-name"
+                                    value={profile.data.first_name}
+                                    onChange={(e) =>
+                                        profile.setData(
+                                            'first_name',
+                                            e.target.value,
+                                        )
+                                    }
+                                />
+                            </FormField>
+                            <FormField
+                                id="last_name"
+                                label={t('Last name')}
+                                error={profile.errors.last_name}
+                            >
+                                <Input
+                                    id="last_name"
+                                    required
+                                    maxLength={30}
+                                    autoComplete="family-name"
+                                    value={profile.data.last_name}
+                                    onChange={(e) =>
+                                        profile.setData(
+                                            'last_name',
+                                            e.target.value,
+                                        )
+                                    }
+                                />
+                            </FormField>
+                            <FormField
+                                id="email"
+                                label={t('Email address')}
+                                hint={t(
+                                    'Changing the email address requires verification again.',
+                                )}
+                                error={profile.errors.email}
+                                after={
+                                    <span>
+                                        <StatusBadge
+                                            status={
+                                                unverified
+                                                    ? 'pending'
+                                                    : 'verified'
+                                            }
+                                            label={
+                                                unverified
+                                                    ? t('Not verified')
+                                                    : t('Verified')
+                                            }
+                                        />
+                                    </span>
+                                }
+                            >
+                                <Input
+                                    id="email"
+                                    type="email"
+                                    required
+                                    maxLength={255}
+                                    autoComplete="email"
+                                    value={profile.data.email}
+                                    onChange={(e) =>
+                                        profile.setData('email', e.target.value)
+                                    }
+                                />
+                            </FormField>
+                            <FormField
+                                id="user_name"
+                                label={t('Username')}
+                                error={profile.errors.name}
+                            >
+                                <Input
+                                    id="user_name"
+                                    required
+                                    maxLength={50}
+                                    autoComplete="username"
+                                    value={profile.data.name}
+                                    onChange={(e) =>
+                                        profile.setData('name', e.target.value)
+                                    }
+                                />
+                            </FormField>
+                            <FormField
+                                id="title"
+                                label={t('Job title')}
+                                error={profile.errors.title}
+                            >
+                                <Input
+                                    id="title"
+                                    maxLength={50}
+                                    autoComplete="organization-title"
+                                    value={profile.data.title}
+                                    onChange={(e) =>
+                                        profile.setData('title', e.target.value)
+                                    }
+                                />
+                            </FormField>
+                        </div>
+                        {unverified && (
+                            <div className="rounded-xl bg-warning-soft p-3.5 text-sm text-warning-ink">
+                                <p>
+                                    {t('Your email address is unverified.')}{' '}
+                                    <Link
+                                        href={send()}
+                                        as="button"
+                                        className="font-bold underline underline-offset-4"
+                                    >
+                                        {t('Resend verification email')}
+                                    </Link>
+                                </p>
+                                {status === 'verification-link-sent' && (
+                                    <p role="status" className="mt-2">
+                                        {t(
+                                            'A new verification link has been sent to your email address.',
                                         )}
-                                        name="name"
-                                        required
-                                        autoComplete="name"
-                                        placeholder="Full name"
-                                    />
-
-                                    <InputError
-                                        className="mt-2"
-                                        message={errors.name}
-                                    />
-                                </div>
-
-                                <div className="grid gap-2">
-                                    <Label htmlFor="email">Email address</Label>
-
-                                    <Input
-                                        id="email"
-                                        type="email"
-                                        className="mt-1 block w-full"
-                                        defaultValue={auth.user.email}
-                                        name="email"
-                                        required
-                                        autoComplete="username"
-                                        placeholder="Email address"
-                                    />
-
-                                    <InputError
-                                        className="mt-2"
-                                        message={errors.email}
-                                    />
-                                </div>
-
-                                {mustVerifyEmail &&
-                                    auth.user.email_verified_at === null && (
-                                        <div>
-                                            <p className="-mt-4 text-sm text-muted-foreground">
-                                                Your email address is
-                                                unverified.{' '}
-                                                <Link
-                                                    href={send()}
-                                                    as="button"
-                                                    className="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
-                                                >
-                                                    Click here to resend the
-                                                    verification email.
-                                                </Link>
-                                            </p>
-
-                                            {status ===
-                                                'verification-link-sent' && (
-                                                <div className="mt-2 text-sm font-medium text-green-600">
-                                                    A new verification link has
-                                                    been sent to your email
-                                                    address.
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-
-                                <div className="flex items-center gap-4">
-                                    <Button
-                                        disabled={processing}
-                                        data-test="update-profile-button"
-                                    >
-                                        Save
-                                    </Button>
-
-                                    <Transition
-                                        show={recentlySuccessful}
-                                        enter="transition ease-in-out"
-                                        enterFrom="opacity-0"
-                                        leave="transition ease-in-out"
-                                        leaveTo="opacity-0"
-                                    >
-                                        <p className="text-sm text-neutral-600">
-                                            Saved
-                                        </p>
-                                    </Transition>
-                                </div>
-                            </>
+                                    </p>
+                                )}
+                            </div>
                         )}
-                    </Form>
-                </EditableOverview>
+                    </SectionCard>
+                </form>
+
+                <form onSubmit={submit(preferences)} noValidate>
+                    <SectionCard
+                        title={t('Location & preferences')}
+                        description={t(
+                            'Used for dates, times and messages we send you',
+                        )}
+                        icon={<Globe2 />}
+                        tone="analytics"
+                        footer={
+                            <>
+                                <SavedNote
+                                    show={preferences.recentlySuccessful}
+                                />
+                                <Button
+                                    type="submit"
+                                    className="ml-auto"
+                                    disabled={preferences.processing}
+                                >
+                                    {t('Save preferences')}
+                                </Button>
+                            </>
+                        }
+                    >
+                        <div className="grid gap-4 sm:grid-cols-3">
+                            <FormField
+                                id="country_iso"
+                                label={t('Country code')}
+                                hint={t(
+                                    'Use a three-letter country code, for example NLD.',
+                                )}
+                                error={preferences.errors.country_iso}
+                            >
+                                <Input
+                                    id="country_iso"
+                                    maxLength={3}
+                                    className="uppercase"
+                                    value={preferences.data.country_iso}
+                                    onChange={(e) =>
+                                        preferences.setData(
+                                            'country_iso',
+                                            e.target.value.toUpperCase(),
+                                        )
+                                    }
+                                />
+                            </FormField>
+                            <FormField
+                                id="timezone"
+                                label={t('Timezone')}
+                                hint={t('For example Europe/Amsterdam.')}
+                                error={preferences.errors.timezone}
+                            >
+                                <Input
+                                    id="timezone"
+                                    maxLength={50}
+                                    value={preferences.data.timezone}
+                                    onChange={(e) =>
+                                        preferences.setData(
+                                            'timezone',
+                                            e.target.value,
+                                        )
+                                    }
+                                />
+                            </FormField>
+                            <FormField
+                                id="language"
+                                label={t('Preferred language')}
+                                error={preferences.errors.language}
+                            >
+                                <Select
+                                    value={preferences.data.language || 'none'}
+                                    onValueChange={(value) =>
+                                        preferences.setData(
+                                            'language',
+                                            value === 'none' ? '' : value,
+                                        )
+                                    }
+                                >
+                                    <SelectTrigger id="language">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="none">
+                                            {t('Not set')}
+                                        </SelectItem>
+                                        <SelectItem value="en">
+                                            {t('English')}
+                                        </SelectItem>
+                                        <SelectItem value="nl">
+                                            {t('Dutch')}
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </FormField>
+                        </div>
+                    </SectionCard>
+                </form>
 
                 <DeleteUser />
             </SettingsLayout>

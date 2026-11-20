@@ -87,3 +87,30 @@ test('correct password must be provided to delete account', function () {
 
     expect($user->fresh())->not->toBeNull();
 });
+
+test('personal details and preferences can be updated without changing account privileges', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user)->patch(route('profile.update'), [
+        'name' => $user->user_name, 'email' => $user->email,
+        'first_name' => 'Jane', 'last_name' => 'Smith', 'title' => 'Director',
+        'country_iso' => 'NLD', 'timezone' => 'Europe/Amsterdam', 'language' => 'nl',
+        'is_super_admin' => true, 'status' => 'P', 'currency' => 'EUR',
+    ])->assertSessionHasNoErrors()->assertRedirect(route('profile.edit'));
+    $user->refresh();
+    expect($user->first_name)->toBe('Jane')->and($user->last_name)->toBe('Smith')
+        ->and($user->title)->toBe('Director')->and($user->country_iso)->toBe('NLD')
+        ->and($user->timezone)->toBe('Europe/Amsterdam')->and($user->language)->toBe('nl')
+        ->and($user->is_super_admin)->toBeFalse()->and($user->status)->toBe('A')
+        ->and($user->email_verified_at)->not->toBeNull();
+});
+
+test('invalid personal details do not partially save', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user)->patch(route('profile.update'), [
+        'name' => $user->user_name, 'email' => $user->email,
+        'first_name' => str_repeat('a', 31), 'last_name' => '',
+        'title' => str_repeat('a', 51), 'country_iso' => 'NL',
+        'timezone' => 'invalid', 'language' => 'unknown',
+    ])->assertSessionHasErrors(['first_name', 'last_name', 'title', 'country_iso', 'timezone', 'language']);
+    expect($user->fresh()->first_name)->toBe($user->first_name);
+});

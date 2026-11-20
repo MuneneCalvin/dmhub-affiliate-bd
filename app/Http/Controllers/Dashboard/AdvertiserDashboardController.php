@@ -55,20 +55,24 @@ class AdvertiserDashboardController extends Controller
         $assignments = DB::table('publisher_campaigns')->whereIn('campaign_id', $campaignIds);
         $performance = $reporting->performance($assignments);
 
-        $pendingApplications = DB::table('publisher_campaigns')
+        $pending = DB::table('publisher_campaigns')
             ->whereIn('publisher_campaigns.campaign_id', $campaignIds)
-            ->where('publisher_campaigns.status', 'P')
+            ->where('publisher_campaigns.status', 'P');
+        $pendingApplications = (clone $pending)
+            ->join('campaigns', 'campaigns.id', '=', 'publisher_campaigns.campaign_id')
             ->join('publishers', 'publishers.id', '=', 'publisher_campaigns.publisher_id')
             ->join('users', 'users.id', '=', 'publishers.user_id')
             ->leftJoin('offers', 'offers.id', '=', 'publisher_campaigns.offer_id')
             ->select([
                 'publisher_campaigns.id',
+                'publisher_campaigns.campaign_id',
                 'publisher_campaigns.applied_at',
                 'publisher_campaigns.applied_notes',
                 'users.first_name',
                 'users.last_name',
                 'users.email',
                 'offers.name as offer_name',
+                'campaigns.name as campaign_name',
             ])
             ->orderByDesc('publisher_campaigns.created_at')
             ->limit(5)
@@ -85,6 +89,7 @@ class AdvertiserDashboardController extends Controller
             'performance' => $performance,
             'dailyRevenue' => $reporting->daily($assignments, $advertiser->currency ?: 'USD'),
             'pendingApplications' => $pendingApplications,
+            'pendingApplicationsCount' => (clone $pending)->count(),
             'conversionRate' => $conversionRate,
         ]);
     }

@@ -22,7 +22,7 @@ class ShopifyPromotionController extends Controller
         $campaign = Campaign::visibleTo($request->user())->findOrFail($request->integer('campaign'));
         abort_unless($store->platform === 'shopify' && $campaign->advertiser_id === $store->advertiser_id && $campaign->network_id === $store->network_id, 404);
         if (! config('promotions.shopify.client_id') || ! config('promotions.shopify.client_secret')) {
-            return redirect()->route('advertiser.campaign.show', ['id' => $campaign->id, 'tab' => 'offers'])
+            return redirect()->route('campaign.promotions.edit', $campaign)
                 ->with('error', 'Shopify connection is not available yet. Contact your DM Hub administrator.');
         }
         $state = Str::random(48);
@@ -57,7 +57,7 @@ class ShopifyPromotionController extends Controller
         abort_unless(($shop['shop']['currencyCode'] ?? null) === $store->currency, 422, 'Store and campaign currencies must match.');
         $store->update(['status' => 'connected', 'last_seen_at' => now()]);
 
-        return redirect()->route('advertiser.campaign.show', ['id' => $campaign->id, 'tab' => 'offers'])->with('success', 'Shopify connected. Enable the DM Hub theme app embed.');
+        return redirect()->route('campaign.promotions.edit', $campaign)->with('success', 'Shopify connected. Enable the DM Hub theme app embed.');
     }
 
     public function proxy(Request $request, PromotionGrantService $grants, ShopifyDiscountService $discounts)

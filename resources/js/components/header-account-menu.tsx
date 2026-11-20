@@ -1,64 +1,51 @@
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { UserMenuContent } from '@/components/user-menu-content';
-import { useInitials } from '@/hooks/use-initials';
+import {
+    displayName,
+    UserAvatar,
+    UserMenuContent,
+} from '@/components/user-menu-content';
 import { type SharedData } from '@/types';
 import { usePage } from '@inertiajs/react';
 import { ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+/** Avatar, name and email; opens settings, campaign terms and log out. */
 export function HeaderAccountMenu() {
     const { auth } = usePage<SharedData>().props;
     const { t } = useTranslation();
-    const getInitials = useInitials();
-    const userName =
-        [auth.user.first_name, auth.user.last_name].filter(Boolean).join(' ') ||
-        auth.user.user_name ||
-        auth.user.email;
-    const role = auth.user.is_super_admin
-        ? 'Administrator'
-        : auth.user.is_network
-          ? 'Network'
-          : auth.user.is_advertiser
-            ? 'Advertiser'
-            : auth.user.is_publisher
-              ? 'Publisher'
-              : 'Workspace';
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button
                     variant="ghost"
-                    className="workspace-account h-auto gap-3 p-1.5 text-left"
-                    aria-label={t('Account menu')}
+                    className="h-11 w-11 justify-center gap-2.5 px-0 text-left shadow-none xl:w-auto xl:justify-start xl:px-1 xl:pr-2.5"
                 >
-                    <Avatar className="size-10">
-                        <AvatarImage src={auth.user.avatar} alt={userName} />
-                        <AvatarFallback className="border-0 bg-accent text-primary">
-                            {getInitials(
-                                auth.user.first_name,
-                                auth.user.last_name,
-                                auth.user.user_name || auth.user.email,
-                            )}
-                        </AvatarFallback>
-                    </Avatar>
-                    <span className="workspace-account-label min-w-0">
-                        <span className="block max-w-40 truncate text-sm font-semibold">
-                            {userName}
-                        </span>
-                        <span className="block text-xs font-normal text-muted-foreground">
-                            {t(role)}
+                    <UserAvatar user={auth.user} />
+                    <span className="hidden min-w-0 flex-col leading-tight xl:flex">
+                        <strong className="max-w-40 truncate text-sm font-bold">
+                            {displayName(auth.user)}
+                        </strong>
+                        <span className="max-w-40 truncate text-xs font-medium text-ink-muted">
+                            {auth.user.email}
                         </span>
                     </span>
-                    <ChevronDown className="workspace-account-label size-4 text-muted-foreground" />
+                    <ChevronDown
+                        aria-hidden="true"
+                        className="hidden size-4 text-ink-muted xl:block"
+                    />
+                    {/* Named by the visible name/email plus this label. */}
+                    <span className="sr-only">{t('Account menu')}</span>
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-60" align="end">
+            <DropdownMenuContent
+                className="w-64 rounded-[20px] p-2"
+                align="end"
+            >
                 <UserMenuContent user={auth.user} />
             </DropdownMenuContent>
         </DropdownMenu>

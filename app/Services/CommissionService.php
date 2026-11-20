@@ -13,16 +13,18 @@ use Illuminate\Validation\ValidationException;
 
 class CommissionService
 {
+    public const EVENT_COMMISSION_TYPES = [
+        'submission' => ['CPL'],
+        'purchase' => ['CPS', 'RevShare', 'Flat'],
+        'action' => ['CPA', 'Flat'],
+    ];
+
     // The approved publisher assignment is the agreed rate. Never select an
     // unrelated offer commission merely because it happens to be listed first.
     public function quote(PublisherCampaigns $assignment, string $eventType, string $basis, ?array $snapshot = null): array
     {
         $type = $snapshot['type'] ?? $assignment->commission_type;
-        $allowed = match ($eventType) {
-            'submission' => ['CPL'],
-            'purchase' => ['CPS', 'RevShare', 'Flat'],
-            'action' => ['CPA', 'Flat'],
-        };
+        $allowed = self::EVENT_COMMISSION_TYPES[$eventType] ?? [];
         if (! in_array($type, $allowed, true)) {
             throw ValidationException::withMessages(['event_type' => 'Event does not match the approved commission type.']);
         }

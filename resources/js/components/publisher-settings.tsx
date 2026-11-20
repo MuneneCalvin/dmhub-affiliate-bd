@@ -11,6 +11,13 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import type { PublisherWorkspaceProps } from '@/types/publisher-workspace';
 import { Link, useForm } from '@inertiajs/react';
 import { useState } from 'react';
@@ -41,7 +48,7 @@ export function PublisherSettings({
     if (can.owner)
         return (
             <Panel title={t('Personal settings')}>
-                <p className="mb-5 text-muted-foreground">
+                <p className="mb-5 text-ink-muted">
                     {t(
                         'Manage your profile and sign-in security through account settings.',
                     )}
@@ -69,7 +76,7 @@ export function PublisherSettings({
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(260px,1fr)]">
             {can.edit && (
                 <Panel title={t('Publisher settings')}>
-                    <p className="mb-5 text-muted-foreground">
+                    <p className="mb-5 text-ink-muted">
                         {t(
                             'Update contact details, website and payout preferences.',
                         )}
@@ -78,6 +85,23 @@ export function PublisherSettings({
                         className="space-y-5"
                         onSubmit={(event) => {
                             event.preventDefault();
+                            if (!form.data.currency) {
+                                form.setError('currency', t('Select currency'));
+                                document
+                                    .getElementById('publisher-currency')
+                                    ?.focus();
+                                return;
+                            }
+                            if (can.changeNetwork && !form.data.network_id) {
+                                form.setError(
+                                    'network_id',
+                                    t('Select network'),
+                                );
+                                document
+                                    .getElementById('publisher-network')
+                                    ?.focus();
+                                return;
+                            }
                             form.post(`/publishers/update/${p.user_id}`, {
                                 preserveScroll: true,
                             });
@@ -139,31 +163,35 @@ export function PublisherSettings({
                                 <Label htmlFor="publisher-currency">
                                     {t('Preferred currency')}
                                 </Label>
-                                <select
-                                    id="publisher-currency"
-                                    className="h-10 w-full rounded-md border bg-background px-3"
+                                <Select
                                     required
                                     value={form.data.currency}
-                                    onChange={(event) =>
-                                        form.setData(
-                                            'currency',
-                                            event.target.value,
-                                        )
-                                    }
+                                    onValueChange={(value) => {
+                                        form.setData('currency', value);
+                                        form.clearErrors('currency');
+                                    }}
                                 >
-                                    <option value="" disabled>
-                                        {t('Select currency')}
-                                    </option>
-                                    {currencies.map((currency) => (
-                                        <option
-                                            key={currency.currency_code}
-                                            value={currency.currency_code}
-                                        >
-                                            {currency.currency_code} ·{' '}
-                                            {currency.currency_name}
-                                        </option>
-                                    ))}
-                                </select>
+                                    <SelectTrigger
+                                        id="publisher-currency"
+                                        aria-invalid={!!form.errors.currency}
+                                        className="h-10 w-full rounded-md border bg-surface px-3"
+                                    >
+                                        <SelectValue
+                                            placeholder={t('Select currency')}
+                                        />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {currencies.map((currency) => (
+                                            <SelectItem
+                                                key={currency.currency_code}
+                                                value={currency.currency_code}
+                                            >
+                                                {currency.currency_code} ·{' '}
+                                                {currency.currency_name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="publisher-threshold">
@@ -190,43 +218,59 @@ export function PublisherSettings({
                                     <Label htmlFor="publisher-network">
                                         {t('Network')}
                                     </Label>
-                                    <select
-                                        id="publisher-network"
-                                        className="h-10 w-full rounded-md border bg-background px-3"
+                                    <Select
                                         required
-                                        value={form.data.network_id}
-                                        onChange={(event) =>
+                                        value={String(form.data.network_id)}
+                                        onValueChange={(value) => {
                                             form.setData(
                                                 'network_id',
-                                                Number(event.target.value),
-                                            )
-                                        }
+                                                Number(value),
+                                            );
+                                            form.clearErrors('network_id');
+                                        }}
                                     >
-                                        <option value="" disabled>
-                                            {t('Select network')}
-                                        </option>
-                                        {p.network_id &&
-                                            !networks.some(
-                                                (network) =>
-                                                    network.id === p.network_id,
-                                            ) && (
-                                                <option value={p.network_id}>
-                                                    {p.network_name}
-                                                </option>
-                                            )}
-                                        {networks.map((network) => (
-                                            <option
-                                                key={network.id}
-                                                value={network.id}
-                                            >
-                                                {network.network_name}
-                                            </option>
-                                        ))}
-                                    </select>
+                                        <SelectTrigger
+                                            id="publisher-network"
+                                            aria-invalid={
+                                                !!form.errors.network_id
+                                            }
+                                            className="h-10 w-full rounded-md border bg-surface px-3"
+                                        >
+                                            <SelectValue
+                                                placeholder={t(
+                                                    'Select network',
+                                                )}
+                                            />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {p.network_id &&
+                                                !networks.some(
+                                                    (network) =>
+                                                        network.id ===
+                                                        p.network_id,
+                                                ) && (
+                                                    <SelectItem
+                                                        value={String(
+                                                            p.network_id,
+                                                        )}
+                                                    >
+                                                        {p.network_name}
+                                                    </SelectItem>
+                                                )}
+                                            {networks.map((network) => (
+                                                <SelectItem
+                                                    key={network.id}
+                                                    value={String(network.id)}
+                                                >
+                                                    {network.network_name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                             )}
                         </div>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-ink-muted">
                             {t(
                                 'Currency preferences do not convert existing earnings. Payout eligibility is checked separately for each network and currency.',
                             )}
@@ -239,7 +283,7 @@ export function PublisherSettings({
                 </Panel>
             )}
             <Panel title={t('Account status')}>
-                <p className="mb-4 text-muted-foreground">
+                <p className="mb-4 text-ink-muted">
                     {t(
                         'Status changes also apply to the publisher’s login account.',
                     )}

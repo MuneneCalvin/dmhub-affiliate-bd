@@ -8,6 +8,7 @@ use App\Models\Publisher;
 use App\Models\PublisherCampaigns;
 use App\Models\User;
 use App\Support\ConversionMoney;
+use App\Support\TrackingUrl;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -106,7 +107,7 @@ class PartnerEnrollmentService
                 'status' => 'A', 'offer_id' => $offer->id,
                 'commission_type' => $rules[0]['type'], 'commission_value' => $rules[0]['value'],
                 'approved_by' => $actor->id, 'approved_at' => now(),
-                'tracking_link' => url('/t/'.Str::uuid()),
+                'tracking_link' => TrackingUrl::to('/t/'.Str::uuid()),
             ]);
             $this->record($application, $actor->id, 'approved');
 

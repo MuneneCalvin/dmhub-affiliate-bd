@@ -1,5 +1,13 @@
+import { DetailList, PageHeader, SectionCard } from '@/components/app';
 import { EnrollmentRate } from '@/components/campaign-publishers';
 import { Button } from '@/components/ui/button';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import {
     Sheet,
     SheetContent,
@@ -7,13 +15,19 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
+import { StatusBadge } from '@/components/ui/status-badge';
 import { Textarea } from '@/components/ui/textarea';
-import { BreadCrumbComponent } from '@/dev/core';
 import AppLayout from '@/layouts/app-layout';
 import type { SharedData } from '@/types';
 import { termsText } from '@/utils/partner-terms';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import { CheckCircle2, Clock3, TriangleAlert } from 'lucide-react';
+import {
+    CalendarRange,
+    CheckCircle2,
+    Clock3,
+    Megaphone,
+    TriangleAlert,
+} from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import '../../../css/campaign-publishers.css';
@@ -99,24 +113,23 @@ export default function CampaignApplication() {
         <AppLayout>
             <Head title={`${campaign.name} · ${t('Apply to be a partner')}`} />
             <div className="workspace-page campaign-publishers">
-                <div className="mb-5 text-xs">
-                    <BreadCrumbComponent
-                        breadcrumbs={[
-                            {
-                                title: t('Campaigns'),
-                                href: '/publisher_dashboard/dashboard',
-                            },
-                            {
-                                title: campaign.name,
-                                href: `/publishers/${campaign.id}/campaign/application`,
-                            },
-                        ]}
-                    />
-                </div>
-                <header className="publishers-heading">
-                    <h1>{campaign.name}</h1>
-                    <p>{t('Apply to be a partner')}</p>
-                </header>
+                <PageHeader
+                    title={campaign.name}
+                    description={t('Apply to be a partner')}
+                    breadcrumbs={[
+                        {
+                            title: t('Campaigns'),
+                            href: '/publisher_dashboard/dashboard',
+                        },
+                        {
+                            title: campaign.name,
+                            href: `/publishers/${campaign.id}/campaign/application`,
+                        },
+                    ]}
+                    icon={<Megaphone />}
+                    tone="brand"
+                    className="mb-6"
+                />
                 {enrollment && (
                     <div
                         className={`publisher-notice ${changed || enrollment.status === 'R' ? 'warning' : 'info'} mb-6`}
@@ -170,47 +183,49 @@ export default function CampaignApplication() {
                                 'Choose an offer, tell us how you will promote it, and accept its terms.',
                             )}
                         </p>
-                        {campaign.offers.map((offer) => (
-                            <article
-                                className="publisher-apply-offer"
-                                key={offer.id}
-                            >
-                                <div>
-                                    <h3>{offer.name}</h3>
-                                    <span className="publisher-status active">
-                                        {t('Active')}
-                                    </span>
-                                </div>
-                                {offer.description && (
-                                    <p className="publisher-prewrap publisher-muted">
-                                        {offer.description}
-                                    </p>
-                                )}
-                                <div>
-                                    <strong>
-                                        <EnrollmentRate
-                                            rates={
-                                                offer.enrollment_contract
-                                                    .commissions
-                                            }
-                                            currency={campaign.currency}
-                                        />
-                                    </strong>
-                                    <Button
-                                        disabled={!!assigned}
-                                        onClick={() => choose(offer)}
-                                    >
-                                        {t(
-                                            enrollment?.status === 'P'
-                                                ? 'Review terms'
-                                                : enrollment?.status === 'R'
-                                                  ? 'Reapply'
-                                                  : 'Apply to be a partner',
-                                        )}
-                                    </Button>
-                                </div>
-                            </article>
-                        ))}
+                        <div className="mt-4 grid gap-3">
+                            {campaign.offers.map((offer) => (
+                                <article
+                                    className="flex flex-col gap-3 rounded-card border border-border bg-surface p-5 shadow-card"
+                                    key={offer.id}
+                                >
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <h3 className="text-base font-bold">
+                                            {offer.name}
+                                        </h3>
+                                        <StatusBadge status="active" />
+                                    </div>
+                                    {offer.description && (
+                                        <p className="text-sm whitespace-pre-wrap text-ink-muted">
+                                            {offer.description}
+                                        </p>
+                                    )}
+                                    <div className="flex flex-wrap items-center justify-between gap-3">
+                                        <strong className="text-brand-ink">
+                                            <EnrollmentRate
+                                                rates={
+                                                    offer.enrollment_contract
+                                                        .commissions
+                                                }
+                                                currency={campaign.currency}
+                                            />
+                                        </strong>
+                                        <Button
+                                            disabled={!!assigned}
+                                            onClick={() => choose(offer)}
+                                        >
+                                            {t(
+                                                enrollment?.status === 'P'
+                                                    ? 'Review terms'
+                                                    : enrollment?.status === 'R'
+                                                      ? 'Reapply'
+                                                      : 'Apply to be a partner',
+                                            )}
+                                        </Button>
+                                    </div>
+                                </article>
+                            ))}
+                        </div>
                         {!campaign.offers.length && (
                             <div className="publisher-empty">
                                 <Clock3 size={26} />
@@ -223,50 +238,56 @@ export default function CampaignApplication() {
                             </div>
                         )}
                     </section>
-                    <aside className="publisher-apply-summary">
-                        <h3>{t('Campaign details')}</h3>
-                        <dl>
-                            <div>
-                                <dt>{t('Dates')}</dt>
-                                <dd>
-                                    {date(campaign.start_date)} –{' '}
-                                    {!campaign.end_date ||
-                                    campaign.end_date.startsWith('2100-12-31')
-                                        ? t('No end date')
-                                        : date(campaign.end_date)}
-                                </dd>
-                            </div>
-                            <div>
-                                <dt>{t('Currency')}</dt>
-                                <dd>{campaign.currency}</dd>
-                            </div>
-                            <div>
-                                <dt>{t('Geography')}</dt>
-                                <dd>
-                                    {termsText(campaign.geo_targeting) ||
-                                        t('Global')}
-                                </dd>
-                            </div>
-                            <div>
-                                <dt>{t('Devices')}</dt>
-                                <dd>
-                                    {termsText(campaign.device_targeting) ||
-                                        t('All devices')}
-                                </dd>
-                            </div>
-                            <div>
-                                <dt>{t('Publisher places')}</dt>
-                                <dd>
-                                    {campaign.max_publishers || t('Unlimited')}
-                                </dd>
-                            </div>
-                        </dl>
-                        <p className="publisher-muted mt-6">
+                    <SectionCard
+                        title={t('Campaign details')}
+                        icon={<CalendarRange />}
+                        tone="brand"
+                        className="self-start"
+                    >
+                        <DetailList
+                            labelWidth={120}
+                            rows={[
+                                {
+                                    label: t('Dates'),
+                                    value: `${date(campaign.start_date)} – ${
+                                        !campaign.end_date ||
+                                        campaign.end_date.startsWith(
+                                            '2100-12-31',
+                                        )
+                                            ? t('No end date')
+                                            : date(campaign.end_date)
+                                    }`,
+                                },
+                                {
+                                    label: t('Currency'),
+                                    value: campaign.currency,
+                                },
+                                {
+                                    label: t('Geography'),
+                                    value:
+                                        termsText(campaign.geo_targeting) ||
+                                        t('Global'),
+                                },
+                                {
+                                    label: t('Devices'),
+                                    value:
+                                        termsText(campaign.device_targeting) ||
+                                        t('All devices'),
+                                },
+                                {
+                                    label: t('Publisher places'),
+                                    value:
+                                        campaign.max_publishers ||
+                                        t('Unlimited'),
+                                },
+                            ]}
+                        />
+                        <p className="mt-5 text-[13px] text-ink-muted">
                             {t(
                                 'After approval, your assignment and tracking materials will be available in My campaigns.',
                             )}
                         </p>
-                    </aside>
+                    </SectionCard>
                 </div>
                 <Sheet open={open} onOpenChange={setOpen}>
                     <SheetContent className="publisher-drawer">
@@ -286,6 +307,12 @@ export default function CampaignApplication() {
                                 className="publisher-application-form"
                                 onSubmit={(event) => {
                                     event.preventDefault();
+                                    if (!selected) {
+                                        document
+                                            .getElementById('application-offer')
+                                            ?.focus();
+                                        return;
+                                    }
                                     form.post(
                                         `/publishers/${campaign.id}/campaign/submit/application`,
                                         { preserveScroll: true },
@@ -294,37 +321,41 @@ export default function CampaignApplication() {
                             >
                                 <label htmlFor="application-offer">
                                     {t('Requested offer')}
-                                    <select
-                                        id="application-offer"
+                                    <Select
                                         required
                                         value={form.data.offer_id}
-                                        onChange={(event) => {
+                                        onValueChange={(value) => {
                                             const offer = campaign.offers.find(
                                                 (item) =>
-                                                    String(item.id) ===
-                                                    event.target.value,
+                                                    String(item.id) === value,
                                             );
                                             form.setData({
                                                 ...form.data,
-                                                offer_id: event.target.value,
+                                                offer_id: value,
                                                 terms_version:
                                                     offer?.terms_version || '',
                                                 terms_accepted: false,
                                             });
                                         }}
                                     >
-                                        <option value="">
-                                            {t('Select an offer...')}
-                                        </option>
-                                        {campaign.offers.map((offer) => (
-                                            <option
-                                                key={offer.id}
-                                                value={offer.id}
-                                            >
-                                                {offer.name}
-                                            </option>
-                                        ))}
-                                    </select>
+                                        <SelectTrigger id="application-offer">
+                                            <SelectValue
+                                                placeholder={t(
+                                                    'Select an offer...',
+                                                )}
+                                            />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {campaign.offers.map((offer) => (
+                                                <SelectItem
+                                                    key={offer.id}
+                                                    value={String(offer.id)}
+                                                >
+                                                    {offer.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </label>
                                 {selected && (
                                     <>

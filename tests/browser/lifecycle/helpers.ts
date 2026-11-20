@@ -71,42 +71,23 @@ export async function fillRegistration(
     email: string,
     coc: string,
 ) {
+    // Phase 04 register: account type → company/website → your details.
     await page.goto(`${app}/register`);
-    await page.getByRole('tab', { name: role, exact: true }).click();
-    for (const [name, value] of Object.entries({
-        business_name: `Lifecycle ${role}`,
-        website_name: merchant,
-        industry: 'Retail',
-        coc_number: coc,
-    })) {
-        const labels: Record<string, string> = {
-            business_name: 'Business Name',
-            website_name: 'Website URL',
-            industry: 'Industry',
-            coc_number: 'Chamber Of Commerce Number',
-            first_name: 'First Name',
-            last_name: 'Last Name',
-            email: 'Email Address',
-        };
-        await page.getByLabel(labels[name], { exact: true }).fill(value);
-    }
-    await page.getByRole('button', { name: /Next|Volgende/ }).click();
-    for (const [name, value] of Object.entries({
-        first_name: 'Lifecycle',
-        last_name: role,
-        email,
-    })) {
-        const labels: Record<string, string> = {
-            business_name: 'Business Name',
-            website_name: 'Website URL',
-            industry: 'Industry',
-            coc_number: 'Chamber Of Commerce Number',
-            first_name: 'First Name',
-            last_name: 'Last Name',
-            email: 'Email Address',
-        };
-        await page.getByLabel(labels[name], { exact: true }).fill(value);
-    }
+    const advertiser = role === 'advertiser';
+    await page
+        .getByRole('radio', { name: advertiser ? 'Advertiser' : 'Publisher' })
+        .check();
+    await page.getByRole('button', { name: 'Continue', exact: true }).click();
+    await page
+        .getByLabel(advertiser ? /^Company name/ : /^Business name/)
+        .fill(`Lifecycle ${role}`);
+    await page.getByLabel(/^Website URL/).fill(merchant);
+    await page.getByLabel(/^Industry/).fill('Retail');
+    await page.getByLabel(/^Chamber of Commerce number/).fill(coc);
+    await page.getByRole('button', { name: 'Continue', exact: true }).click();
+    await page.getByLabel(/^First name/).fill('Lifecycle');
+    await page.getByLabel(/^Last name/).fill(role);
+    await page.getByLabel(/^Work email/).fill(email);
 }
 
 export async function register(
@@ -118,7 +99,11 @@ export async function register(
     await fillRegistration(page, role, email, coc);
     await Promise.all([
         page.waitForURL(/dashboard|approval|verify/),
-        page.getByRole('button', { name: /^Submit$|^Verzenden$/ }).click(),
+        page
+            .getByRole('button', {
+                name: /^Create account$|^Account aanmaken$/,
+            })
+            .click(),
     ]);
     const user = state().users.find((u) => u.email === email)!;
     expect(user.status).toBe('P');
@@ -151,7 +136,7 @@ export async function register(
         state().users.find((u) => u.id === user.id)?.email_verified_at,
     ).toBeTruthy();
     await page
-        .getByRole('button', { name: /Terug naar inloggen|Go Back To Login/ })
+        .getByRole('button', { name: /Terug naar inloggen|Back to sign in/ })
         .click();
     await page.waitForURL(/login/);
     await page.goto(setup!);
@@ -175,9 +160,9 @@ export async function approveAccount(
         expect(
             await row.innerText(),
             'B13: unapproved advertiser must not be labelled Active',
-        ).toMatch(/\bPending\b/);
+        ).toMatch(/\b(?:Pending|Awaiting approval)\b/);
     }
-    await row.getByRole('link', { name: /View overview/ }).click();
+    await row.getByRole('link', { name: /^Details for / }).click();
     await operator
         .getByRole('button', { name: 'Approve & Add to Network' })
         .click();
@@ -203,28 +188,27 @@ export async function english(page: Page) {
     }
 }
 
+/** Wizard (phase 07): fills the essentials step and continues to step 2. */
 export async function campaignStepTwo(page: Page, name: string) {
     await page.goto(`${app}/advertiser/campaigns/create`);
     await page.locator('#name').fill(name);
     await page
         .locator('#description')
         .fill('Synthetic deployment lifecycle test');
-    await page
-        .getByRole('button', { name: 'Start Date *', exact: true })
-        .click();
+    await page.getByRole('button', { name: 'Start date', exact: true }).click();
     await page.getByRole('button', { name: /^Today,/ }).click();
     await page.keyboard.press('Escape');
-    await page.locator('#no_end_date').check();
-    await page.getByRole('button', { name: 'Continue', exact: true }).click();
-    await page.locator('#total_budget').fill('1000');
-    await page.locator('#daily_budget').fill('100');
+    await page.getByRole('checkbox', { name: 'Never ending campaign' }).check();
     await page.locator('#currency').click();
-    await page
-        .getByRole('option', {
-            name: 'USD - United States Dollar',
-            exact: true,
-        })
-        .click();
+    await page.getByRole('option', { name: /^USD · / }).click();
+    await page.getByRole('button', { name: 'Continue', exact: true }).click();
+}
+
+/** From step 2 to the budget step, with the lifecycle budget filled in. */
+export async function campaignBudget(page: Page) {
+    await page.getByRole('button', { name: 'Continue', exact: true }).click();
+    await page.getByLabel(/^Total budget/).fill('1000');
+    await page.getByLabel(/^Daily budget/).fill('100');
 }
 
 export async function expectCampaignSchedule(page: Page) {
@@ -235,19 +219,20 @@ export async function expectCampaignSchedule(page: Page) {
         day: 'numeric',
     }).format(new Date());
     await expect(
-        page.locator('.campaign-meta'),
+        page.getByText(`${expected} – No end date`, { exact: true }),
         'Campaign schedule shows the selected start date and open-ended duration',
-    ).toContainText(`${expected} – No end date`);
+    ).toBeVisible();
 }
 
 export async function createCampaign(page: Page, name: string) {
     await campaignStepTwo(page, name);
+    await campaignBudget(page);
     // B03 regression: optional ROI is deliberately left blank.
     await page.getByRole('button', { name: 'Continue', exact: true }).click();
     await Promise.all([
         page.waitForURL(/campaigns\/show/),
         page
-            .getByRole('button', { name: 'Create Campaign', exact: true })
+            .getByRole('button', { name: 'Create campaign', exact: true })
             .click(),
     ]);
     const id = Number(page.url().split('/').at(-1));
@@ -319,9 +304,7 @@ export async function apply(page: Page, campaignId: number, offer: string) {
         .getByRole('button', { name: 'Apply to be a partner' })
         .click();
     const application = page.getByRole('dialog');
-    await expect(
-        application.getByRole('combobox').locator('option:checked'),
-    ).toHaveText(offer);
+    await expect(application.getByRole('combobox')).toHaveText(offer);
     await application
         .getByRole('textbox', { name: 'How will you promote this campaign?' })
         .fill('Synthetic deployment campaign application');
@@ -339,19 +322,31 @@ export async function approveApplication(
     email: string,
     campaignName: string,
 ) {
+    // Phase 06: list items open a review drawer; the full application page
+    // keeps the offer choice with its commission.
     await operator.goto(`${app}/applications/index`);
     await operator
-        .getByRole('row')
-        .filter({ hasText: email })
+        .getByRole('region', { name: 'Applications' })
+        .getByRole('listitem')
         .filter({ hasText: campaignName })
-        .getByRole('link', { name: /View overview/ })
+        .getByRole('button', { name: /^Review / })
+        .first()
         .click();
+    const drawer = operator.getByRole('dialog', {
+        name: 'Application details',
+    });
+    await expect(drawer).toContainText(email);
+    await drawer.getByRole('link', { name: 'Open full application' }).click();
     await operator.waitForURL(/applications\/show/);
-    const selectedOffer = operator.getByRole('combobox');
+    const selectedOffer = operator
+        .getByRole('radiogroup', { name: 'Select offer' })
+        .getByRole('radio', { checked: true });
     await expect(
         selectedOffer,
         'B08: commission includes the correct currency or percentage',
-    ).toContainText(campaignName.includes('Checkout') ? '10%' : '$5.00');
+    ).toHaveAccessibleDescription(
+        new RegExp(campaignName.includes('Checkout') ? '10%' : '\\$5\\.00'),
+    );
     await operator
         .getByRole('button', { name: 'Approve & Assign Offer', exact: true })
         .click();

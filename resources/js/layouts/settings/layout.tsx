@@ -1,96 +1,152 @@
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import { ReusablePageTitle } from '@/dev/core';
-import { cn, isSameUrl, resolveUrl } from '@/lib/utils';
+import { IconTile, PageHeader } from '@/components/app';
+import { type Tone } from '@/lib/tones';
+import { cn } from '@/lib/utils';
 import { edit as editAppearance } from '@/routes/appearance';
-import { edit } from '@/routes/profile';
-import { show } from '@/routes/two-factor';
+import { edit as editProfile } from '@/routes/profile';
+import { company } from '@/routes/settings';
+import { show as showTwoFactor } from '@/routes/two-factor';
 import { edit as editPassword } from '@/routes/user-password';
-import { type NavItem } from '@/types';
-import { Head, Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
+import {
+    Building2,
+    LockKeyhole,
+    Moon,
+    ShieldCheck,
+    UserRound,
+    type LucideIcon,
+} from 'lucide-react';
 import { type PropsWithChildren } from 'react';
 import { useTranslation } from 'react-i18next';
 
-export default function SettingsLayout({ children }: PropsWithChildren) {
-    const { t } = useTranslation();
+export type SettingsSection = {
+    key: string;
+    title: string;
+    href: string;
+    icon: LucideIcon;
+    tone: Tone;
+};
 
-    const sidebarNavItems: NavItem[] = [
+type SettingsSectionsProp = { company?: boolean } | null | undefined;
+
+/**
+ * Account settings sections the user has, in menu order. Company details only
+ * exist for advertiser / publisher accounts that may edit their company
+ * (`settingsSections.company`, shared by the server on settings pages).
+ */
+export function settingsSections(
+    available: SettingsSectionsProp,
+): SettingsSection[] {
+    return [
         {
-            title: t('Profile'),
-            href: edit(),
-            icon: null,
-            children: [],
+            key: 'profile',
+            title: 'Profile',
+            href: editProfile().url,
+            icon: UserRound,
+            tone: 'brand' as const,
+        },
+        ...(available?.company
+            ? [
+                  {
+                      key: 'company',
+                      title: 'Company details',
+                      href: company().url,
+                      icon: Building2,
+                      tone: 'partners' as const,
+                  },
+              ]
+            : []),
+        {
+            key: 'password',
+            title: 'Password',
+            href: editPassword().url,
+            icon: LockKeyhole,
+            tone: 'admin' as const,
         },
         {
-            title: t('Password'),
-            href: editPassword(),
-            icon: null,
-            children: [],
+            key: 'two-factor',
+            title: 'Two-factor',
+            href: showTwoFactor().url,
+            icon: ShieldCheck,
+            tone: 'success' as const,
         },
         {
-            title: t('Two-Factor Auth'),
-            href: show(),
-            icon: null,
-            children: [],
-        },
-        {
-            title: t('Appearance'),
-            href: editAppearance(),
-            icon: null,
-            children: [],
+            key: 'appearance',
+            title: 'Appearance',
+            href: editAppearance().url,
+            icon: Moon,
+            tone: 'analytics' as const,
         },
     ];
+}
 
-    if (typeof window === 'undefined') {
-        return null;
-    }
-    const currentPath = window.location.pathname;
+const currentRow: Partial<Record<Tone, string>> = {
+    brand: 'bg-brand-soft',
+    partners: 'bg-partners-soft',
+    admin: 'bg-admin-soft',
+    success: 'bg-success-soft',
+    analytics: 'bg-analytics-soft',
+};
+
+/**
+ * Account settings frame: page header, a section menu with tinted icon tiles
+ * (a horizontal scroller on small screens) and the section's cards.
+ */
+export default function SettingsLayout({ children }: PropsWithChildren) {
+    const { t } = useTranslation();
+    const { url, props } = usePage<{
+        settingsSections?: SettingsSectionsProp;
+    }>();
+    const currentPath = url.split('?')[0];
+    const sections = settingsSections(props.settingsSections);
+
     return (
-        <div className="workspace-page flex flex-col">
-            <Head title={t('Settings')} />
-            <div className="flex h-full flex-1 flex-col gap-6">
-                <ReusablePageTitle
-                    title={t('Settings')}
-                    description={t('Manage your profile and account settings')}
-                    breadcrumbs={[]}
-                />
-                <div className="w-full">
-                    <div className="flex flex-col gap-8 rounded-xl border bg-card p-5 md:p-8 lg:flex-row lg:gap-10">
-                        <aside className="w-full max-w-xl lg:w-48">
-                            <nav className="flex flex-col space-y-1 space-x-0">
-                                {sidebarNavItems.map((item, index) => (
-                                    <Button
-                                        key={`${resolveUrl(item.href)}-${index}`}
-                                        size="sm"
-                                        variant="ghost"
-                                        asChild
-                                        className={cn('w-full justify-start', {
-                                            'bg-accent text-accent-foreground':
-                                                isSameUrl(
-                                                    currentPath,
-                                                    item.href,
-                                                ),
-                                        })}
-                                    >
-                                        <Link href={item.href}>
-                                            {item.icon && (
-                                                <item.icon className="h-4 w-4" />
-                                            )}
-                                            {item.title}
-                                        </Link>
-                                    </Button>
-                                ))}
-                            </nav>
-                        </aside>
-
-                        <Separator className="my-6 lg:hidden" />
-
-                        <div className="flex-1 md:max-w-2xl">
-                            <section className="max-w-xl space-y-12">
-                                {children}
-                            </section>
-                        </div>
-                    </div>
+        <div className="workspace-page flex flex-col gap-6">
+            <PageHeader
+                title={t('Account settings')}
+                description={t(
+                    'Manage your profile, security and how DM Hub looks for you',
+                )}
+                breadcrumbs={[
+                    { title: t('Account'), href: editProfile().url },
+                    { title: t('Settings'), href: currentPath },
+                ]}
+            />
+            <div className="flex flex-col items-start gap-[22px] lg:flex-row">
+                <nav
+                    aria-label={t('Settings sections')}
+                    className="flex w-full max-w-full shrink-0 gap-0.5 overflow-x-auto rounded-card border border-border bg-surface p-2.5 shadow-card lg:w-[260px] lg:flex-col"
+                >
+                    {sections.map((section) => {
+                        const current = section.href === currentPath;
+                        const Icon = section.icon;
+                        return (
+                            <Link
+                                key={section.key}
+                                href={section.href}
+                                aria-current={current ? 'page' : undefined}
+                                className={cn(
+                                    'flex min-h-11 shrink-0 items-center gap-3 rounded-xl px-2.5 py-2 text-sm whitespace-nowrap text-ink-muted transition-colors hover:bg-surface-muted hover:text-ink',
+                                    current &&
+                                        cn(
+                                            'font-bold text-ink hover:text-ink',
+                                            currentRow[section.tone],
+                                        ),
+                                )}
+                            >
+                                <IconTile
+                                    size={32}
+                                    tone={section.tone}
+                                    variant={current ? 'solid' : 'soft'}
+                                >
+                                    <Icon />
+                                </IconTile>
+                                {t(section.title)}
+                            </Link>
+                        );
+                    })}
+                </nav>
+                <div className="flex w-full min-w-0 flex-1 flex-col gap-[18px]">
+                    {children}
                 </div>
             </div>
         </div>

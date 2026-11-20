@@ -4,6 +4,13 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import type { AnalyticsWorkspace } from '@/types/campaign-analytics';
 import { router, usePage, usePoll } from '@inertiajs/react';
 import { ChevronDown, Download, Info, LoaderCircle } from 'lucide-react';
@@ -184,7 +191,7 @@ function AnalyticsContent({
                                 {error && (
                                     <p
                                         role="alert"
-                                        className="text-sm text-destructive"
+                                        className="text-sm text-danger-ink"
                                     >
                                         {error}
                                     </p>
@@ -192,45 +199,68 @@ function AnalyticsContent({
                             </form>
                         </PopoverContent>
                     </Popover>
-                    <select
-                        aria-label={t('Filter by offer')}
-                        value={data.filters.offer ?? ''}
+                    <Select
+                        value={String(data.filters.offer ?? '') || '__none__'}
                         disabled={busy}
-                        onChange={(event) =>
+                        onValueChange={(value) =>
                             change({
-                                offer: event.target.value
-                                    ? Number(event.target.value)
-                                    : null,
+                                offer:
+                                    value === '__none__' ? null : Number(value),
                             })
                         }
                     >
-                        <option value="">{t('All offers')}</option>
-                        {data.offers.map((offer) => (
-                            <option key={offer.id} value={offer.id}>
-                                {offer.name}
-                            </option>
-                        ))}
-                    </select>
+                        <SelectTrigger aria-label={t('Filter by offer')}>
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="__none__">
+                                {t('All offers')}
+                            </SelectItem>
+                            {data.offers.map((offer) => (
+                                <SelectItem
+                                    key={offer.id}
+                                    value={String(offer.id)}
+                                >
+                                    {offer.name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                     {!data.publisher_view && (
-                        <select
-                            aria-label={t('Filter by publisher')}
-                            value={data.filters.publisher ?? ''}
+                        <Select
+                            value={
+                                String(data.filters.publisher ?? '') ||
+                                '__none__'
+                            }
                             disabled={busy}
-                            onChange={(event) =>
+                            onValueChange={(value) =>
                                 change({
-                                    publisher: event.target.value
-                                        ? Number(event.target.value)
-                                        : null,
+                                    publisher:
+                                        value === '__none__'
+                                            ? null
+                                            : Number(value),
                                 })
                             }
                         >
-                            <option value="">{t('All publishers')}</option>
-                            {data.publishers.map((publisher) => (
-                                <option key={publisher.id} value={publisher.id}>
-                                    {publisher.name}
-                                </option>
-                            ))}
-                        </select>
+                            <SelectTrigger
+                                aria-label={t('Filter by publisher')}
+                            >
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="__none__">
+                                    {t('All publishers')}
+                                </SelectItem>
+                                {data.publishers.map((publisher) => (
+                                    <SelectItem
+                                        key={publisher.id}
+                                        value={String(publisher.id)}
+                                    >
+                                        {publisher.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     )}
                     <Popover>
                         <PopoverTrigger asChild>
@@ -249,19 +279,19 @@ function AnalyticsContent({
                                     {t('Export filtered analytics')}
                                 </strong>
                                 <a
-                                    className="rounded px-2 py-2 hover:bg-muted"
+                                    className="rounded px-2 py-2 hover:bg-surface-muted"
                                     href={exportUrl('csv')}
                                 >
                                     {t('Current breakdown (.csv)')}
                                 </a>
                                 <a
-                                    className="rounded px-2 py-2 hover:bg-muted"
+                                    className="rounded px-2 py-2 hover:bg-surface-muted"
                                     href={exportUrl('csv', 'daily')}
                                 >
                                     {t('Daily performance (.csv)')}
                                 </a>
                                 <a
-                                    className="rounded px-2 py-2 hover:bg-muted"
+                                    className="rounded px-2 py-2 hover:bg-surface-muted"
                                     href={exportUrl('xlsx')}
                                 >
                                     {t('Full report (.xlsx)')}
@@ -272,7 +302,7 @@ function AnalyticsContent({
                 </div>
             </div>
             {error && !datesOpen && (
-                <p role="alert" className="text-sm text-destructive">
+                <p role="alert" className="text-sm text-danger-ink">
                     {error}
                 </p>
             )}

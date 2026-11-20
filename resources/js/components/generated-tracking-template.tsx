@@ -35,7 +35,7 @@ export function GeneratedTrackingTemplate({
 }) {
     const { t } = useTranslation();
     return (
-        <div className="space-y-2 rounded-lg bg-muted/40 p-4">
+        <div className="space-y-2 rounded-lg bg-surface-muted/40 p-4">
             <Label htmlFor="generated-tracking-template">
                 {t('Tracking URL Template')} · {t('Generated automatically')}
             </Label>
@@ -51,7 +51,7 @@ export function GeneratedTrackingTemplate({
             />
             <p
                 id="generated-tracking-template-hint"
-                className="text-sm leading-relaxed text-muted-foreground"
+                className="text-sm leading-relaxed text-ink-muted"
             >
                 {t(
                     'Generated from the landing page URL. DM Hub fills in click_id and referral_id for each tracked visit.',

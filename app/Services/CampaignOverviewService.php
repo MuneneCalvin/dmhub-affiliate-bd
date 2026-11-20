@@ -8,6 +8,7 @@ use App\Models\PublisherCampaigns;
 use App\Models\User;
 use App\Services\Finance\LedgerService;
 use App\Support\ConversionMoney;
+use App\Support\TrackingUrl;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
@@ -183,12 +184,28 @@ class CampaignOverviewService
             }
         }
 
+        $offerConversions = DB::table('conversions')->whereIn('publisher_campaign_id', $ids)->whereNotNull('conversion_event_id')
+            ->whereBetween('conversion_date', [$start->toDateString(), $end->toDateString()])->selectRaw('offer_id, COUNT(*) as total')->groupBy('offer_id')
+            ->pluck('total', 'offer_id')->map(fn ($total) => (int) $total);
+        $lastClick = DB::table('clicks')->whereIn('publisher_campaign_id', $ids)->max('clicked_at');
+        $lastOutcome = DB::table('conversions')->whereIn('publisher_campaign_id', $ids)->whereNotNull('conversion_event_id')->max('created_at');
+
         return [
             'publisher_view' => $publisherView,
             'role' => $publisherView ? 'Publisher' : ($user->is_super_admin ? 'Administrator' : ($user->is_network ? 'Network operator' : 'Advertiser')),
             'campaign' => ['id' => $campaign->id, 'name' => $campaign->name, 'status' => $campaign->campaign_status,
                 'advertiser' => $advertiser->business_name, 'network' => $network?->network_name,
-                'currency' => $campaign->currency, 'start_date' => $campaign->start_date?->toISOString(), 'end_date' => $campaign->end_date?->year >= 2100 ? null : $campaign->end_date?->toISOString()],
+                'currency' => $campaign->currency, 'start_date' => $campaign->start_date?->toISOString(), 'end_date' => $campaign->end_date?->year >= 2100 ? null : $campaign->end_date?->toISOString(),
+                'countries' => array_values($campaign->geo_targeting['countries'] ?? []), 'tags' => array_values($campaign->metadata['tags'] ?? [])],
+            'counts' => ['offers' => $campaign->offers()->count(),
+                'publishers' => $publisherView ? null : (clone $assignments)->where('status', 'A')->whereNull('terminated_at')->count()],
+            'offer_conversions' => (object) $offerConversions->all(),
+            'tracking' => ['last_click_at' => $lastClick ? CarbonImmutable::parse($lastClick, 'UTC')->toISOString() : null,
+                'last_outcome_at' => $lastOutcome ? CarbonImmutable::parse($lastOutcome, 'UTC')->toISOString() : null],
+            'can' => ['manage' => ! $publisherView && $can('manage_campaigns'), 'create_offers' => ! $publisherView && $can('create_offers'),
+                'fund' => ! $publisherView && $operator && $can('manage_funding')],
+            'funding_advertiser' => ! $publisherView && $operator && $can('manage_funding')
+                ? ['id' => $advertiser->id, 'business_name' => $advertiser->business_name, 'currency' => $campaign->currency] : null,
             'period' => ['start' => $start->toDateString(), 'end' => $end->toDateString()],
             'configured' => $activeOffers > 0 && (! $assignment || ($assignment->offer_id && $assignment->tracking_link)),
             'traffic_eligible' => ! collect($alerts)->contains('blocks', true),
@@ -207,7 +224,7 @@ class CampaignOverviewService
             'assignment' => $assignment ? ['id' => $assignment->id, 'status' => $assignment->status, 'offer' => $assignment->offer?->name,
                 'commission_type' => $assignment->commission_type, 'commission_value' => $assignment->commission_value,
                 'tracking_link' => $assignment->status === 'A' && ! $assignment->terminated_at && $assignment->tracking_link && $assignment->extractTrackingId()
-                    ? url('/t/'.$assignment->extractTrackingId()) : null] : null,
+                    ? TrackingUrl::to('/t/'.$assignment->extractTrackingId()) : null] : null,
             'activity' => $latest ? ['status' => $latest->status, 'amount' => round((float) $latest->amount - $latest->reversed_minor / 100, 2), 'currency' => $latest->currency, 'at' => $latest->updated_at] : null,
             'tools' => $tools,
         ];
