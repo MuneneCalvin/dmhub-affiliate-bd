@@ -1,6 +1,8 @@
 import type { WorkspacePage } from '@/types/partner-workspace';
 export type PublisherAccount = {
     publisher_id: number;
+    publisher_type?: string | null;
+    channels?: { type: string; handle: string }[];
     user_id: number;
     business_name: string | null;
     industry: string | null;

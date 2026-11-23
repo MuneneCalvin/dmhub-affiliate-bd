@@ -1,4 +1,8 @@
 import { PoolProfile } from '@/components/pool-profile';
+import {
+    PublisherChannels,
+    type PublisherChannelRow,
+} from '@/components/publisher-channels';
 import { useCount, useDate } from '@/lib/format';
 import { trafficSourceLabels } from '@/utils/campaign-display';
 import { usePage } from '@inertiajs/react';
@@ -7,6 +11,8 @@ import { useTranslation } from 'react-i18next';
 
 type PoolPublisher = {
     id: number;
+    publisher_type?: string | null;
+    channels?: PublisherChannelRow[];
     business_name?: string | null;
     coc_number: string | null;
     website_url: string | null;
@@ -62,6 +68,14 @@ export default function PoolPublisherShow() {
             verified={p.is_verified}
             chips={[
                 { label: t('Publisher'), tone: 'partners' },
+                {
+                    label: t(
+                        p.publisher_type === 'individual'
+                            ? 'Individual'
+                            : 'Company',
+                    ),
+                    tone: 'brand' as const,
+                },
                 ...sources.slice(0, 3).map((source) => ({
                     label: (
                         <span className="capitalize">
@@ -80,12 +94,31 @@ export default function PoolPublisherShow() {
                         { label: t('Name'), value: contact },
                         { label: t('Email'), value: p.user?.email },
                         {
+                            label: t('Registered as'),
+                            value: t(
+                                p.publisher_type === 'individual'
+                                    ? 'Individual'
+                                    : 'Company',
+                            ),
+                        },
+                        {
                             label: t('Registered'),
                             value: formatDate(p.user?.created_at),
                         },
                         {
                             label: t('Chamber of Commerce number'),
                             value: p.coc_number,
+                        },
+                    ],
+                },
+                {
+                    title: t('Channels'),
+                    icon: <Globe2 />,
+                    tone: 'analytics',
+                    rows: [
+                        {
+                            label: t('Where they promote'),
+                            value: <PublisherChannels channels={p.channels} />,
                         },
                     ],
                 },
