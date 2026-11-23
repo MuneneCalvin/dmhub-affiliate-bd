@@ -1,7 +1,8 @@
-/* global __CONFIG__ -- replaced with this offer's key and endpoint when the script is served */
 (function () {
     'use strict';
 
+    // Replaced with this offer's key and endpoint when the script is served.
+    // eslint-disable-next-line no-undef
     var CONFIG = __CONFIG__;
     var registry = (window.BNDLeadForm = window.BNDLeadForm || {});
     if (registry[CONFIG.key]) return;
