@@ -403,7 +403,7 @@ test('onboarding → campaign enrollment → clicks, submissions, checkout and f
                 .fill('Verified synthetic deployment conversion');
             await network
                 .getByRole('button', {
-                    name: 'Approve commission',
+                    name: 'Approve compensation',
                     exact: true,
                 })
                 .click();
@@ -428,7 +428,7 @@ test('onboarding → campaign enrollment → clicks, submissions, checkout and f
             'B11: approved commissions are labelled accurately',
         ).toMatch(/Spent budget\s+\$25\.00/);
         expect(dashboard).not.toMatch(/commissions paid/i);
-        expect(dashboard).not.toContain('Total Commissions Paid');
+        expect(dashboard).not.toContain('Total Compensation Paid');
         await screenshot(advertiser, 'approved-dashboard');
         await promoter.goto(`${app}/publisher/earnings`);
         await expect(promoter.locator('main')).toContainText(/approved/i);
