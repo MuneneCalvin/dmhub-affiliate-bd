@@ -16,6 +16,7 @@ class Publisher extends Model
 
     protected $fillable = [
         'user_id',
+        'publisher_type',
         'network_id',
         'business_name', 'industry',
         'website_url',
@@ -50,6 +51,10 @@ class Publisher extends Model
     /**
      * Relationships
      */
+    public function channels()
+    {
+        return $this->hasMany(PublisherChannel::class)->orderBy('id');
+    }
 
     // A publisher belongs to a user
     public function user()

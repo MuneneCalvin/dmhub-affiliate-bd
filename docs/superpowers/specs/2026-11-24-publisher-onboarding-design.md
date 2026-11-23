@@ -22,7 +22,7 @@ Client points 3.1–3.3: company name, CoC number and industry are not relevant 
 - Breaking tracking, applications or payouts for existing publishers.
 
 ## Constraints
-- `publishers.website_url` is `NOT NULL` today; it becomes nullable (individuals may have no website).
+- `publishers.website_url` stays `NOT NULL` (changing it on SQLite rebuilds the table and drops its triggers, as found in part 2); individuals with no website store an empty string, which every screen already treats as "no website".
 - `coc_number` stays unique where present; individuals store `NULL` (several allowed).
 - Names shown in lists already fall back from business name to the contact's name; individuals rely on that.
 - Dutch and English text for every label.
@@ -33,7 +33,7 @@ Client points 3.1–3.3: company name, CoC number and industry are not relevant 
 3. Reuse `traffic_sources`: wrong concept (campaign traffic restrictions), rejected.
 
 ## Design
-- **Data:** `publishers.publisher_type` (`company` default | `individual`); `publishers.website_url` nullable; table `publisher_channels` (`id`, `publisher_id` cascade, `type`, `handle` ≤255, timestamps, unique `(publisher_id, type)`). Channel types live in `config/publisher.php` (`channel_types`). A migration backfills existing publishers: a `website` channel from `website_url` when present.
+- **Data:** `publishers.publisher_type` (`company` default | `individual`); table `publisher_channels` (`id`, `publisher_id` cascade, `type`, `handle` ≤255, timestamps, unique `(publisher_id, type)`). Channel types live in `config/publisher.php` (`channel_types`). A migration backfills existing publishers: a `website` channel from `website_url` when present.
 - **Registration rules (publishers):** `publisher_type` required (`company`|`individual`); `channels` array of 1–10 entries `{type, handle}` with unique, known types; `handle` required, ≤255; `website` and `comparison_site` must be a valid http(s) URL; the others accept a URL or an account name (a value containing `://` or starting with `www.` must be a valid URL). Company: `business_name`, `industry`, `coc_number` required as today. Individual: those three are ignored and stored `NULL`. `publishers.website_url` is set from the website channel when there is one.
 - **Advertisers:** rules unchanged.
 - **Form (`register.tsx`, publisher step 2):** "I register as" Company / Individual (Company preselected); company fields shown only for Company; "Where will you promote?" list of channel checkboxes, each revealing a URL or account-name input; at least one required; inline errors per channel.

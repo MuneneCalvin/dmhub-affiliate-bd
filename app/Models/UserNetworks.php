@@ -10,6 +10,7 @@ class UserNetworks extends Model
     use HasFactory;
 
     protected $table = 'user_networks';
+
     protected $fillable = [
         'user_id',
         'network_id',

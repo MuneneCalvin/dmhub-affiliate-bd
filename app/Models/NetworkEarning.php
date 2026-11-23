@@ -25,7 +25,7 @@ class NetworkEarning extends Model
         'amount_credited',
         'total_amount',
         'currency',
-        'status'
+        'status',
     ];
 
     /**

@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class OfferCommission extends Model
 {
-     use HasFactory;
+    use HasFactory;
 
     protected $table = 'offer_commissions';
 
@@ -24,6 +24,7 @@ class OfferCommission extends Model
     {
         return $this->belongsTo(Offer::class, 'offer_id');
     }
+
     public function commissionType()
     {
         return $this->belongsTo(CommissionType::class, 'commission_type_id');
