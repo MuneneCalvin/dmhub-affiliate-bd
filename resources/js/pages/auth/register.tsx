@@ -1,4 +1,9 @@
 import { IconTile, StepProgress } from '@/components/app';
+import {
+    ChannelPicker,
+    type ChannelErrors,
+    type ChannelValues,
+} from '@/components/channel-picker';
 import InputError from '@/components/input-error';
 import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
@@ -8,11 +13,20 @@ import { RadioCard, RadioCardGroup } from '@/components/ui/radio-card';
 import { Spinner } from '@/components/ui/spinner';
 import AuthLayout from '@/layouts/auth-layout';
 import { useAuthBrand } from '@/layouts/auth/auth-brand-panel';
+import {
+    PUBLISHER_CHANNELS,
+    channelError,
+    type ChannelType,
+} from '@/lib/publisher-channels';
 import { login } from '@/routes';
 import { store } from '@/routes/register';
 import { type TPublisherOnboardingTypes } from '@/types/schema_types';
 import { EREGISTER_TYPE } from '@/utils/enums';
-import { advertiserSchema, publisherSchema } from '@/utils/form-schema';
+import {
+    advertiserSchema,
+    publisherCompanySignupSchema,
+    publisherIndividualSignupSchema,
+} from '@/utils/form-schema';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Head, router } from '@inertiajs/react';
 import { ArrowLeft, ArrowRight, Building2, Users } from 'lucide-react';
@@ -32,17 +46,22 @@ const businessFields: Field[] = [
 ];
 const TOTAL_STEPS = 3;
 
-type RegisterContext = { role: EREGISTER_TYPE };
+type PublisherType = 'company' | 'individual';
+type RegisterContext = { role: EREGISTER_TYPE; publisherType: PublisherType };
+const signupSchema = (context?: RegisterContext) =>
+    // The three schemas differ only in which fields they demand; the form values are one shape.
+    (context?.role === EREGISTER_TYPE.ADVERTISER
+        ? advertiserSchema
+        : context?.publisherType === 'individual'
+          ? publisherIndividualSignupSchema
+          : publisherCompanySignupSchema) as unknown as typeof advertiserSchema;
+
 const resolver: Resolver<RegisterValues, RegisterContext> = (
     values,
     context,
     options,
 ) =>
-    zodResolver(
-        context?.role === EREGISTER_TYPE.ADVERTISER
-            ? advertiserSchema
-            : publisherSchema,
-    )(values, context, options) as ReturnType<
+    zodResolver(signupSchema(context))(values, context, options) as ReturnType<
         Resolver<RegisterValues, RegisterContext>
     >;
 
@@ -53,6 +72,11 @@ export default function Register() {
     const { t } = useTranslation();
     const { name } = useAuthBrand();
     const [role, setRole] = useState<EREGISTER_TYPE>(EREGISTER_TYPE.PUBLISHER);
+    const [publisherType, setPublisherType] =
+        useState<PublisherType>('company');
+    const [channels, setChannels] = useState<ChannelValues>({});
+    const [channelErrors, setChannelErrors] = useState<ChannelErrors>({});
+    const submittedChannels = useRef<ChannelType[]>([]);
     const [step, setStep] = useState(1);
     const [submitting, setSubmitting] = useState(false);
     const headingRef = useRef<HTMLHeadingElement>(null);
@@ -68,7 +92,7 @@ export default function Register() {
     } = useForm<RegisterValues, RegisterContext>({
         // Both roles collect the same fields; each keeps its own schema.
         resolver,
-        context: { role },
+        context: { role, publisherType },
         defaultValues: {
             business_name: '',
             website_name: '',
@@ -101,10 +125,8 @@ export default function Register() {
                   hint: t('Tell us about the brand that runs the campaigns.'),
               }
             : {
-                  title: t('Your website'),
-                  hint: t(
-                      'Tell us about the site, app or channel where you promote offers.',
-                  ),
+                  title: t('Your channels'),
+                  hint: t('Tell us who you are and where you promote offers.'),
               },
         {
             title: t('Your details'),
@@ -115,32 +137,89 @@ export default function Register() {
     ];
     const current = steps[step - 1];
 
+    const individual = !isAdvertiser && publisherType === 'individual';
+
+    /** Every ticked channel needs a value that fits it, and at least one must be ticked. */
+    const validateChannels = () => {
+        const ticked = PUBLISHER_CHANNELS.filter((c) => c.value in channels);
+        const next: ChannelErrors = {};
+        if (ticked.length === 0) next.channels = 'Choose at least one channel';
+        ticked.forEach((c) => {
+            const message = channelError(c.value, channels[c.value] ?? '');
+            if (message) next[c.value] = message;
+        });
+        setChannelErrors(next);
+        return Object.keys(next).length === 0;
+    };
+
     const handleContinue = async () => {
         if (step === 1) return goTo(2);
-        if (await trigger(businessFields)) goTo(3);
+        if (isAdvertiser) {
+            if (await trigger(businessFields)) goTo(3);
+            return;
+        }
+        const companyOk = individual
+            ? true
+            : await trigger(['business_name', 'industry', 'coc_number']);
+        const channelsOk = validateChannels();
+        if (companyOk && channelsOk) goTo(3);
     };
 
     const onSubmit = (data: RegisterValues) => {
         clearErrors();
         setSubmitting(true);
-        router.post(
-            store(),
-            { ...data, role_name: role },
-            {
-                onSuccess: () =>
-                    toast.success(t('Account created successfully')),
-                onFinish: () => setSubmitting(false),
-                onError: (serverErrors) => {
-                    Object.entries(serverErrors).forEach(([field, message]) => {
+        const ticked = PUBLISHER_CHANNELS.filter((c) => c.value in channels);
+        submittedChannels.current = ticked.map((c) => c.value);
+        const payload = isAdvertiser
+            ? { ...data, role_name: role }
+            : {
+                  first_name: data.first_name,
+                  last_name: data.last_name,
+                  email: data.email,
+                  role_name: role,
+                  publisher_type: publisherType,
+                  ...(individual
+                      ? {}
+                      : {
+                            business_name: data.business_name,
+                            industry: data.industry,
+                            coc_number: data.coc_number,
+                        }),
+                  channels: ticked.map((c) => ({
+                      type: c.value,
+                      handle: (channels[c.value] ?? '').trim(),
+                  })),
+              };
+        router.post(store(), payload, {
+            onSuccess: () => toast.success(t('Account created successfully')),
+            onFinish: () => setSubmitting(false),
+            onError: (serverErrors) => {
+                const forChannels: ChannelErrors = {};
+                Object.entries(serverErrors).forEach(([field, message]) => {
+                    const channel = /^channels\.(\d+)\./.exec(field);
+                    if (channel) {
+                        const type =
+                            submittedChannels.current[Number(channel[1])];
+                        if (type)
+                            forChannels[type] = forChannels[type] ?? message;
+                    } else if (field === 'channels') {
+                        forChannels.channels = message;
+                    } else {
                         setError(field as Field, { type: 'server', message });
-                    });
-                    if (serverErrors.role_name) goTo(1);
-                    else if (businessFields.some((f) => serverErrors[f]))
-                        goTo(2);
-                    else goTo(3);
-                },
+                    }
+                });
+                setChannelErrors(forChannels);
+                const channelFailed = Object.keys(forChannels).length > 0;
+                if (serverErrors.role_name) goTo(1);
+                else if (
+                    channelFailed ||
+                    serverErrors.publisher_type ||
+                    businessFields.some((f) => serverErrors[f])
+                )
+                    goTo(2);
+                else goTo(3);
             },
-        );
+        });
     };
 
     const field = (
@@ -254,20 +333,12 @@ export default function Register() {
                     </RadioCardGroup>
                 )}
 
-                {step === 2 && (
+                {step === 2 && isAdvertiser && (
                     <div className="grid gap-[14px]">
-                        {field(
-                            'business_name',
-                            isAdvertiser
-                                ? t('Company name')
-                                : t('Business name'),
-                            {
-                                autoComplete: 'organization',
-                                placeholder: isAdvertiser
-                                    ? 'Advertiser LLC'
-                                    : 'Publisher LLC',
-                            },
-                        )}
+                        {field('business_name', t('Company name'), {
+                            autoComplete: 'organization',
+                            placeholder: 'Advertiser LLC',
+                        })}
                         {field('website_name', t('Website URL'), {
                             type: 'url',
                             autoComplete: 'url',
@@ -279,6 +350,65 @@ export default function Register() {
                         {field('coc_number', t('Chamber of Commerce number'), {
                             placeholder: 'SB1234567',
                         })}
+                    </div>
+                )}
+
+                {step === 2 && !isAdvertiser && (
+                    <div className="grid gap-[18px]">
+                        <RadioCardGroup
+                            name="publisher_type"
+                            label={t('I register as')}
+                            value={publisherType}
+                            onValueChange={(value) =>
+                                setPublisherType(value as PublisherType)
+                            }
+                            className="gap-3"
+                        >
+                            <RadioCard
+                                value="company"
+                                tone="partners"
+                                title={t('Company')}
+                                hint={t(
+                                    'A business with a Chamber of Commerce number.',
+                                )}
+                            />
+                            <RadioCard
+                                value="individual"
+                                tone="partners"
+                                title={t('Individual')}
+                                hint={t(
+                                    'A creator or private person promoting on their own channels.',
+                                )}
+                            />
+                        </RadioCardGroup>
+                        {!individual && (
+                            <div className="grid gap-[14px]">
+                                {field('business_name', t('Business name'), {
+                                    autoComplete: 'organization',
+                                    placeholder: 'Publisher LLC',
+                                })}
+                                {field('industry', t('Industry'), {
+                                    placeholder: t(
+                                        'Finance, e-commerce, travel…',
+                                    ),
+                                })}
+                                {field(
+                                    'coc_number',
+                                    t('Chamber of Commerce number'),
+                                    {
+                                        placeholder: 'SB1234567',
+                                    },
+                                )}
+                            </div>
+                        )}
+                        <ChannelPicker
+                            values={channels}
+                            errors={channelErrors}
+                            onChange={(next) => {
+                                setChannels(next);
+                                setChannelErrors({});
+                            }}
+                        />
                     </div>
                 )}
 
