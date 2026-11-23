@@ -32,7 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
             // Public lead form traffic stays outside the web (session, CSRF) and api (blanket CORS) groups:
             // only the offer's own origin may read an answer.
             Route::middleware([
-                ForceJsonResponse::class, 'throttle:30,1,lead-forms', 'throttle:lead-form-key',
+                ForceJsonResponse::class,
             ])->group(base_path('routes/lead-forms.php'));
         },
     )
