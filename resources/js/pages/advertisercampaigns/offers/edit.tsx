@@ -8,6 +8,7 @@ import {
     TextareaField,
 } from '@/components/app/form-controls';
 import { FormDialog } from '@/components/app/form-dialog';
+import { InfoTip } from '@/components/app/info-tip';
 import { GeneratedTrackingTemplate } from '@/components/generated-tracking-template';
 import { OfferStepTabs } from '@/components/offer-step-tabs';
 import { OfferThumbnailUpload } from '@/components/offer-thumbnail-upload';
@@ -280,7 +281,8 @@ const OfferEditPage = () => {
                                     <p className="text-sm text-ink-muted">
                                         {t(
                                             'Step 2 of 4: Configure commission and bonus settings.',
-                                        )}
+                                        )}{' '}
+                                        <InfoTip term="compensation" />
                                     </p>
                                 </div>
 

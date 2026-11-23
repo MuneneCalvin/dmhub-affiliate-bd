@@ -1,4 +1,5 @@
 import { PageHeader } from '@/components/app';
+import { InfoTip } from '@/components/app/info-tip';
 import { GeneratedTrackingTemplate } from '@/components/generated-tracking-template';
 import { OfferStepTabs } from '@/components/offer-step-tabs';
 import { OfferThumbnailUpload } from '@/components/offer-thumbnail-upload';
@@ -267,7 +268,8 @@ const OffersIndexPage = () => {
                                     <p className="text-sm text-ink-muted">
                                         {t(
                                             'Step 2 of 4: Configure commission and bonus settings.',
-                                        )}
+                                        )}{' '}
+                                        <InfoTip term="compensation" />
                                     </p>
                                 </div>
 

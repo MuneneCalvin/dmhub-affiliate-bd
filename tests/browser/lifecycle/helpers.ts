@@ -198,7 +198,7 @@ export async function campaignStepTwo(page: Page, name: string) {
     await page.keyboard.press('Escape');
     await page.getByRole('checkbox', { name: 'Never ending campaign' }).check();
     await page.locator('#currency').click();
-    await page.getByRole('option', { name: /^USD · / }).click();
+    await page.getByRole('option', { name: /^EUR · / }).click();
     await page.getByRole('button', { name: 'Continue', exact: true }).click();
 }
 
@@ -343,7 +343,7 @@ export async function approveApplication(
         selectedOffer,
         'B08: commission includes the correct currency or percentage',
     ).toHaveAccessibleDescription(
-        new RegExp(campaignName.includes('Checkout') ? '10%' : '\\$5\\.00'),
+        new RegExp(campaignName.includes('Checkout') ? '10%' : '€5\\.00'),
     );
     await operator
         .getByRole('button', { name: 'Approve & Assign Offer', exact: true })

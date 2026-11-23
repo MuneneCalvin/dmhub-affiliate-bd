@@ -3336,5 +3336,11 @@
     "Creatives are the materials publishers use to promote: links, banners, copy, conditions and required disclaimers.": "Creatives zijn het promotiemateriaal van publishers: links, banners, teksten, voorwaarden en verplichte disclaimers.",
     "A lead is a visitor who completed the form and gave consent to be contacted.": "Een lead is een bezoeker die het formulier heeft ingevuld en toestemming heeft gegeven om benaderd te worden.",
     "Account opened: a lead whose account has been opened. Staff set this status on the Leads page.": "Account geopend: een lead waarvan het account is geopend. Medewerkers stellen deze status in op de pagina Leads.",
-    "The partner pool lists advertisers and publishers who signed up and are waiting for approval.": "De partnerpool toont adverteerders en publishers die zich hebben aangemeld en wachten op goedkeuring."
+    "The partner pool lists advertisers and publishers who signed up and are waiting for approval.": "De partnerpool toont adverteerders en publishers die zich hebben aangemeld en wachten op goedkeuring.",
+    "Confirmed outcomes will appear here when commissions are recorded.": "Bevestigde resultaten verschijnen hier zodra vergoedingen zijn geregistreerd.",
+    "Commission type": "Vergoedingstype",
+    "Second commission (optional)": "Tweede vergoeding (optioneel)",
+    "Total commission limit": "Totale vergoedingslimiet",
+    "Daily commission limit": "Dagelijkse vergoedingslimiet",
+    "Recurring Commission": "Terugkerende vergoeding"
 }

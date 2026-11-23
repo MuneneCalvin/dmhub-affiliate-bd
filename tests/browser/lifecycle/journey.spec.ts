@@ -47,6 +47,10 @@ const test = base.extend<{
                 isMobile: mobile,
                 hasTouch: mobile,
             });
+            // The platform starts in Dutch; the journey reads English, like a visitor who already chose it.
+            await context.addCookies([
+                { name: 'locale', value: 'en', url: app },
+            ]);
             const page = await context.newPage();
             page.setDefaultTimeout(10_000);
             contexts.push({ name, context, page });
@@ -182,7 +186,7 @@ test('onboarding → campaign enrollment → clicks, submissions, checkout and f
             advertiser
                 .getByRole('row')
                 .filter({ hasText: 'Lifecycle Submission Offer' }),
-        ).toContainText('USD 5 per lead');
+        ).toContainText('EUR 5 per lead');
         await screenshot(advertiser, 'offer-summary');
         await advertiser.goto(
             `${app}/advertiser/campaigns/show/${saleCampaign}`,
@@ -262,7 +266,7 @@ test('onboarding → campaign enrollment → clicks, submissions, checkout and f
             .click();
         await admin
             .getByRole('option', {
-                name: 'Lifecycle advertiser · USD',
+                name: 'Lifecycle advertiser · EUR',
                 exact: true,
             })
             .click();
@@ -311,7 +315,7 @@ test('onboarding → campaign enrollment → clicks, submissions, checkout and f
             http_status: 201,
             commission_status: 'pending',
             commission_amount: '5.00',
-            currency: 'USD',
+            currency: 'EUR',
         });
         expect(
             await merchantAction(buyer, 'Replay confirmation', '/replay'),
@@ -389,7 +393,7 @@ test('onboarding → campaign enrollment → clicks, submissions, checkout and f
 
     await test.step('Approve commissions and verify reports without labelling them paid', async () => {
         await promoter.goto(`${app}/publisher/earnings`);
-        await expect(promoter.locator('main')).toContainText('$25.00');
+        await expect(promoter.locator('main')).toContainText('€25.00');
         // Phase 09: earning statuses are StatusBadges ("Pending", sentence case).
         await expect(promoter.locator('main')).toContainText(/pending/i);
         await network.goto(`${app}/finance`);
@@ -416,17 +420,17 @@ test('onboarding → campaign enrollment → clicks, submissions, checkout and f
         ).toHaveLength(3);
         await advertiser.goto(`${app}/advertiser/dashboard`);
         const dashboard = await advertiser.locator('main').innerText();
-        expect(dashboard).toContain('$200.00');
-        expect(dashboard).toContain('$25.00');
-        expect(dashboard, 'B10: funding excludes the $160 fee').toContain(
-            'Net funded budget\n$1,840.00',
+        expect(dashboard).toContain('€200.00');
+        expect(dashboard).toContain('€25.00');
+        expect(dashboard, 'B10: funding excludes the €160 fee').toContain(
+            'Net funded budget\n€1,840.00',
         );
         // Phase 05 dashboard: approved commissions draw down the funded
         // budget as "Spent budget" (never labelled as paid).
         expect(
             dashboard,
             'B11: approved commissions are labelled accurately',
-        ).toMatch(/Spent budget\s+\$25\.00/);
+        ).toMatch(/Spent budget\s+€25\.00/);
         expect(dashboard).not.toMatch(/compensation paid/i);
         expect(dashboard).not.toContain('Total Compensation Paid');
         await screenshot(advertiser, 'approved-dashboard');

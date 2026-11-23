@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      */
@@ -14,9 +15,9 @@ return new class extends Migration {
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('network_id')
-            ->nullable()
-            ->constrained('networks')
-            ->onDelete('cascade');
+                ->nullable()
+                ->constrained('networks')
+                ->onDelete('cascade');
             $table->string('business_name', 200);
             $table->string('website_name', 100);
             $table->string('industry', 200);
@@ -39,6 +40,7 @@ return new class extends Migration {
             $table->unique(['id', 'network_id'], 'advertisers_advertiser_network_unique');
         });
     }
+
     /**
      * Reverse the migrations.
      */

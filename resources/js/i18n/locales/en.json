@@ -3336,5 +3336,11 @@
     "Creatives are the materials publishers use to promote: links, banners, copy, conditions and required disclaimers.": "Creatives are the materials publishers use to promote: links, banners, copy, conditions and required disclaimers.",
     "A lead is a visitor who completed the form and gave consent to be contacted.": "A lead is a visitor who completed the form and gave consent to be contacted.",
     "Account opened: a lead whose account has been opened. Staff set this status on the Leads page.": "Account opened: a lead whose account has been opened. Staff set this status on the Leads page.",
-    "The partner pool lists advertisers and publishers who signed up and are waiting for approval.": "The partner pool lists advertisers and publishers who signed up and are waiting for approval."
+    "The partner pool lists advertisers and publishers who signed up and are waiting for approval.": "The partner pool lists advertisers and publishers who signed up and are waiting for approval.",
+    "Confirmed outcomes will appear here when commissions are recorded.": "Confirmed outcomes will appear here when compensation is recorded.",
+    "Commission type": "Compensation type",
+    "Second commission (optional)": "Second compensation (optional)",
+    "Total commission limit": "Total compensation limit",
+    "Daily commission limit": "Daily compensation limit",
+    "Recurring Commission": "Recurring compensation"
 }

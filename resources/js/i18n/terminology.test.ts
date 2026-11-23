@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync } from 'node:fs';
+import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import en from './locales/en.json';
@@ -45,5 +47,51 @@ describe('terminology', () => {
             )
             .map(([key]) => key);
         expect(untranslated).toEqual([]);
+    });
+
+    // Text that reaches a screen through a variable or a conditional is invisible to translations.test.ts.
+    // Any sentence that still says "commission" in the source must be a translation key, or it shows untranslated.
+    it('has every source string that mentions commission as a translation key', () => {
+        const root = join(process.cwd(), 'resources', 'js');
+        const files = (dir: string): string[] =>
+            readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+                const path = join(dir, entry.name);
+                if (entry.isDirectory()) {
+                    return ['routes', 'actions', 'wayfinder', 'dev'].includes(
+                        entry.name,
+                    )
+                        ? []
+                        : files(path);
+                }
+                return /\.tsx?$/.test(entry.name) &&
+                    !/\.test\./.test(entry.name)
+                    ? [path]
+                    : [];
+            });
+        const missing: string[] = [];
+        for (const file of files(root)) {
+            readFileSync(file, 'utf8')
+                .split('\n')
+                .forEach((line, index) => {
+                    for (const match of line.matchAll(
+                        /'([^'\n]*commission[^'\n]*)'/gi,
+                    )) {
+                        const text = match[1];
+                        const identifier =
+                            /^[\w./$:{}-]*$/.test(text) && !text.includes(' ');
+                        // A plural key exists as `key_one` / `key_other`.
+                        if (
+                            !identifier &&
+                            !(text in en) &&
+                            !(`${text}_other` in en)
+                        ) {
+                            missing.push(
+                                `${relative(root, file)}:${index + 1} ${text}`,
+                            );
+                        }
+                    }
+                });
+        }
+        expect(missing).toEqual([]);
     });
 });

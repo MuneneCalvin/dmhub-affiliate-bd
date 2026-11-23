@@ -103,6 +103,10 @@ try {
         locale: 'en-US',
     });
     page.setDefaultTimeout(10000);
+    // The platform starts in Dutch; this check reads English, like a visitor who already chose it.
+    await page
+        .context()
+        .addCookies([{ name: 'locale', value: 'en', url: base }]);
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     await page.goto(`${base}/login`);
