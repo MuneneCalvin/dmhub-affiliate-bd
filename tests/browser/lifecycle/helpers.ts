@@ -129,16 +129,10 @@ export async function register(
             link.includes('/reset-password/') &&
             new URL(link).searchParams.get('email') === email,
     );
-    expect(verify, 'Verification email was generated').toBeTruthy();
+    // One email per sign-up: the password link is also the address confirmation.
+    expect(verify, 'No separate verification mail is sent').toBeUndefined();
     expect(setup, 'Password setup email was generated').toBeTruthy();
-    await page.goto(verify!);
-    expect(
-        state().users.find((u) => u.id === user.id)?.email_verified_at,
-    ).toBeTruthy();
-    await page
-        .getByRole('button', { name: /Terug naar inloggen|Back to sign in/ })
-        .click();
-    await page.waitForURL(/login/);
+    // Still signed in from registering: opening the link must show the reset form, not bounce away.
     await page.goto(setup!);
     await page.locator('#password').fill(password);
     await page.locator('#password_confirmation').fill(password);
@@ -146,6 +140,10 @@ export async function register(
         page.waitForURL(/login/),
         page.locator('button[type=submit]').click(),
     ]);
+    expect(
+        state().users.find((u) => u.id === user.id)?.email_verified_at,
+        'Choosing a password confirms the address',
+    ).toBeTruthy();
     await login(page, email);
 }
 
