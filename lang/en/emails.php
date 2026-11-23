@@ -13,4 +13,11 @@ return [
         'expires' => 'This link is valid for :minutes minutes and can be used once. Expired? Use "Forgot password" on the login page.',
         'thanks' => 'Kind regards,',
     ],
+    'approved' => [
+        'subject' => 'Your account has been approved at :app',
+        'greeting' => 'Hello :name,',
+        'body' => 'Good news: your application has been approved. You can now log in and get started.',
+        'button' => 'Log in',
+        'thanks' => 'Kind regards,',
+    ],
 ];

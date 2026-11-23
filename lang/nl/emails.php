@@ -13,4 +13,11 @@ return [
         'expires' => 'Deze link is :minutes minuten geldig en kan één keer worden gebruikt. Is hij verlopen? Kies dan "Wachtwoord vergeten" op de inlogpagina.',
         'thanks' => 'Met vriendelijke groet,',
     ],
+    'approved' => [
+        'subject' => 'Uw account is goedgekeurd bij :app',
+        'greeting' => 'Hallo :name,',
+        'body' => 'Goed nieuws: uw aanvraag is goedgekeurd. U kunt nu inloggen en aan de slag.',
+        'button' => 'Inloggen',
+        'thanks' => 'Met vriendelijke groet,',
+    ],
 ];

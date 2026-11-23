@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\NotifiesWhenApproved;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Publisher extends Model
 {
-    use HasFactory;
+    use HasFactory, NotifiesWhenApproved;
 
     protected $table = 'publishers';
 
