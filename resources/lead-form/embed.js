@@ -1,3 +1,4 @@
+/* global __CONFIG__ -- replaced with this offer's key and endpoint when the script is served */
 (function () {
     'use strict';
 
@@ -45,14 +46,14 @@
         if (fresh.referral_id) {
             try {
                 window.sessionStorage.setItem(key, JSON.stringify(fresh));
-            } catch (_) {
+            } catch {
                 /* Still works on this page. */
             }
             return fresh;
         }
         try {
             return JSON.parse(window.sessionStorage.getItem(key)) || {};
-        } catch (_) {
+        } catch {
             return {};
         }
     }
@@ -152,7 +153,7 @@
                     request.catch(function () {
                         /* The visitor's submit must never fail because of us. */
                     });
-            } catch (_) {
+            } catch {
                 /* Same: reporting is best effort. */
             }
         });
