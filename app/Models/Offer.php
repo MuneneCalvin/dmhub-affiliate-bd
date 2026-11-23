@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class Offer extends Model
 {
@@ -36,6 +37,7 @@ class Offer extends Model
         'avg_order_value',
         'earnings_per_click',
         'expires_at',
+        'lead_form_allowed_origins',
     ];
 
     protected $casts = [
@@ -44,9 +46,32 @@ class Offer extends Model
         'allowed_traffic_sources' => 'array',
         'prohibited_traffic_sources' => 'array',
         'expires_at' => 'datetime',
+        'lead_form_allowed_origins' => 'array',
     ];
 
+    // The key only travels in the dedicated lead form prop, never with the offer itself (publishers read offers too).
+    protected $hidden = ['lead_form_key', 'lead_form_allowed_origins'];
+
     protected $appends = ['commission_value_1', 'commission_value_2', 'commission_type_1', 'commission_type_2'];
+
+    protected static function booted(): void
+    {
+        static::creating(function (Offer $offer) {
+            $offer->lead_form_key ??= Str::random(32);
+        });
+        // A copy must never share the original's public embed key.
+        static::replicating(function (Offer $offer) {
+            $offer->lead_form_key = Str::random(32);
+        });
+    }
+
+    /** Invalidates every embed that uses the old key. */
+    public function rotateLeadFormKey(): string
+    {
+        $this->forceFill(['lead_form_key' => Str::random(32)])->save();
+
+        return $this->lead_form_key;
+    }
 
     public function getCommissionValue1Attribute()
     {
