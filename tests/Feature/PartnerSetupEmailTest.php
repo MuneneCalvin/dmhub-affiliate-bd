@@ -13,6 +13,7 @@ function registrationInput(array $override = []): array
 {
     return array_merge([
         'first_name' => 'Anna', 'last_name' => 'de Vries', 'role_name' => 'publisher', 'email' => 'anna@example.nl',
+        'publisher_type' => 'company', 'channels' => [['type' => 'website', 'handle' => 'https://publisher.example.test']],
         'coc_number' => '12345678', 'business_name' => 'Voorbeeld BV', 'website_name' => 'https://voorbeeld.example.nl',
         'industry' => 'retail',
     ], $override);

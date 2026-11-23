@@ -130,7 +130,8 @@ it('allows registration without websites and retains publisher business fields',
     Queue::fake();
     $this->seed(RolePermsSeeder::class);
     $this->post(route('register.store'), ['first_name' => 'Pat', 'last_name' => 'Partner', 'role_name' => $role,
-        'email' => 'partner@example.test', 'coc_number' => '12345678', 'business_name' => 'Partner BV', 'industry' => 'retail'])
+        'email' => 'partner@example.test', 'coc_number' => '12345678', 'business_name' => 'Partner BV', 'industry' => 'retail']
+        + ($role === 'publisher' ? ['publisher_type' => 'company', 'channels' => [['type' => 'instagram', 'handle' => '@partner']]] : []))
         ->assertSessionHasNoErrors();
     $user = User::where('email', 'partner@example.test')->firstOrFail();
     $profile = $role === 'publisher' ? $user->publisher : $user->advertiser;

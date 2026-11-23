@@ -19,6 +19,7 @@ import {
     Panel,
 } from '@/components/partner-workspace-ui';
 import { ProfileCard, ProfileDetails } from '@/components/profile-ui';
+import { PublisherChannels } from '@/components/publisher-channels';
 import { PublisherSettings } from '@/components/publisher-settings';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -385,7 +386,22 @@ export default function Show() {
                                                 t('Business Name'),
                                                 p.business_name,
                                             ],
+                                            [
+                                                t('Registered as'),
+                                                t(
+                                                    p.publisher_type ===
+                                                        'individual'
+                                                        ? 'Individual'
+                                                        : 'Company',
+                                                ),
+                                            ],
                                             [t('Website URL'), website],
+                                            [
+                                                t('Channels'),
+                                                <PublisherChannels
+                                                    channels={p.channels}
+                                                />,
+                                            ],
                                             [t('Network'), p.network_name],
                                             [
                                                 t('Created'),
@@ -842,6 +858,12 @@ export default function Show() {
                                 <Details
                                     rows={[
                                         [t('Website URL'), website],
+                                        [
+                                            t('Channels'),
+                                            <PublisherChannels
+                                                channels={p.channels}
+                                            />,
+                                        ],
                                         [t('Business Name'), p.business_name],
                                         [t('Industry'), p.industry],
                                         [

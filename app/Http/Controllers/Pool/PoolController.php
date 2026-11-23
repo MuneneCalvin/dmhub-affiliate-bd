@@ -184,7 +184,7 @@ class PoolController extends Controller
 
     public function showPublisher($id)
     {
-        $publisher = $this->claimable(Publisher::with('user'))->findOrFail($id);
+        $publisher = $this->claimable(Publisher::with(['user', 'channels']))->findOrFail($id);
 
         return inertia('pool/publisher-show', [
             'publisher' => $publisher,

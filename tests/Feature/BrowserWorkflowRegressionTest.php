@@ -22,6 +22,7 @@ it('returns field validation for a duplicate company number without creating an 
         'role_name' => $role, 'first_name' => 'New', 'last_name' => 'Account',
         'email' => 'duplicate-company@example.test', 'business_name' => 'New Business',
         'industry' => 'Retail', 'website_name' => 'http://127.0.0.1:8766', 'coc_number' => 'COC123456',
+        'publisher_type' => 'company', 'channels' => [['type' => 'website', 'handle' => 'http://127.0.0.1:8766']],
     ])->assertSessionHasErrors('coc_number');
 
     expect(User::count())->toBe($count);

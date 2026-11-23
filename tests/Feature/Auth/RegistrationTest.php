@@ -14,6 +14,8 @@ test('new publishers can register and wait for approval', function () {
         'first_name' => 'Test',
         'last_name' => 'Publisher',
         'role_name' => 'publisher',
+        'publisher_type' => 'company',
+        'channels' => [['type' => 'website', 'handle' => 'https://publisher.example.test']],
         'email' => 'new-publisher@example.test',
         'coc_number' => '12345678',
         'business_name' => 'Test BV',

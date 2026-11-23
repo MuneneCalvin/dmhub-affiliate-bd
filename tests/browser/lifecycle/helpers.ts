@@ -81,7 +81,15 @@ export async function fillRegistration(
     await page
         .getByLabel(advertiser ? /^Company name/ : /^Business name/)
         .fill(`Lifecycle ${role}`);
-    await page.getByLabel(/^Website URL/).fill(merchant);
+    if (advertiser) {
+        await page.getByLabel(/^Website URL/).fill(merchant);
+    } else {
+        // Publishers say where they promote instead of giving one website.
+        await page.getByRole('checkbox', { name: 'Website or blog' }).check();
+        await page
+            .getByLabel('Website or blog: URL or account name')
+            .fill(merchant);
+    }
     await page.getByLabel(/^Industry/).fill('Retail');
     await page.getByLabel(/^Chamber of Commerce number/).fill(coc);
     await page.getByRole('button', { name: 'Continue', exact: true }).click();

@@ -88,6 +88,18 @@ export const publisherSchema = z.object({
     title: z.string().optional(),
 });
 
+// Publishers sign up through their channels, so the website is not a field of its own.
+export const publisherCompanySignupSchema = publisherSchema.extend({
+    website_name: z.string().optional(),
+});
+
+// An individual has no company, industry or CoC number to give.
+export const publisherIndividualSignupSchema = z.object({
+    first_name: z.string().min(1, 'First name is required'),
+    last_name: z.string().min(1, 'Last name is required'),
+    email: z.string().min(1, 'Email Address is required'),
+});
+
 export const publisherSchemaEdit = z.object({
     id: z.number().optional(),
     first_name: z.string().min(1, 'First name is required'),

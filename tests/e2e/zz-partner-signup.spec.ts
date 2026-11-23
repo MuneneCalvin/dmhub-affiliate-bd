@@ -44,8 +44,9 @@ async function register(page: Page) {
     await page.getByRole('radio', { name: 'Publisher' }).check();
     await page.getByRole('button', { name: 'Continue' }).click();
     await page.getByLabel('Business name').fill(business);
+    await page.getByRole('checkbox', { name: 'Website or blog' }).check();
     await page
-        .getByLabel('Website URL')
+        .getByLabel('Website or blog: URL or account name')
         .fill('https://e2e-partner.example.test');
     await page.getByLabel('Industry').fill('Media');
     await page

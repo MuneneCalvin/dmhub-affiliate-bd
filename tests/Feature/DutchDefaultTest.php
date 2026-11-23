@@ -43,6 +43,7 @@ it('stores Dutch for a new partner whose browser asks for English', function () 
 
     $this->withHeader('Accept-Language', 'en-GB,en;q=0.8')->post(route('register.store'), [
         'first_name' => 'Anna', 'last_name' => 'de Vries', 'role_name' => 'publisher', 'email' => 'anna@example.nl',
+        'publisher_type' => 'company', 'channels' => [['type' => 'website', 'handle' => 'https://publisher.example.test']],
         'coc_number' => '12345678', 'business_name' => 'Voorbeeld BV', 'industry' => 'retail',
     ]);
 
