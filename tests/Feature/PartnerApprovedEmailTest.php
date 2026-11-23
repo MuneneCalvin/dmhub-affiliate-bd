@@ -102,3 +102,13 @@ it('does not email a closed account', function () {
 
     Mail::assertNothingSent();
 });
+
+it('still approves the partner when the mail provider is down', function () {
+    $partner = pendingPartner('publisher');
+    Mail::shouldReceive('to')->andThrow(new RuntimeException('smtp unreachable'));
+
+    $this->actingAs($this->operator)->post(route('networks.pool.publishers.approve', $partner->id))
+        ->assertRedirect()->assertSessionHas('success');
+
+    expect($partner->fresh()->is_verified)->toBeTruthy()->and($partner->user->fresh()->status)->toBe('A');
+});
