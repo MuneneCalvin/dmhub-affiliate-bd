@@ -18,11 +18,11 @@ class DisputeMessage extends Model
         'attachments',
         'is_internal',
     ];
-
     protected $casts = [
         'attachments' => 'array',
         'is_internal' => 'boolean',
     ];
+
 
     /**
      * Relationships
@@ -33,7 +33,6 @@ class DisputeMessage extends Model
     {
         return $this->belongsTo(Dispute::class, 'dispute_id');
     }
-
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');

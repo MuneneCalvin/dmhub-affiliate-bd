@@ -10,11 +10,8 @@ class Currency extends Model
     use HasFactory;
 
     protected $primaryKey = 'currency_code';
-
     public $incrementing = false;
-
     protected $keyType = 'string';
-
     public $timestamps = false;
 
     protected $fillable = [

@@ -11,8 +11,7 @@ class UserRoles extends Model
     use HasFactory;
 
     protected $table = 'user_roles';
-
-    protected $fillable = [
+      protected $fillable = [
         'user_id',
         'role_id',
     ];
@@ -27,4 +26,5 @@ class UserRoles extends Model
     {
         return $this->belongsTo(Role::class);
     }
+
 }
