@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-import { as, loginWith } from './helpers';
+import { as, english, loginWith } from './helpers';
 
 // Runs last (file order): it adds a pending partner the other specs do not expect.
 // Mail goes to the log driver in the e2e environment, so the emails are read back from the run's log.
@@ -14,7 +14,7 @@ let setupLink = '';
 let partner: Page;
 
 test.beforeAll(async ({ browser }) => {
-    partner = await browser.newPage();
+    partner = await browser.newPage({ storageState: english });
 });
 
 test.afterAll(async () => {
@@ -141,7 +141,7 @@ test('the approver sees the partner waiting and approves them', async ({
 test('the approved partner signs in and reaches the workspace', async ({
     browser,
 }) => {
-    const page = await browser.newPage();
+    const page = await browser.newPage({ storageState: english });
     await loginWith(page, email, password);
     await expect(page).toHaveURL(/publisher_dashboard\/dashboard/);
     await expect(

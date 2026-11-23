@@ -26,16 +26,16 @@ class CommissionService
         $type = $snapshot['type'] ?? $assignment->commission_type;
         $allowed = self::EVENT_COMMISSION_TYPES[$eventType] ?? [];
         if (! in_array($type, $allowed, true)) {
-            throw ValidationException::withMessages(['event_type' => 'Event does not match the approved commission type.']);
+            throw ValidationException::withMessages(['event_type' => 'Event does not match the approved compensation type.']);
         }
         $rate = ConversionMoney::cents($snapshot['value'] ?? $assignment->commission_value);
         $percentage = in_array($type, ['CPS', 'RevShare'], true);
         if ($percentage && $rate > 10000) {
-            throw ValidationException::withMessages(['commission' => 'Percentage commission must not exceed 100%.']);
+            throw ValidationException::withMessages(['commission' => 'Percentage compensation must not exceed 100%.']);
         }
         $cents = $percentage ? intdiv(ConversionMoney::cents($basis) * $rate + 5000, 10000) : $rate;
         if ($cents <= 0) {
-            throw ValidationException::withMessages(['commission' => 'A positive commission must be configured.']);
+            throw ValidationException::withMessages(['commission' => 'A positive compensation must be configured.']);
         }
 
         return ['type' => $type, 'rate' => $percentage ? ($snapshot['value'] ?? $assignment->commission_value) : '0.00', 'amount' => ConversionMoney::decimal($cents)];

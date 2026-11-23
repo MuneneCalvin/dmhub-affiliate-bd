@@ -48,7 +48,7 @@ const env = {
     APP_KEY: `base64:${randomBytes(32).toString('base64')}`,
     APP_URL: `http://127.0.0.1:${appPort}`,
     APP_FORCE_HTTPS: 'false',
-    APP_LOCALE: 'en',
+    APP_LOCALE: 'nl',
     DB_CONNECTION: 'sqlite',
     DB_DATABASE: database,
     DB_URL: '',

@@ -4,6 +4,7 @@ import {
     ProgressBar,
     ResourceDirectory,
 } from '@/components/app';
+import { InfoTip } from '@/components/app/info-tip';
 import { campaignStatusKey } from '@/components/campaigns';
 import { Button } from '@/components/ui/button';
 import {
@@ -99,9 +100,15 @@ export default function AdvertiserCampaignsIndex() {
             <div className="workspace-page flex flex-col gap-6">
                 <PageHeader
                     title={t('Campaigns')}
-                    description={t(
-                        'Campaigns, their offers and how much of each budget is used.',
-                    )}
+                    description={
+                        <>
+                            {t(
+                                'Campaigns, their offers and how much of each budget is used.',
+                            )}{' '}
+                            <InfoTip term="campaign" />
+                            <InfoTip term="offer" />
+                        </>
+                    }
                     breadcrumbs={[
                         {
                             title: t('Campaigns'),

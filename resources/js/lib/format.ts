@@ -1,3 +1,6 @@
+/** What new records start with; anyone can pick another currency. Matches `finance.default_currency` on the server. */
+export const DEFAULT_CURRENCY = 'EUR';
+
 import { useTranslation } from 'react-i18next';
 
 /** Locale-aware money formatter for one currency. `compact` → "€12.4K". */

@@ -24,7 +24,7 @@ An impression pixel records impressions only. It is not a conversion endpoint.
 
 ## 3. Understand click reporting
 
-**Clicks do not create a conversion or a payable CPC commission in the current implementation.** The events API accepts only `submission`, `purchase` and `action`. Do not send `event_type: click` or disguise raw visits as qualified actions.
+**Clicks do not create a conversion or a payable CPC compensation in the current implementation.** The events API accepts only `submission`, `purchase` and `action`. Do not send `event_type: click` or disguise raw visits as qualified actions.
 
 Click totals reflect recorded requests, not guaranteed unique humans. Browsers, previews and repeated visits can generate more than one request. Check the destination URL and campaign/publisher/creative counters using a fresh test link.
 

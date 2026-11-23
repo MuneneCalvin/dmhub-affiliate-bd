@@ -22,8 +22,8 @@ The storefront message appears on storefront pages. The discount is applied auto
 
 ## Check the connection
 
-Follow a fresh publisher link, add eligible products and complete a paid test order. Check the discount, order totals and commission record in Brand New Day. Test express checkout and buy-now options separately, since paths that bypass the storefront cart update may miss the promotion.
+Follow a fresh publisher link, add eligible products and complete a paid test order. Check the discount, order totals and compensation record in Brand New Day. Test express checkout and buy-now options separately, since paths that bypass the storefront cart update may miss the promotion.
 
 If no offer appears, check the store connection, published promotion, selected store, offer dates and theme app embed. If your app proxy path was changed in Shopify, the embed's proxy setting must match it. If the currency check fails, use a campaign with the store's currency; Brand New Day does not convert currencies.
 
-Refunds and cancellations appear for financial review and do not automatically reverse commissions. For purchase attribution without a customer discount, ask your website developer to follow the [custom website](custom-website.md) and [checkout campaign](checkout-campaigns.md) guides.
+Refunds and cancellations appear for financial review and do not automatically reverse compensation. For purchase attribution without a customer discount, ask your website developer to follow the [custom website](custom-website.md) and [checkout campaign](checkout-campaigns.md) guides.

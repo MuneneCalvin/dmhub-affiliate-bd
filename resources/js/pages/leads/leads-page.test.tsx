@@ -57,6 +57,55 @@ const render = (overrides: Record<string, unknown> = {}) =>
         url: '/leads',
     });
 
+describe('Leads page account opened', () => {
+    it('calls a converted lead an opened account, in the tile, the row and the actions', async () => {
+        const { user } = render({
+            leads: {
+                data: [{ ...anna, status: 'converted' }],
+                current_page: 1,
+                last_page: 1,
+                total: 1,
+                from: 1,
+                to: 1,
+            },
+            statusCounts: {
+                all: 1,
+                new: 0,
+                contacted: 0,
+                qualified: 0,
+                converted: 1,
+                lost: 0,
+            },
+        });
+
+        expect(
+            screen.getByText('Account opened', {
+                selector: '[data-slot="status-badge"]',
+            }),
+        ).toBeInTheDocument();
+        expect(screen.getAllByText('Account opened').length).toBeGreaterThan(1);
+        expect(screen.queryByText('Converted')).not.toBeInTheDocument();
+        await user.click(
+            screen.getByRole('button', { name: /More actions for/ }),
+        );
+        expect(
+            screen.queryByRole('menuitem', { name: 'Mark as converted' }),
+        ).not.toBeInTheDocument();
+    });
+
+    it('offers "Mark as account opened" for a lead that has not opened one', async () => {
+        const { user } = render();
+
+        await user.click(
+            screen.getAllByRole('button', { name: /More actions for/ })[0],
+        );
+
+        expect(
+            screen.getByRole('menuitem', { name: 'Mark as account opened' }),
+        ).toBeInTheDocument();
+    });
+});
+
 describe('Leads page', () => {
     beforeEach(() => {
         Object.values(router).forEach(

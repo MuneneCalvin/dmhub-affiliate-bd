@@ -43,7 +43,7 @@ return [
             'campaign' => 'Campaign',
             'type' => 'Type',
             'date' => 'Date',
-            'commission' => 'Commission',
+            'compensation' => 'Compensation',
             'subtotal' => 'Subtotal',
             'recovery' => 'Prior refund recovery deducted',
             'total' => 'Total',
@@ -58,6 +58,17 @@ return [
                 'paid' => 'Paid',
                 'rejected' => 'Rejected',
             ],
+        ],
+    ],
+
+    // Lead statuses as shown in exports. "converted" is an opened account.
+    'leads' => [
+        'status' => [
+            'new' => 'New',
+            'contacted' => 'Contacted',
+            'qualified' => 'Qualified',
+            'converted' => 'Account opened',
+            'lost' => 'Lost',
         ],
     ],
 ];

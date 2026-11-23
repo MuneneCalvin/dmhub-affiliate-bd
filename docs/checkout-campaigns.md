@@ -6,7 +6,7 @@ Attribute an order to a publisher and confirm a purchase only after your merchan
 
 Complete [campaign setup](campaign-setup.md). Choose CPS or RevShare for a percentage of the reported sale amount, or Flat for a fixed purchase reward. Set a positive rate on the approved publisher assignment.
 
-Agree on the commission basis: for example, merchandise after discounts, excluding shipping and taxes. Brand New Day uses the amount your backend reports; it does not calculate the store's tax, discounts or exchange rates. Event, campaign and advertiser currencies must match.
+Agree on the compensation basis: for example, merchandise after discounts, excluding shipping and taxes. Brand New Day uses the amount your backend reports; it does not calculate the store's tax, discounts or exchange rates. Event, campaign and advertiser currencies must match.
 
 ## Connected Shopify and WooCommerce stores
 
@@ -44,7 +44,7 @@ Persist this payload before the first send. A webhook retry must not change the 
 
 ## 4. Review conversions and refunds
 
-A new confirmed purchase creates one pending conversion and commission. A configured fraud policy can approve eligible commissions after its hold period; uncertain outcomes remain for manual review. Approval, invoicing and payout remain separate. An identical event replay produces the original result, not a second earning.
+A new confirmed purchase creates one pending conversion and its compensation. A configured fraud policy can approve eligible compensation after its hold period; uncertain outcomes remain for manual review. Approval, invoicing and payout remain separate. An identical event replay produces the original result, not a second earning.
 
 Refunds and cancellations are not accepted event types. Do not submit a negative purchase, mutate the original event or reuse its ID with a lower amount. Route refunds to the platform's financial review/reversal process with the original conversion/event reference. This guide does not install automatic refund synchronization.
 

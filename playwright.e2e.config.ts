@@ -21,6 +21,23 @@ export default defineConfig({
     use: {
         baseURL: process.env.APP_URL,
         locale: 'en-US',
+        // The platform starts in Dutch. These workflows were written in English, so they begin as a visitor
+        // who already chose English; zzz-dutch-euro.spec.ts opens contexts without it to prove the default.
+        storageState: {
+            cookies: [
+                {
+                    name: 'locale',
+                    value: 'en',
+                    domain: '127.0.0.1',
+                    path: '/',
+                    expires: -1,
+                    httpOnly: false,
+                    secure: false,
+                    sameSite: 'Lax',
+                },
+            ],
+            origins: [],
+        },
         viewport: { width: 1440, height: 1000 },
         actionTimeout: 10_000,
         headless: true,

@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { as, seeded, state, type Persona } from './helpers';
+import { as, english, seeded, state, type Persona } from './helpers';
 
 /**
  * Accessibility gate (phase 11). Runs as its own Playwright project after the
@@ -107,7 +107,7 @@ async function pageFor(
 ): Promise<Page> {
     const page = persona
         ? await as(browser, persona)
-        : await (await browser.newContext()).newPage();
+        : await (await browser.newContext({ storageState: english })).newPage();
     const baseURL = process.env.APP_URL!;
     await page
         .context()

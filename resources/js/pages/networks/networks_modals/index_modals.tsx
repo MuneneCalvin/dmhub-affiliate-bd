@@ -9,6 +9,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { DEFAULT_CURRENCY } from '@/lib/format';
 import { store } from '@/routes/networks';
 import { TCountry, TCurrency, TModalPropsW, TNetwork } from '@/types';
 import { TNetworkOnboardingTypes } from '@/types/schema_types';
@@ -41,7 +42,7 @@ export function AddNetworksForm({
         defaultValues: {
             network_name: '',
             owner_email: '',
-            default_currency: '',
+            default_currency: DEFAULT_CURRENCY,
             requires_prepaid_funding: false,
             default_commission_model: '',
             default_commission_value: '',

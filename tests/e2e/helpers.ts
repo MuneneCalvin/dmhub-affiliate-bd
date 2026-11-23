@@ -11,6 +11,23 @@ export const personas = {
     publisher: 'publisher@dmhub.com',
 } as const;
 export type Persona = keyof typeof personas;
+
+/** A visitor who already chose English: the platform itself starts in Dutch. */
+export const english = {
+    cookies: [
+        {
+            name: 'locale',
+            value: 'en',
+            domain: '127.0.0.1',
+            path: '/',
+            expires: -1,
+            httpOnly: false,
+            secure: false,
+            sameSite: 'Lax' as const,
+        },
+    ],
+    origins: [],
+};
 export const demoPassword = 'Abcd1234!';
 
 // Seeded by tests/Support/e2e.php.
@@ -82,7 +99,7 @@ export const state = (): State =>
 export async function as(browser: Browser, persona: Persona): Promise<Page> {
     const file = `${process.env.E2E_RUN_DIR}/session-${persona}.json`;
     if (!existsSync(file)) {
-        const context = await browser.newContext();
+        const context = await browser.newContext({ storageState: english });
         const page = await context.newPage();
         await login(page, persona);
         await context.storageState({ path: file });

@@ -1,6 +1,6 @@
 # Customer discounts & plugins
 
-Customer promotions are available in Brand New Day by default. An authorized campaign manager can connect a store and configure customer savings separately from publisher commissions. Discounts apply only after you configure and publish a promotion.
+Customer promotions are available in Brand New Day by default. An authorized campaign manager can connect a store and configure customer savings separately from publisher compensation. Discounts apply only after you configure and publish a promotion.
 
 ## Connect your store in Brand New Day
 
@@ -48,7 +48,7 @@ In **Customer promotions & stores**, select **Set up promotion** or **Edit promo
 - **Eligibility:** all products or selected products/categories, minimum spend or quantity, and supported exclusions. Enter the product/category IDs from your store. Scoped offers must select a single store; entire-catalogue offers can use multiple stores in the same currency.
 - **Timing:** start/end dates, validity after following a referral, and usage limit. An empty usage limit means unlimited uses. A specified limit applies per referral session, not per identified customer.
 - **Storefront message:** a bottom bar, popup or no message, with your text, colours and optional Dutch text. Available placeholders are `{benefit}`, `{offer_name}` and `{saving}`.
-- **Commission basis:** merchandise after discounts excluding shipping/tax, or the final paid total including shipping/tax.
+- **Compensation basis:** merchandise after discounts excluding shipping/tax, or the final paid total including shipping/tax.
 
 Select the connected stores and publish when ready. Saving a draft does not change a live promotion. Publishing applies a new version to new referrals; previously issued discounts keep their original rules and expiry.
 
@@ -62,15 +62,15 @@ Select **Disconnect** next to a store to revoke its Brand New Day connection. Pr
 
 ## Review orders and refunds
 
-Review promotion orders and refund/cancellation records in the campaign workspace. Commission confirmation still requires eligible attribution and compliance with campaign budgets, advertiser credit limits and any network prepayment requirement; a customer discount does not guarantee a publisher commission.
+Review promotion orders and refund/cancellation records in the campaign workspace. Compensation confirmation still requires eligible attribution and compliance with campaign budgets, advertiser credit limits and any network prepayment requirement; a customer discount does not guarantee a publisher compensation.
 
-Orders that cannot be confirmed appear for review. Resolve funding or eligibility issues with your account administrator. Refunds and cancellations do **not** automatically reverse commissions: use **Financial review** with the original conversion reference.
+Orders that cannot be confirmed appear for review. Resolve funding or eligibility issues with your account administrator. Refunds and cancellations do **not** automatically reverse compensation: use **Financial review** with the original conversion reference.
 
 ## Test before inviting shoppers
 
 - Follow a fresh publisher link and confirm the intended message and discount appear.
 - Test eligible and excluded products, minimum values, competing coupons and expired offers.
-- Complete a paid order and check the store totals and commission basis in Brand New Day.
+- Complete a paid order and check the store totals and compensation basis in Brand New Day.
 - Test your enabled checkout and express-payment options, mobile layouts and cached pages.
 - Check an unpaid order, refund and cancellation, and confirm the review workflow.
 

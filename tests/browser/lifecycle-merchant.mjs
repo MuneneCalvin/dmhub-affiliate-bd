@@ -56,7 +56,7 @@ createServer(async (req, res) => {
                         external_id: `submission:${randomUUID()}`,
                         ...data.referral,
                         amount: '0.00',
-                        currency: 'USD',
+                        currency: 'EUR',
                         occurred_at: new Date().toISOString(),
                         successful: true,
                         spam_checks: {
@@ -80,7 +80,7 @@ createServer(async (req, res) => {
                         external_id: `browser-order-${++sequence}`,
                         referral_id: data.referral_id,
                         amount: '100.00',
-                        currency: 'USD',
+                        currency: 'EUR',
                         occurred_at: new Date().toISOString(),
                     };
                     events.set('purchase', payload);

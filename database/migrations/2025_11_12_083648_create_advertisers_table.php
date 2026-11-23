@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      */
@@ -14,15 +15,15 @@ return new class extends Migration {
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('network_id')
-            ->nullable()
-            ->constrained('networks')
-            ->onDelete('cascade');
+                ->nullable()
+                ->constrained('networks')
+                ->onDelete('cascade');
             $table->string('business_name', 200);
             $table->string('website_name', 100);
             $table->string('industry', 200);
             $table->decimal('total_budget', 20, 8)->default(0);
             $table->decimal('available_budget', 20, 2)->default(0);
-            $table->string('currency', 3)->default('USD');
+            $table->string('currency', 3)->default('EUR');
             $table->boolean('auto_approve_publishers')->default(false);
             $table->boolean('require_publisher_approval')->default(false);
             $table->boolean('is_verified')->default(false);
@@ -39,6 +40,7 @@ return new class extends Migration {
             $table->unique(['id', 'network_id'], 'advertisers_advertiser_network_unique');
         });
     }
+
     /**
      * Reverse the migrations.
      */

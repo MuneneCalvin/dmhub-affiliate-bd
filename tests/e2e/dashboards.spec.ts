@@ -14,7 +14,7 @@ const home: Record<
         path: '/network/dashboard',
         heading: 'Network overview',
         metrics: [
-            'Net commissions',
+            'Net compensation',
             'Clicks',
             'Approved conversions',
             'Active campaigns',

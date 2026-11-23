@@ -56,7 +56,8 @@ export const STATUS_MAP: Record<string, StatusEntry> = {
     // leads
     contacted: { tone: 'info', label: 'Contacted' },
     qualified: { tone: 'warning', label: 'Qualified' },
-    converted: { tone: 'success', label: 'Converted' },
+    // A lead whose account has been opened (staff set this on the Leads page).
+    converted: { tone: 'success', label: 'Account opened' },
     lost: { tone: 'neutral', label: 'Lost' },
     // brand
     not_applied: { tone: 'brand', label: 'Not applied' },

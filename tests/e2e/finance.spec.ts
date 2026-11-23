@@ -30,7 +30,7 @@ test('publisher switches currency and sees separate totals', async ({
     await expect(history).toContainText(seeded.dollarCampaign);
     await expect(history).not.toContainText(seeded.runningCampaign);
     const breakdown = page.getByRole('region', {
-        name: 'Commission breakdown',
+        name: 'Compensation breakdown',
     });
     await expect(breakdown).toContainText('$');
     await expect(breakdown).not.toContainText('€');

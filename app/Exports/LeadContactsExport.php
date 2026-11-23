@@ -5,6 +5,7 @@ namespace App\Exports;
 use App\Models\LeadContact;
 use App\Models\User;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Lang;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -34,8 +35,16 @@ class LeadContactsExport implements FromCollection, ShouldAutoSize, WithHeadings
 
         return array_map($safe, [
             $lead->first_name, $lead->last_name, $lead->email, $lead->phone, $lead->company, $lead->job_title,
-            $lead->city, $lead->country, $lead->status, $lead->campaign?->name, $lead->offer?->name, $lead->notes,
+            $lead->city, $lead->country, $this->statusLabel($lead->status), $lead->campaign?->name, $lead->offer?->name, $lead->notes,
             $lead->created_at?->toDateTimeString(),
         ]);
+    }
+
+    /** The status in the reader's language; "converted" is an opened account. */
+    private function statusLabel(?string $status): ?string
+    {
+        $key = 'messages.leads.status.'.$status;
+
+        return $status !== null && Lang::has($key) ? __($key) : $status;
     }
 }

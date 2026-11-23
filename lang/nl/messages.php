@@ -43,7 +43,7 @@ return [
             'campaign' => 'Campagne',
             'type' => 'Type',
             'date' => 'Datum',
-            'commission' => 'Commissie',
+            'compensation' => 'Vergoeding',
             'subtotal' => 'Subtotaal',
             'recovery' => 'Eerdere terugboeking van restitutie afgetrokken',
             'total' => 'Totaal',
@@ -58,6 +58,17 @@ return [
                 'paid' => 'Betaald',
                 'rejected' => 'Afgewezen',
             ],
+        ],
+    ],
+
+    // Lead statuses as shown in exports. "converted" is an opened account.
+    'leads' => [
+        'status' => [
+            'new' => 'Nieuw',
+            'contacted' => 'Gecontacteerd',
+            'qualified' => 'Gekwalificeerd',
+            'converted' => 'Account geopend',
+            'lost' => 'Verloren',
         ],
     ],
 ];

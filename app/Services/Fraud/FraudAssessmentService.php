@@ -107,7 +107,7 @@ class FraudAssessmentService
                 app(LedgerService::class)->lock($claim->network_id);
                 $assessment = $claim->fresh();
                 if ($assessment->status === 'running' && $assessment->attempts === $claim->attempts) {
-                    $assessment->update(['status' => 'error', 'last_error' => 'Assessment failed; commission remains pending.',
+                    $assessment->update(['status' => 'error', 'last_error' => 'Assessment failed; compensation remains pending.',
                         'next_attempt_at' => now()->addSeconds(min(3600, 60 * (2 ** $assessment->attempts)))]);
                     Log::error('Fraud assessment failed.', ['assessment_id' => $assessment->id, 'attempt' => $assessment->attempts, 'exception_type' => $exception::class]);
                 }

@@ -11,7 +11,7 @@ class PublicDocumentation
     {
         return [
             'overview' => ['title' => 'Documentation', 'group' => 'Start here', 'description' => 'Set up campaigns and connect your website to Brand New Day.'],
-            'campaign-setup' => ['title' => 'Campaign setup', 'group' => 'Start here', 'description' => 'Configure offers, commissions, publishers and tracking.'],
+            'campaign-setup' => ['title' => 'Campaign setup', 'group' => 'Start here', 'description' => 'Configure offers, compensation, publishers and tracking.'],
             'form-campaigns' => ['title' => 'Form submission campaigns', 'group' => 'Campaigns', 'description' => 'Track successful submissions without storing customer data.'],
             'lead-submissions' => ['title' => 'Lead submissions', 'group' => 'Campaigns', 'description' => 'Embed a form you built elsewhere, or report submissions with the contact details you collected.'],
             'checkout-campaigns' => ['title' => 'Checkout campaigns', 'group' => 'Campaigns', 'description' => 'Attribute paid orders and confirm purchase conversions.'],

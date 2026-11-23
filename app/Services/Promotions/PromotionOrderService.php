@@ -80,7 +80,7 @@ class PromotionOrderService
         $basis = $c['commission_basis'] === 'net_order' ? $data['total']
             : ConversionMoney::decimal(ConversionMoney::cents($data['subtotal']) - ConversionMoney::cents($data['discount']) - ($data['taxes_included'] ? ConversionMoney::cents($data['tax']) - ConversionMoney::cents($data['shipping_tax']) : 0));
         if (ConversionMoney::cents($basis) === 0) {
-            $order->update(['status' => 'no_commission', 'review_reason' => 'Zero commissionable amount.']);
+            $order->update(['status' => 'no_commission', 'review_reason' => 'No amount eligible for compensation.']);
 
             return;
         }
@@ -101,7 +101,7 @@ class PromotionOrderService
             ], $request);
             $order->update(['status' => 'confirmed', 'conversion_event_id' => $result['event']->id, 'review_reason' => null]);
         } catch (ValidationException|HttpExceptionInterface $e) {
-            $order->update(['status' => 'needs_review', 'review_reason' => 'Commission eligibility or funding requires review.']);
+            $order->update(['status' => 'needs_review', 'review_reason' => 'Compensation eligibility or funding requires review.']);
         }
     }
 

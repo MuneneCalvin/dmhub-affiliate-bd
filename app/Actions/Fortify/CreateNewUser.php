@@ -56,6 +56,7 @@ class CreateNewUser implements CreatesNewUsers
                     'user_id' => $user->id,
                     'business_name' => $input['business_name'],
                     'status' => 'P',
+                    'currency' => config('finance.default_currency'),
                     'website_name' => $input['website_name'] ?? null,
                     'industry' => $input['industry'],
                     'coc_number' => $input['coc_number'],
