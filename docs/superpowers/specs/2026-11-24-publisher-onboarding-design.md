@@ -22,7 +22,7 @@ Client points 3.1–3.3: company name, CoC number and industry are not relevant 
 - Breaking tracking, applications or payouts for existing publishers.
 
 ## Constraints
-- `publishers.website_url` stays `NOT NULL` (changing it on SQLite rebuilds the table and drops its triggers, as found in part 2); individuals with no website store an empty string, which every screen already treats as "no website".
+- `publishers.website_url` is already nullable (an earlier repair migration); individuals with no website store `NULL`, as publishers registered without a website already do.
 - `coc_number` stays unique where present; individuals store `NULL` (several allowed).
 - Names shown in lists already fall back from business name to the contact's name; individuals rely on that.
 - Dutch and English text for every label.
