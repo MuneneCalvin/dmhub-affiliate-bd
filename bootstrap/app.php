@@ -7,6 +7,7 @@ use App\Http\Middleware\EnsureCampaignManager;
 use App\Http\Middleware\EnsureNetworkOwner;
 use App\Http\Middleware\EnsurePublisher;
 use App\Http\Middleware\EnsureSuperAdmin;
+use App\Http\Middleware\ForceJsonResponse;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RedirectByRole;
@@ -19,6 +20,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
+use Illuminate\Support\Facades\Route;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -26,6 +28,13 @@ return Application::configure(basePath: dirname(__DIR__))
         api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
+        then: function () {
+            // Public lead form traffic stays outside the web (session, CSRF) and api (blanket CORS) groups:
+            // only the offer's own origin may read an answer.
+            Route::middleware([
+                ForceJsonResponse::class, 'throttle:30,1,lead-forms', 'throttle:lead-form-key',
+            ])->group(base_path('routes/lead-forms.php'));
+        },
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state', 'locale']);
