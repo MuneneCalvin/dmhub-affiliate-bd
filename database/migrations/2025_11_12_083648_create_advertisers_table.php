@@ -22,7 +22,7 @@ return new class extends Migration {
             $table->string('industry', 200);
             $table->decimal('total_budget', 20, 8)->default(0);
             $table->decimal('available_budget', 20, 2)->default(0);
-            $table->string('currency', 3)->default('USD');
+            $table->string('currency', 3)->default('EUR');
             $table->boolean('auto_approve_publishers')->default(false);
             $table->boolean('require_publisher_approval')->default(false);
             $table->boolean('is_verified')->default(false);

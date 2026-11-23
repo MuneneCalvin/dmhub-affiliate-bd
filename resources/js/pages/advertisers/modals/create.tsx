@@ -6,6 +6,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { DEFAULT_CURRENCY } from '@/lib/format';
 
 import {
     EmailField,
@@ -47,7 +48,8 @@ const CreateAdvertiser = ({
         last_name: '',
         email: '',
         total_budget: '',
-        currency_code: extingNetwork?.network?.default_currency ?? '',
+        currency_code:
+            extingNetwork?.network?.default_currency ?? DEFAULT_CURRENCY,
         network_id: extingNetwork ? String(extingNetwork?.network_id) : '',
     });
 

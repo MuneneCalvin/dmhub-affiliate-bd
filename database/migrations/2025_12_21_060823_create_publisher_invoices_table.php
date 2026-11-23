@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignId('publisher_id')->constrained('publishers')->onDelete('cascade');
             $table->foreignId('network_id')->constrained('networks')->onDelete('cascade');
             $table->decimal('amount', 20, 2);
-            $table->string('currency', 3)->default('USD');
+            $table->string('currency', 3)->default('EUR');
             $table->date('period_start');
             $table->date('period_end');
             $table->enum('status', ['pending', 'approved', 'processing', 'paid', 'rejected'])->default('pending');

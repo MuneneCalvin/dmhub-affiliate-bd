@@ -25,7 +25,7 @@ return new class extends Migration
             $table->decimal('amount_credited', 20, 4)->default(0);
             $table->decimal('total_amount', 20, 4)->default(0);
             $table->string('status');
-            $table->string('currency', 3)->default('USD');
+            $table->string('currency', 3)->default('EUR');
             $table->timestamps();
 
             $table->index(['network_id', 'created_at']);

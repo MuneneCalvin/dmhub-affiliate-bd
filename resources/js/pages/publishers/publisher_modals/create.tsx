@@ -12,6 +12,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { useLanguage } from '@/context/language-context';
+import { DEFAULT_CURRENCY } from '@/lib/format';
 import { store } from '@/routes/publishers';
 import { PublisherPagesTypes, TCurrency, TNetwork } from '@/types';
 import { TPublisherOnboardingTypes } from '@/types/schema_types';
@@ -41,7 +42,8 @@ const CreatePublisherForm = ({
             last_name: '',
             email: '',
             title: '',
-            currency_code: extingNetwork?.network?.default_currency ?? '',
+            currency_code:
+                extingNetwork?.network?.default_currency ?? DEFAULT_CURRENCY,
             network_id: extingNetwork ? String(extingNetwork?.network_id) : '',
         });
     const validateStepOne = () => {
