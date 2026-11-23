@@ -1,21 +1,28 @@
 <x-mail::message>
-# Welcome to {{ config('app.name') }}
+# {{ __('emails.credentials.subject', ['app' => config('app.name')]) }}
 
-Hello {{ $user->first_name }},
+{{ __('emails.credentials.greeting', ['name' => $user->first_name]) }}
 
-Your account has been created successfully @if($networkName) for **{{ $networkName }}** @endif.
+@if($networkName)
+{{ __('emails.credentials.created_network', ['app' => config('app.name'), 'network' => $networkName]) }}
+@else
+{{ __('emails.credentials.created', ['app' => config('app.name')]) }}
+@endif
 
-Choose your password using the secure setup link below.
+@if($user->status === 'P')
+{{ __('emails.credentials.pending') }}
 
-**Email:** {{ $user->email }}
+@endif
+{{ __('emails.credentials.choose') }}
 
+**{{ __('emails.credentials.email') }}:** {{ $user->email }}
 
 <x-mail::button :url="$setupUrl">
-Set Up Password
+{{ __('emails.credentials.button') }}
 </x-mail::button>
 
-This link expires in {{ $expiresInMinutes }} minutes and can be used once. After signing in, verify your email to access your workspace.
+{{ __('emails.credentials.expires', ['minutes' => $expiresInMinutes]) }}
 
-Thanks,<br>
+{{ __('emails.credentials.thanks') }}<br>
 {{ config('app.name') }}
 </x-mail::message>

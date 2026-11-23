@@ -29,7 +29,7 @@ class UserCredentialsMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Set up your account',
+            subject: __('emails.credentials.subject', ['app' => config('app.name')]),
         );
     }
 

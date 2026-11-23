@@ -2,7 +2,6 @@
 
 namespace App\Actions\Fortify;
 
-use App\Jobs\SendUserCredentialsJob;
 use App\Models\Advertiser;
 use App\Models\Publisher;
 use App\Models\User;
@@ -72,8 +71,6 @@ class CreateNewUser implements CreatesNewUsers
                     'coc_number' => $input['coc_number'],
                 ]);
             }
-
-            SendUserCredentialsJob::dispatch($user)->afterCommit();
 
             return $user;
         });
