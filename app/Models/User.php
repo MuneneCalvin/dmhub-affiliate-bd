@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Jobs\SendUserCredentialsJob;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -93,6 +94,15 @@ class User extends Authenticatable implements MustVerifyEmail
                 $user->closed_at = $user->getOriginal('closed_at');
             }
         });
+    }
+
+    /**
+     * Partners prove their address by choosing a password from the emailed link, so that one email replaces
+     * the framework's separate verification mail (registration and "resend" both land here).
+     */
+    public function sendEmailVerificationNotification(): void
+    {
+        SendUserCredentialsJob::dispatch($this)->afterCommit();
     }
 
     public function generateUsername(): string

@@ -9,6 +9,7 @@ use App\Models\Offer;
 use App\Models\User;
 use App\Services\DashboardRevenueService;
 use App\Services\PartnerReportingService;
+use App\Support\PendingPartners;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
@@ -70,6 +71,7 @@ class AdminDashboardController extends Controller
         return Inertia::render('admin_dashboard/dashboard', [
             'stats' => $stats,
             'recentNetworks' => $recentNetworks,
+            'pendingPartners' => PendingPartners::counts(auth()->user()),
             'pendingNetworks' => $pendingNetworks,
             'pendingUsers' => $pendingUsers,
             'performance' => $performance,

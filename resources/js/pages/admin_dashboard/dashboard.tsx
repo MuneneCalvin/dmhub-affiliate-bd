@@ -11,6 +11,10 @@ import {
     type RevenueSeries,
 } from '@/components/dashboard/revenue-chart';
 import { partnerMoney } from '@/components/partner-money';
+import {
+    PendingPartnersCard,
+    type PendingPartnerCounts,
+} from '@/components/pending-partners-card';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/status-badge';
 import AppLayout from '@/layouts/app-layout';
@@ -36,6 +40,7 @@ import {
 import { useTranslation } from 'react-i18next';
 
 type AdminDashboardProps = SharedData & {
+    pendingPartners?: PendingPartnerCounts;
     stats: Record<string, number>;
     pendingUsers: {
         id: number;
@@ -70,6 +75,7 @@ const AdminDashboard = () => {
         auth,
         stats = {},
         pendingUsers = [],
+        pendingPartners,
         performance,
         dailyRevenue = [],
         networkBreakdown = [],
@@ -123,6 +129,7 @@ const AdminDashboard = () => {
                         </>
                     }
                 />
+                <PendingPartnersCard counts={pendingPartners} />
 
                 <section
                     aria-label={t('Platform metrics')}

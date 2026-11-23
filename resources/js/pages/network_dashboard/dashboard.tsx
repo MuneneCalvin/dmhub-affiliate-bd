@@ -16,6 +16,10 @@ import {
     type RevenueSeries,
 } from '@/components/dashboard/revenue-chart';
 import { partnerMoney } from '@/components/partner-money';
+import {
+    PendingPartnersCard,
+    type PendingPartnerCounts,
+} from '@/components/pending-partners-card';
 import { Button } from '@/components/ui/button';
 import {
     Select,
@@ -51,6 +55,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 type NetworkDashboardProps = SharedData & {
+    pendingPartners?: PendingPartnerCounts;
     network: {
         id: number;
         network_name: string;
@@ -116,6 +121,7 @@ const NetworkDashboard = () => {
         budgets = [],
         pendingApplications = [],
         pendingApplicationsCount = 0,
+        pendingPartners,
     } = usePage<NetworkDashboardProps>().props;
     const can = (permission: string) =>
         checkPermission(auth.permissions, permission);
@@ -290,6 +296,7 @@ const NetworkDashboard = () => {
                         </>
                     }
                 />
+                <PendingPartnersCard counts={pendingPartners} />
 
                 <section
                     aria-label={t('Headline metrics')}

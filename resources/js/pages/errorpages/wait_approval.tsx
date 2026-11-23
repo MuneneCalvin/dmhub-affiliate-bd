@@ -50,7 +50,7 @@ export default function WaitForApproval() {
                                       'The network did not approve this account, so you cannot open the workspace.',
                                   )
                                 : t(
-                                      "The network reviews new partners before they can start. We'll email you as soon as you're in.",
+                                      "Check your inbox for the email with your password link, then wait while we review your application. We'll email you as soon as you're in.",
                                   )}
                         </p>
                         <p className="mt-2">

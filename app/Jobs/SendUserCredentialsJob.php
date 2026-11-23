@@ -31,7 +31,8 @@ class SendUserCredentialsJob implements ShouldQueue
         // Create the expiring, one-use token only while delivering the message.
         $token = Password::broker()->createToken($this->user);
         $setupUrl = url(route('password.reset', ['token' => $token, 'email' => $this->user->email], false));
-        Mail::to($this->user->email)->send(
+        // The partner reads this in their own language, not the language of whoever triggered it.
+        Mail::to($this->user->email)->locale($this->user->locale ?: config('app.locale'))->send(
             new UserCredentialsMail($this->user, $setupUrl, $this->networkName)
         );
     }

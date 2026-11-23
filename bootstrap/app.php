@@ -10,6 +10,7 @@ use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\ForceJsonResponse;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\LogOutForPasswordLink;
 use App\Http\Middleware\RedirectByRole;
 use App\Http\Middleware\RedirectIfPublisher;
 use App\Http\Middleware\RequireBusinessPermission;
@@ -46,6 +47,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append(TrustCloudflareClientIp::class);
 
         $middleware->web(append: [
+            LogOutForPasswordLink::class,
             HandleAppearance::class,
             SetLocale::class,
             SecurityHeaders::class,

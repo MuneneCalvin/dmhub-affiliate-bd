@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\NotifiesWhenApproved;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
@@ -10,6 +11,7 @@ use Illuminate\Validation\ValidationException;
 class Advertiser extends Model
 {
     use HasFactory;
+    use NotifiesWhenApproved;
 
     protected $table = 'advertisers';
 

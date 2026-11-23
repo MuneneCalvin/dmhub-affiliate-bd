@@ -10,6 +10,7 @@ use App\Models\Offer;
 use App\Models\Publisher;
 use App\Services\DashboardRevenueService;
 use App\Services\PartnerReportingService;
+use App\Support\PendingPartners;
 use App\Support\Tenancy;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -45,7 +46,7 @@ class NetworkDashboardController extends Controller
         ];
         $pendingPublishers = Publisher::where('network_id', $network->id)
             ->whereHas('user', fn ($q) => $q->where('status', 'P'))
-            ->with('user:id,first_name,last_name,email,created_at')
+            ->with('user:id,first_name,last_name,email')
             ->latest()
             ->take(5)
             ->get();
@@ -105,6 +106,7 @@ class NetworkDashboardController extends Controller
 
         return Inertia::render('network_dashboard/dashboard', [
             'network' => $network,
+            'pendingPartners' => PendingPartners::counts(auth()->user()),
             'stats' => $stats,
             'pendingPublishers' => $pendingPublishers,
             'pendingAdvertisers' => $pendingAdvertisers,

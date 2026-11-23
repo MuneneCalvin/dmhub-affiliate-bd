@@ -21,8 +21,10 @@ class ResetUserPassword implements ResetsUserPasswords
             'password' => $this->passwordRules(),
         ])->validate();
 
+        // A valid reset token went to this address, so choosing a password proves it is the partner's own.
         $user->forceFill([
             'password' => $input['password'],
+            'email_verified_at' => $user->email_verified_at ?? now(),
         ])->save();
     }
 }
