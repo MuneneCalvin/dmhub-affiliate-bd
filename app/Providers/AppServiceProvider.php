@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use Dedoc\Scramble\Scramble;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Routing\Route;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
@@ -24,6 +26,8 @@ class AppServiceProvider extends ServiceProvider
         if ($this->app->environment('production') && str_starts_with((string) config('app.url'), 'https://')) {
             URL::forceScheme('https');
         }
+        // Public lead forms: one key can only carry so much traffic, whoever sends it.
+        RateLimiter::for('lead-form-key', fn ($request) => Limit::perMinute(600)->by('lead-form-key:'.$request->route('key')));
         Scramble::configure()
             ->routes(function (Route $route) {
                 return ! in_array('GET', $route->methods());

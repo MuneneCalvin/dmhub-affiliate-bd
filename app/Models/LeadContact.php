@@ -14,10 +14,23 @@ class LeadContact extends Model
     protected $fillable = [
         'conversion_event_id', 'advertiser_id', 'network_id', 'campaign_id', 'offer_id', 'publisher_campaign_id',
         'first_name', 'last_name', 'email', 'phone', 'company', 'job_title', 'city', 'country',
-        'custom_fields', 'status', 'notes',
+        'custom_fields', 'status', 'notes', 'consented_at',
     ];
 
-    protected $casts = ['custom_fields' => 'array'];
+    protected $casts = ['custom_fields' => 'array', 'consented_at' => 'datetime'];
+
+    protected static function booted(): void
+    {
+        static::saving(function (LeadContact $lead) {
+            $lead->email_hash = self::hashEmail($lead->email);
+        });
+    }
+
+    /** One contact per campaign and email, however the address was typed. */
+    public static function hashEmail(string $email): string
+    {
+        return hash('sha256', mb_strtolower(trim($email)));
+    }
 
     public function event(): BelongsTo
     {

@@ -9,6 +9,7 @@ use App\Models\Offer;
 use App\Models\OfferCommission;
 use App\Models\PublisherCampaigns;
 use App\Support\MediaStorage;
+use App\Support\TrackingUrl;
 use App\Support\TrackingUrlTemplate;
 use Exception;
 use Illuminate\Http\Request;
@@ -70,6 +71,7 @@ class OffersController extends Controller
                 'offer' => $offer,
                 'commissions' => CommissionType::all(),
                 'hasPublishers' => $hasPublishers,
+                'leadForm' => $this->leadFormProps($offer),
                 'materials' => $offer->creatives()->latest()->paginate(12, ['*'], 'materials_page')->appends(['tab' => 'materials']),
             ]);
         } catch (Exception $e) {
@@ -88,7 +90,40 @@ class OffersController extends Controller
         return inertia('advertisercampaigns/offers/edit', [
             'offer' => $offer,
             'commissions' => CommissionType::all(),
+            'leadForm' => $this->leadFormProps($offer),
         ]);
+    }
+
+    /** The embed settings only reach people who manage the offer; the key never travels with the offer itself. */
+    private function leadFormProps(Offer $offer): array
+    {
+        return [
+            'key' => $offer->lead_form_key,
+            'snippet' => '<script async src="'.TrackingUrl::to('/lf/'.$offer->lead_form_key.'.js').'"></script>',
+            'destinationHost' => parse_url((string) $offer->preview_url, PHP_URL_HOST) ?: null,
+            'allowedOrigins' => $offer->lead_form_allowed_origins ?? [],
+        ];
+    }
+
+    public function updateLeadForm(Request $request, Offer $offer)
+    {
+        $this->authorizeOffer($offer);
+        $data = $request->validate([
+            'allowed_origins' => 'sometimes|array|max:10',
+            'allowed_origins.*' => ['string', 'max:255', 'regex:#^https?://[a-z0-9]([a-z0-9.-]*[a-z0-9])?(:\d{1,5})?/?$#i'],
+            'rotate' => 'sometimes|boolean',
+        ]);
+
+        if (array_key_exists('allowed_origins', $data)) {
+            $offer->update(['lead_form_allowed_origins' => array_values(array_unique(
+                array_map(fn (string $origin) => strtolower(rtrim($origin, '/')), $data['allowed_origins'])
+            ))]);
+        }
+        if (! empty($data['rotate'])) {
+            $offer->rotateLeadFormKey();
+        }
+
+        return back()->with('success', 'Lead form settings saved.');
     }
 
     public function update(Request $request, Offer $offer)

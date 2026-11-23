@@ -1,6 +1,7 @@
 import { DetailList, PageHeader, SectionCard } from '@/components/app';
 import { ConfirmDialog } from '@/components/app/confirm-dialog';
 import { CommissionPill, offerStatusKey } from '@/components/campaigns';
+import { LeadFormSettings } from '@/components/lead-form-snippet';
 import { OfferIntegration } from '@/components/offer-integration';
 import {
     OfferMaterials,
@@ -44,6 +45,7 @@ type Props = SharedData & {
     };
     hasPublishers: boolean;
     materials: MaterialsPage;
+    leadForm?: LeadFormSettings;
 };
 
 function Chips({
@@ -79,7 +81,8 @@ function Chips({
 
 export default function OfferShowPage() {
     const { t } = useTranslation();
-    const { auth, offer, hasPublishers, materials } = usePage<Props>().props;
+    const { auth, offer, hasPublishers, materials, leadForm } =
+        usePage<Props>().props;
     const url = usePage().url;
     const can = (permission: string) =>
         Boolean(
@@ -399,7 +402,7 @@ export default function OfferShowPage() {
                         />
                     </TabsContent>
                     <TabsContent value="integration">
-                        <OfferIntegration offer={offer} />
+                        <OfferIntegration offer={offer} leadForm={leadForm} />
                     </TabsContent>
                 </Tabs>
             </div>
