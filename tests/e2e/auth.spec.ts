@@ -97,7 +97,10 @@ test('registering as a publisher lands on the waiting-approval page', async ({
     await page.getByRole('button', { name: 'Continue' }).click();
 
     await page.getByLabel('Business name').fill(`E2E Media ${stamp}`);
-    await page.getByLabel('Website URL').fill('https://e2e-media.example.test');
+    await page.getByRole('checkbox', { name: 'Website or blog' }).check();
+    await page
+        .getByLabel('Website or blog: URL or account name')
+        .fill('https://e2e-media.example.test');
     await page.getByLabel('Industry').fill('Media');
     await page
         .getByLabel('Chamber of Commerce number')
