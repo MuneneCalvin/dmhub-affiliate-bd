@@ -1,12 +1,13 @@
 <?php
 
-use App\Models\User;
 use App\Mail\UserCredentialsMail;
+use App\Models\User;
 use Illuminate\Auth\Notifications\VerifyEmail;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 // Partners confirm their address by choosing a password from one setup email, not a separate verification mail.
 test('sends the setup email instead of a separate verification notification', function () {

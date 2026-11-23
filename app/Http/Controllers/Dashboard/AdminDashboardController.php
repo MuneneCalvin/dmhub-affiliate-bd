@@ -9,8 +9,8 @@ use App\Models\Offer;
 use App\Models\User;
 use App\Services\DashboardRevenueService;
 use App\Services\PartnerReportingService;
-use Illuminate\Support\Facades\DB;
 use App\Support\PendingPartners;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class AdminDashboardController extends Controller
