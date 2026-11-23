@@ -83,6 +83,18 @@ class ConversionEventService
         $advertiserId = (int) $request->attributes->get('postback_advertiser_id');
         $credentialId = (int) $request->attributes->get('postback_credential_id');
         abort_unless($advertiserId && $credentialId, 401);
+
+        return $this->record($advertiserId, $credentialId, $data, $request);
+    }
+
+    /** A public lead form attests the submission with its offer key instead of a merchant credential. */
+    public function confirmFromLeadForm(int $advertiserId, array $data, Request $request): array
+    {
+        return $this->record($advertiserId, null, $data, $request);
+    }
+
+    private function record(int $advertiserId, ?int $credentialId, array $data, Request $request): array
+    {
         SubmissionSpamCheck::validate($data);
         $click = $this->resolveClick($data, $advertiserId);
         $occurredAt = CarbonImmutable::parse($data['occurred_at'])->utc();
@@ -107,9 +119,11 @@ class ConversionEventService
         return DB::transaction(function () use ($data, $request, $click, $occurredAt, $amount, $currency, $hash, $advertiserId, $credentialId, $canonical) {
             $assignment = $this->lockContext($click);
             // Recheck authentication after waiting for the advertiser lock.
-            $credential = PostbackCredential::whereKey($credentialId)->where('advertiser_id', $advertiserId)
-                ->whereNull('revoked_at')->where('expires_at', '>', now())->first();
-            abort_unless($credential, 401);
+            if ($credentialId !== null) {
+                $credential = PostbackCredential::whereKey($credentialId)->where('advertiser_id', $advertiserId)
+                    ->whereNull('revoked_at')->where('expires_at', '>', now())->first();
+                abort_unless($credential, 401);
+            }
             $advertiser = $assignment->campaign->advertiser;
             abort_unless($advertiser->status === 'A' && $advertiser->user?->status === 'A'
                 && $advertiser->user?->closed_at === null && $advertiser->user?->hasVerifiedEmail()
@@ -134,7 +148,7 @@ class ConversionEventService
                 'click_id' => $click->id, 'event_type' => $data['event_type'],
                 'external_id' => $data['external_id'], 'payload_hash' => $hash, 'occurred_at' => $occurredAt,
                 'amount' => $amount, 'currency' => $currency,
-                'fraud_signals' => ['source' => 'authenticated_merchant', 'spam_checks' => $canonical['spam_checks'] ?? null],
+                'fraud_signals' => ['source' => $credentialId === null ? 'lead_form' : 'authenticated_merchant', 'spam_checks' => $canonical['spam_checks'] ?? null],
                 'attribution' => [
                     'policy' => 'last_eligible_referral_v1', 'reason' => 'merchant_confirmed_referral',
                     'referral_id' => $click->referral_id, 'publisher_id' => $click->publisher_id,
