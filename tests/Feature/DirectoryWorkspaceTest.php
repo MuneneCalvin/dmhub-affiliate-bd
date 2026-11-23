@@ -41,7 +41,8 @@ function directoryFixture(int $count = 2): array
 
 function directoryOwner(array $f, string $role = 'network_owner'): User
 {
-    $user = User::factory()->create(['is_network' => true]);
+    // These assertions read the English flash messages, so the reviewer says so explicitly.
+    $user = User::factory()->create(['is_network' => true, 'locale' => 'en']);
     UserNetworks::create(['user_id' => $user->id, 'network_id' => $f['network']->id]);
     $user->assignRoleById(Role::findByName($role)->id);
 
