@@ -68,6 +68,25 @@ describe('NavMain', () => {
     });
 });
 
+describe('NavMain pending partners', () => {
+    it('badges the partner pool with the partners waiting for approval', () => {
+        const poolGroups = buildNavigation({ is_network: true }, [
+            ...networkPermissions,
+            'access_pool',
+        ]);
+        renderWithApp(
+            <SidebarProvider>
+                <NavMain groups={poolGroups} counts={{ pendingPartners: 4 }} />
+            </SidebarProvider>,
+            { url: '/network/dashboard' },
+        );
+
+        expect(
+            screen.getByRole('link', { name: /Partner pool/ }),
+        ).toHaveAccessibleName('Partner pool 4 waiting');
+    });
+});
+
 describe('AppSidebar', () => {
     it('builds the menu from the shared user, permissions and counts', () => {
         renderWithApp(

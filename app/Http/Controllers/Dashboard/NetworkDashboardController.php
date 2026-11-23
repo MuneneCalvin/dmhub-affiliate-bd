@@ -13,6 +13,7 @@ use App\Services\PartnerReportingService;
 use App\Support\Tenancy;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Support\PendingPartners;
 use Inertia\Inertia;
 
 class NetworkDashboardController extends Controller
@@ -105,6 +106,7 @@ class NetworkDashboardController extends Controller
 
         return Inertia::render('network_dashboard/dashboard', [
             'network' => $network,
+            'pendingPartners' => PendingPartners::counts(auth()->user()),
             'stats' => $stats,
             'pendingPublishers' => $pendingPublishers,
             'pendingAdvertisers' => $pendingAdvertisers,

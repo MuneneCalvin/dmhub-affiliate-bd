@@ -37,6 +37,7 @@ const navDot: Record<DomainTone, string> = {
 const badgeClasses: Record<string, string> = {
     pendingApplications: 'bg-admin text-white',
     fraudFlags: 'bg-finance-nav text-sidebar',
+    pendingPartners: 'bg-admin text-white',
 };
 
 function NavLink({

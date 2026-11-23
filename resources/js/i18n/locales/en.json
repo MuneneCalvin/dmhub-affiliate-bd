@@ -3280,5 +3280,11 @@
     "Save origins": "Save origins",
     "Rotate key": "Rotate key",
     "Rotate lead form key": "Rotate lead form key",
-    "The current embed code stops working at once. Replace it on your form page with the new code.": "The current embed code stops working at once. Replace it on your form page with the new code."
+    "The current embed code stops working at once. Replace it on your form page with the new code.": "The current embed code stops working at once. Replace it on your form page with the new code.",
+    "Pending approvals": "Pending approvals",
+    "{{count}} waiting for approval": "{{count}} waiting for approval",
+    "Advertisers: {{count}}": "Advertisers: {{count}}",
+    "Publishers: {{count}}": "Publishers: {{count}}",
+    "Review in the partner pool": "Review in the partner pool",
+    "Check your inbox for the email with your password link, then wait while we review your application. We'll email you as soon as you're in.": "Check your inbox for the email with your password link, then wait while we review your application. We'll email you as soon as you're in."
 }

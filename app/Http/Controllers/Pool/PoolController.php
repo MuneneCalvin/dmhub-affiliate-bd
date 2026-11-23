@@ -7,6 +7,7 @@ use App\Models\Advertiser;
 use App\Models\Network;
 use App\Models\Publisher;
 use App\Models\UserNetworks;
+use App\Support\PendingPartners;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -19,19 +20,7 @@ class PoolController extends Controller
      */
     private function claimable($query)
     {
-        $user = Auth::user();
-        if ($user->is_super_admin) {
-            return $query;
-        }
-
-        $networkId = $user->networkId();
-
-        return $query->where(function ($q) use ($networkId) {
-            $q->whereNull('network_id');
-            if ($networkId !== null) {
-                $q->orWhere('network_id', $networkId);
-            }
-        });
+        return PendingPartners::claimable($query, Auth::user());
     }
 
     public function advertisers(Request $request)

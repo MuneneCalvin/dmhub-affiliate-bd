@@ -39,7 +39,10 @@ import {
 export type NavRole = 'admin' | 'network' | 'advertiser' | 'publisher';
 
 /** Shared Inertia prop `navCounts` keys that can drive a sidebar badge. */
-export type NavBadgeKey = 'pendingApplications' | 'fraudFlags';
+export type NavBadgeKey =
+    | 'pendingApplications'
+    | 'fraudFlags'
+    | 'pendingPartners';
 export type NavCounts = Partial<Record<NavBadgeKey, number | null>>;
 
 export type NavItemConfig = {
@@ -237,6 +240,7 @@ export const navigation: NavGroupConfig[] = [
                 roles: ['admin', 'network'],
                 permission: ['access_pool'],
                 matchPatterns: ['/networks/pool'],
+                badgeKey: 'pendingPartners',
             },
         ],
     },

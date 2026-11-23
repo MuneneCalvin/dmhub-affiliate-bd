@@ -9,6 +9,7 @@ use App\Models\PublisherCampaigns;
 use App\Models\PublisherEarning;
 use App\Models\User;
 use App\Models\UserNetworks;
+use App\Support\PendingPartners;
 use App\Support\SettingsSections;
 use App\Support\Tenancy;
 use Illuminate\Foundation\Inspiring;
@@ -89,7 +90,7 @@ class HandleInertiaRequests extends Middleware
      * Counts for sidebar badges, scoped like the pages they link to.
      *
      * @param  array<int, string>  $permissions
-     * @return array{pendingApplications: int|null, fraudFlags: int|null}
+     * @return array{pendingApplications: int|null, fraudFlags: int|null, pendingPartners: int|null}
      */
     private function navCounts(User $user, array $permissions): array
     {
@@ -115,6 +116,10 @@ class HandleInertiaRequests extends Middleware
                     ->where('status', 'pending')
                     ->whereHas('latestFraudAssessment', fn ($q) => $q->where('recommendation', 'manual_review')->where('status', 'completed'))
                     ->count()
+                : null,
+            // Partners the pool is waiting on, for the approver's own scope.
+            'pendingPartners' => $networkStaff && $can('access_pool')
+                ? PendingPartners::counts($user)['total']
                 : null,
         ];
     }

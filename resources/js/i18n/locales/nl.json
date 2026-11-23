@@ -3280,5 +3280,11 @@
     "Save origins": "Herkomsten opslaan",
     "Rotate key": "Sleutel vernieuwen",
     "Rotate lead form key": "Formuliersleutel vernieuwen",
-    "The current embed code stops working at once. Replace it on your form page with the new code.": "De huidige insluitcode werkt direct niet meer. Vervang deze op uw formulierpagina door de nieuwe code."
+    "The current embed code stops working at once. Replace it on your form page with the new code.": "De huidige insluitcode werkt direct niet meer. Vervang deze op uw formulierpagina door de nieuwe code.",
+    "Pending approvals": "Goedkeuringen in afwachting",
+    "{{count}} waiting for approval": "{{count}} wachten op goedkeuring",
+    "Advertisers: {{count}}": "Adverteerders: {{count}}",
+    "Publishers: {{count}}": "Publishers: {{count}}",
+    "Review in the partner pool": "Bekijk in de partnerpool",
+    "Check your inbox for the email with your password link, then wait while we review your application. We'll email you as soon as you're in.": "Open de e-mail met uw wachtwoordlink in uw inbox en wacht daarna op de beoordeling van uw aanvraag. Zodra u bent goedgekeurd, sturen wij u een e-mail."
 }
