@@ -32,13 +32,15 @@ Submissions are accepted only from the landing page's host. Add more hosts under
 | `422` | Invalid email, no consent, an unknown referral or a click that is not eligible; nothing is stored |
 | `429` | Too many submissions from one address |
 
-**One lead per campaign and email address**, however it is typed. The visitor must have arrived through a tracked link; a submit without one is ignored.
+**One lead per campaign and email address**, however it is typed. The visitor must have arrived through a tracked link (the link adds a `referral_id` to your form page's address); a submit without one is ignored.
 
 ### Opened accounts
 
 A submit is the lead, and it is what the publisher is rewarded for. When the person later opens an account, set the lead to `converted` under **Leads**. That status is for your reporting; it does not create a second reward.
 
 ### Limits
+
+The script has to run on the page that contains the form itself. A form inside another company's iframe (some form tools embed this way) cannot be reached; use the backend call or the tool's webhook for those.
 
 The embed runs in the visitor's browser, so a determined person could send a forged request. Duplicate blocking, one lead per click, rate limits and the fraud rules limit the damage, and you can mark a lead `lost`. If you need certainty, use the backend call below, which is authenticated with your credential.
 

@@ -11,7 +11,9 @@ function load() {
     (0, eval)(code);
 }
 
-function page(html: string, search = '?click_id=42') {
+const REFERRAL = '0b1f3a52-2f6f-4bd2-9d6f-3a5f5e7a9d11';
+
+function page(html: string, search = `?referral_id=${REFERRAL}&click_id=42`) {
     window.history.pushState({}, '', `/form${search}`);
     document.body.innerHTML = html;
 }
@@ -82,7 +84,7 @@ describe('lead form embed script', () => {
         expect(init.headers['Content-Type']).toBe('text/plain');
         expect(init.credentials).toBe('omit');
         expect(body).toMatchObject({
-            click_id: '42',
+            referral_id: REFERRAL,
             email: 'anna@example.nl',
             first_name: 'Anna',
             last_name: 'de Vries',
@@ -147,21 +149,16 @@ describe('lead form embed script', () => {
         load();
         submit(document.querySelector('#f') as HTMLFormElement);
 
-        expect(sent()[0].body.click_id).toBe('42');
+        expect(sent()[0].body.referral_id).toBe(REFERRAL);
     });
 
-    it('sends the referral id when the redirect carries one', () => {
-        page(
-            FORM,
-            '?referral_id=0b1f3a52-2f6f-4bd2-9d6f-3a5f5e7a9d11&click_id=42',
-        );
+    it('sends nothing for a link that only carries a click id', () => {
+        page(FORM, '?click_id=42');
         load();
 
         submit(document.querySelector('#f') as HTMLFormElement);
 
-        expect(sent()[0].body.referral_id).toBe(
-            '0b1f3a52-2f6f-4bd2-9d6f-3a5f5e7a9d11',
-        );
+        expect(sent()).toHaveLength(0);
     });
 
     it('sends nothing when the visitor did not arrive through a tracked link', () => {

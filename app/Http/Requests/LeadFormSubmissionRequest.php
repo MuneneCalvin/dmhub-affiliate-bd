@@ -71,8 +71,8 @@ class LeadFormSubmissionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'click_id' => 'required_without:referral_id|nullable|integer|min:1',
-            'referral_id' => 'required_without:click_id|nullable|uuid',
+            // Only the unguessable referral identifies a visit; click ids are sequential and could be forged.
+            'referral_id' => 'required|uuid',
             'email' => 'required|email|max:255',
             'first_name' => 'nullable|string|max:100',
             'last_name' => 'nullable|string|max:100',

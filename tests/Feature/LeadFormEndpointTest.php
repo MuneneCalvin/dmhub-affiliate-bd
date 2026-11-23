@@ -14,7 +14,7 @@ function formUrl(array $f, ?string $key = null): string
 function formBody($click, array $overrides = []): array
 {
     return array_merge([
-        'click_id' => $click->id, 'email' => 'anna@example.nl', 'first_name' => 'Anna', 'last_name' => 'de Vries',
+        'referral_id' => $click->referral_id, 'email' => 'anna@example.nl', 'first_name' => 'Anna', 'last_name' => 'de Vries',
         'phone' => '+31201234567', 'consent' => true, 'hp' => '', 'duration_ms' => 6000,
     ], $overrides);
 }
@@ -84,7 +84,7 @@ it('stores nothing without consent', function (array $override) {
     'consent false' => [['consent' => false]],
     'consent missing' => [['consent' => null]],
     'invalid email' => [['email' => 'nope']],
-    'no click reference' => [['click_id' => null]],
+    'no click reference' => [['referral_id' => null]],
 ]);
 
 it('lets the allowed page read why a submit was refused', function (array $override, string $field) {
@@ -103,6 +103,15 @@ it('lets the allowed page read why a foreign click was refused', function () {
 
     submitForm($this, $f, formBody(conversionClick($other)))->assertUnprocessable()
         ->assertHeader('Access-Control-Allow-Origin', FORM_ORIGIN);
+});
+
+it('does not take a guessable click id in place of the unguessable referral', function () {
+    $f = conversionFixture();
+    $click = conversionClick($f);
+
+    submitForm($this, $f, ['referral_id' => null, 'click_id' => $click->id] + formBody($click))->assertUnprocessable();
+
+    expect(LeadContact::count())->toBe(0)->and(ConversionEvent::count())->toBe(0);
 });
 
 it('refuses a missing or foreign origin without any cross-origin header', function (?string $origin) {

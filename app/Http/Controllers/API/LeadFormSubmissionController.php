@@ -22,7 +22,7 @@ class LeadFormSubmissionController extends Controller
         $input = $request->validated();
 
         try {
-            $click = $pipeline->resolveClick(array_intersect_key($input, array_flip(['click_id', 'referral_id'])), $advertiserId);
+            $click = $pipeline->resolveClick(['referral_id' => $input['referral_id']], $advertiserId);
         } catch (ModelNotFoundException) {
             throw $request->rejection(['click_id' => ['The referral is unknown.']]);
         }
@@ -31,7 +31,7 @@ class LeadFormSubmissionController extends Controller
         }
 
         $eventData = [
-            'event_type' => 'submission', 'external_id' => 'form:'.$click->id, 'click_id' => $click->id,
+            'event_type' => 'submission', 'external_id' => 'form:'.$click->id, 'referral_id' => $click->referral_id,
             'occurred_at' => now()->utc()->format('Y-m-d\TH:i:s.u\Z'), 'amount' => '0.00',
             'currency' => $offer->campaign->currency, 'successful' => true,
             'spam_checks' => [

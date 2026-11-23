@@ -39,12 +39,13 @@ return new class extends Migration
     /** Fills keys and hashes for rows that predate the columns. Safe to run again. */
     public function backfill(): void
     {
-        DB::table('offers')->whereNull('lead_form_key')->orderBy('id')->each(
+        // chunkById pages by key, so rows leaving the filter while they are updated are never skipped.
+        DB::table('offers')->whereNull('lead_form_key')->chunkById(500, fn ($offers) => $offers->each(
             fn ($offer) => DB::table('offers')->where('id', $offer->id)->update(['lead_form_key' => Str::random(32)])
-        );
+        ));
 
         $seen = [];
-        DB::table('lead_contacts')->where('email_hash', '')->orderBy('id')->each(function ($lead) use (&$seen) {
+        DB::table('lead_contacts')->where('email_hash', '')->chunkById(500, fn ($leads) => $leads->each(function ($lead) use (&$seen) {
             $hash = hash('sha256', mb_strtolower(trim($lead->email)));
             $scope = $lead->campaign_id.':'.$hash;
             // Contacts stored before the one-per-email rule keep their row; only the later copies get a distinct hash.
@@ -52,7 +53,7 @@ return new class extends Migration
                 ? hash('sha256', $hash.':'.$lead->id) : $hash;
             $seen[$scope] = true;
             DB::table('lead_contacts')->where('id', $lead->id)->update(['email_hash' => $unique]);
-        });
+        }));
     }
 
     public function down(): void

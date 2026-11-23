@@ -6,6 +6,7 @@ use App\Models\Advertiser;
 use App\Models\Clicks;
 use App\Models\ConversionEvent;
 use App\Models\LeadContact;
+use App\Services\Finance\LedgerService;
 use Carbon\CarbonImmutable;
 use Closure;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -27,7 +28,9 @@ class LeadIntakeService
 
         try {
             return DB::transaction(function () use ($click, $eventData, $contact, $confirm, $consentedAt, $hash, $campaignId) {
-                // Submissions of one advertiser are serialized here, so the checks below cannot race.
+                // Same order as ConversionEventService (network ledger, then advertiser), so two paths never deadlock;
+                // submissions of one advertiser are serialized here, so the checks below cannot race.
+                app(LedgerService::class)->lock($click->network_id);
                 Advertiser::whereKey($click->campaign->advertiser_id)->lockForUpdate()->firstOrFail();
 
                 if ($existing = $this->existing($click, $campaignId, $hash)) {
