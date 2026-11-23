@@ -1,6 +1,6 @@
 # Lead submissions (Brand New Day)
 
-Use lead submissions when you want Brand New Day to keep the contact details of the people who complete your form, in addition to rewarding the publisher. There are two ways to report a submission. Both end in the same place: one lead, one conversion and one pending commission, decided by the same confirmed-event pipeline as every other submission (referral attribution, fraud rules, funding checks, duplicate protection and financial review). The contact is stored beside the event and never changes the commission.
+Use lead submissions when you want Brand New Day to keep the contact details of the people who complete your form, in addition to rewarding the publisher. There are two ways to report a submission. Both end in the same place: one lead, one conversion and one pending compensation, decided by the same confirmed-event pipeline as every other submission (referral attribution, fraud rules, funding checks, duplicate protection and financial review). The contact is stored beside the event and never changes the compensation.
 
 | | Embedded form (recommended) | Backend call |
 | --- | --- | --- |
@@ -25,7 +25,7 @@ Submissions are accepted only from the landing page's host. Add more hosts under
 
 | Status | Meaning |
 | --- | --- |
-| `201` | New lead recorded: a conversion and a pending commission were created |
+| `201` | New lead recorded: a conversion and pending compensation were created |
 | `200` | Duplicate: this email already exists in the campaign, or this click already reported. Nothing new is created |
 | `403` | The page is not an allowed origin |
 | `404` | Unknown or rotated key |
@@ -94,7 +94,7 @@ Unknown fields are rejected. Send only what you are allowed to share and need to
 
 | Status | Meaning |
 | --- | --- |
-| `201` | New submission recorded: a lead, a conversion and a pending commission were created |
+| `201` | New submission recorded: a lead, a conversion and pending compensation were created |
 | `200` | The `external_id` was already reported, or the email already exists in the campaign; the original lead is returned and nothing new is created |
 | `401` | Missing, invalid, expired or revoked credential |
 | `404` | The referral does not belong to your advertiser account |
@@ -113,13 +113,13 @@ Unknown fields are rejected. Send only what you are allowed to share and need to
 }
 ```
 
-Retry with the same `external_id` and the same event data when you do not receive a response. A retry never creates a second lead or commission. The contact stored by the first accepted request is kept; to correct it, edit the lead in Brand New Day instead of resending.
+Retry with the same `external_id` and the same event data when you do not receive a response. A retry never creates a second lead or compensation. The contact stored by the first accepted request is kept; to correct it, edit the lead in Brand New Day instead of resending.
 
 ## Work the leads
 
 Advertisers and network owners open **Leads** in the sidebar to search, filter by status, move a lead through `new`, `contacted`, `qualified`, `converted` (opened account) and `lost`, add notes, and export the list to Excel. Publishers never see lead contacts.
 
-**Deleting a lead erases the contact only.** The submission, conversion and commission stay on record so payouts and audits remain accurate. If a person asks you to erase their data, delete the lead there and remove the matching record on your own website.
+**Deleting a lead erases the contact only.** The submission, conversion and compensation stay on record so payouts and audits remain accurate. If a person asks you to erase their data, delete the lead there and remove the matching record on your own website.
 
 ## Checklist before launch
 
@@ -127,7 +127,7 @@ Embedded form: follow a tracked link to your form page, submit with consent and 
 
 Backend call:
 
-1. Send one successful lead and confirm a `201`, one conversion and one pending commission.
+1. Send one successful lead and confirm a `201`, one conversion and one pending compensation.
 2. Send it again and confirm a `200` with `duplicate: true` and the same `lead_id`.
-3. Send an invalid email and a failed submission; confirm `422` and that no lead or commission appears.
+3. Send an invalid email and a failed submission; confirm `422` and that no lead or compensation appears.
 4. Confirm the lead is visible under **Leads** for your advertiser account only.

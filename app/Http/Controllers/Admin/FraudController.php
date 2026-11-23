@@ -128,7 +128,7 @@ class FraudController extends Controller
     public function reassess(Request $request, PublisherEarning $earning, FraudAssessmentService $service)
     {
         $this->authorizeNetwork($request, $earning->network_id);
-        abort_unless($earning->status === 'pending', 409, 'Only pending commissions may be reassessed.');
+        abort_unless($earning->status === 'pending', 409, 'Only pending compensation may be reassessed.');
         $service->request($earning, true);
 
         return back()->with('success', 'A new fraud assessment was requested.');
@@ -158,7 +158,7 @@ class FraudController extends Controller
                 }
             });
 
-        return back()->with('success', $count.' pending commissions queued with the current rules. Repeat to process the next batch.');
+        return back()->with('success', $count.' pending compensation items queued with the current rules. Repeat to process the next batch.');
     }
 
     public function feedback(Request $request, PublisherEarning $earning)

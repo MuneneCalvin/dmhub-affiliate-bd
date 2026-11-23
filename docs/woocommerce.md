@@ -22,12 +22,12 @@ The connection key is private. If it is lost or exposed, select **Rotate connect
 
 ## Check the connection
 
-Follow a fresh publisher link, add eligible products and complete a paid test order. Confirm the discount, order totals and commission record in Brand New Day. Test Classic checkout or Checkout Blocks, the payment gateways you use, express checkout and cached landing pages.
+Follow a fresh publisher link, add eligible products and complete a paid test order. Confirm the discount, order totals and compensation record in Brand New Day. Test Classic checkout or Checkout Blocks, the payment gateways you use, express checkout and cached landing pages.
 
 If the connection fails, check that the saved domain and currency exactly match the WordPress site address and WooCommerce settings. Copy the complete API URL shown in Brand New Day, including `/api/v1/stores`. Verify coupons are enabled and use the latest connection key.
 
 If no discount appears, check that the promotion is published, the connected store is selected, and the products and dates qualify. Ask your website administrator to review page caching if referral links do not display an offer. Check plugin notices and WooCommerce scheduled actions for delivery failures.
 
-Only paid orders should create commissions. For cash-on-delivery or manual payments, verify that your payment setup records payment completion after collection; changing an order status alone may not do this. Refunds and cancellations require **Financial review** in Brand New Day and do not automatically reverse commissions.
+Only paid orders should create compensation. For cash-on-delivery or manual payments, verify that your payment setup records payment completion after collection; changing an order status alone may not do this. Refunds and cancellations require **Financial review** in Brand New Day and do not automatically reverse compensation.
 
 For purchase attribution without customer discounts, ask your website developer to follow the [custom website](custom-website.md) and [checkout campaign](checkout-campaigns.md) guides.

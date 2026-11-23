@@ -77,7 +77,7 @@ class CampaignFinanceService
             'currency' => $earning->currency, 'commission_minor' => Money::cents($earning->amount) - $earning->reversed_minor,
             'original_minor' => Money::cents($earning->amount), 'reversed_minor' => $earning->reversed_minor,
             'status' => $earning->status, 'status_label' => match ($earning->status) {
-                'pending' => 'Commission pending review', 'approved' => 'Approved', 'locked' => 'Invoice awaiting approval',
+                'pending' => 'Compensation pending review', 'approved' => 'Approved', 'locked' => 'Invoice awaiting approval',
                 'payable' => 'Invoice awaiting payment', 'paid' => 'Paid', 'rejected' => 'Rejected', 'reversed' => 'Reversed', default => 'Unknown',
             }, 'ledger_backed' => (bool) $earning->ledger_transaction_id];
     }
@@ -114,8 +114,8 @@ class CampaignFinanceService
             })->orderBy('created_at')->orderBy('id')->get();
         foreach ($transactions as $transaction) {
             $label = match ($transaction->kind) {
-                'approval' => 'Commission approved', 'rejection' => 'Commission rejected', 'refund' => 'Partial refund recorded',
-                'reversal' => 'Commission reversed', 'chargeback' => 'Chargeback recorded', 'invoice_lock' => 'Invoice requested',
+                'approval' => 'Compensation approved', 'rejection' => 'Compensation rejected', 'refund' => 'Partial refund recorded',
+                'reversal' => 'Compensation reversed', 'chargeback' => 'Chargeback recorded', 'invoice_lock' => 'Invoice requested',
                 'invoice_approve' => 'Invoice approved', 'invoice_pay' => 'Payment recorded', 'invoice_reject' => 'Invoice cancelled', default => null,
             };
             if ($label) {

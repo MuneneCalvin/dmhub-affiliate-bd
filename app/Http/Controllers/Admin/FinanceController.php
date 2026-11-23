@@ -88,7 +88,7 @@ class FinanceController extends Controller
         $result = $data['decision'] === 'approve' ? $reviews->approve($earning, $request->user()->id, $data['reason'])
             : $reviews->adjust($earning, 'rejection', null, 'review-rejection', $data['reason'], $request->user()->id);
 
-        return $request->expectsJson() ? response()->json($result) : back()->with('success', 'Commission review recorded.');
+        return $request->expectsJson() ? response()->json($result) : back()->with('success', 'Compensation review recorded.');
     }
 
     public function adjust(Request $request, PublisherEarning $earning, EarningReviewService $reviews)
@@ -101,7 +101,7 @@ class FinanceController extends Controller
         $result = $reviews->adjust($earning, $data['kind'], isset($data['amount']) ? (string) $data['amount'] : null,
             $data['reference'], $data['reason'], $request->user()->id);
 
-        return $request->expectsJson() ? response()->json($result) : back()->with('success', 'Commission adjustment recorded.');
+        return $request->expectsJson() ? response()->json($result) : back()->with('success', 'Compensation adjustment recorded.');
     }
 
     public function ledger(Request $request, int $networkId)

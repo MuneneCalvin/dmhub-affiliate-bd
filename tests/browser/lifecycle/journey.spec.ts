@@ -427,7 +427,7 @@ test('onboarding → campaign enrollment → clicks, submissions, checkout and f
             dashboard,
             'B11: approved commissions are labelled accurately',
         ).toMatch(/Spent budget\s+\$25\.00/);
-        expect(dashboard).not.toMatch(/commissions paid/i);
+        expect(dashboard).not.toMatch(/compensation paid/i);
         expect(dashboard).not.toContain('Total Compensation Paid');
         await screenshot(advertiser, 'approved-dashboard');
         await promoter.goto(`${app}/publisher/earnings`);

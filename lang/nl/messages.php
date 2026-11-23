@@ -43,7 +43,7 @@ return [
             'campaign' => 'Campagne',
             'type' => 'Type',
             'date' => 'Datum',
-            'commission' => 'Commissie',
+            'compensation' => 'Vergoeding',
             'subtotal' => 'Subtotaal',
             'recovery' => 'Eerdere terugboeking van restitutie afgetrokken',
             'total' => 'Totaal',

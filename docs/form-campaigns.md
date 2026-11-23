@@ -1,6 +1,6 @@
 # Form submission campaigns
 
-Reward successful, non-spam submissions on the client's own website. Brand New Day stores referral and conversion metadata, not the customer's contact details or form answers. An accepted submission event automatically creates a conversion and pending commission; there is no lead record or second confirmation step. To keep the contact as a lead in Brand New Day, use [lead submissions](lead-submissions.md) instead.
+Reward successful, non-spam submissions on the client's own website. Brand New Day stores referral and conversion metadata, not the customer's contact details or form answers. An accepted submission event automatically creates a conversion and pending compensation; there is no lead record or second confirmation step. To keep the contact as a lead in Brand New Day, use [lead submissions](lead-submissions.md) instead.
 
 ## 1. Configure the offer
 
@@ -33,7 +33,7 @@ Your backend must validate and successfully save the intended submission before 
 - `form_duration_ms`: elapsed time from form rendering to acceptance, using a server-issued timestamp/session or signed form token. Do not trust a freely editable browser timer.
 - `is_spam`: your form plugin or server spam filter's verdict. Run your existing validation, CAPTCHA or spam filtering as appropriate.
 
-Brand New Day requires successful persistence and valid signal fields. Honeypot, merchant spam and form-duration verdicts are evaluated by configurable fraud rules after acceptance: operators can switch each rule off, monitor it without affecting decisions, or enforce it during financial review. The default minimum form duration is 1000 ms; your account administrator can confirm the policy that applies to your campaign. New installations run in shadow mode and do not automatically approve commissions. Your website remains responsible for validating its form and reporting truthful signals. Brand New Day does not inspect message content.
+Brand New Day requires successful persistence and valid signal fields. Honeypot, merchant spam and form-duration verdicts are evaluated by configurable fraud rules after acceptance: operators can switch each rule off, monitor it without affecting decisions, or enforce it during financial review. The default minimum form duration is 1000 ms; your account administrator can confirm the policy that applies to your campaign. New installations run in shadow mode and do not automatically approve compensation. Your website remains responsible for validating its form and reporting truthful signals. Brand New Day does not inspect message content.
 
 ## 4. Report success once from the backend
 
@@ -65,9 +65,9 @@ Contact fields, arbitrary metadata, form answers and unknown fields are rejected
 
 ## 5. Check the result
 
-`201` creates the conversion and reserves its commission automatically; the response includes `conversion_id`, `commission_amount` and the current `commission_status` (normally `pending` until the background assessment or human review finishes). Pending refers to the existing financial review/payment process, not a lead approval step. An identical retry returns `200` and `duplicate: true` without another commission. Conflicting reuse of an event ID returns `409`. Use one stable event ID per submission across all publishers and delivery attempts.
+`201` creates the conversion and reserves its compensation automatically; the response includes `conversion_id`, `commission_amount` and the current `commission_status` (normally `pending` until the background assessment or human review finishes). Pending refers to the existing financial review/payment process, not a lead approval step. An identical retry returns `200` and `duplicate: true` without another compensation. Conflicting reuse of an event ID returns `409`. Use one stable event ID per submission across all publishers and delivery attempts.
 
-Test valid submissions, failed saves, filled honeypots, spam verdicts, implausibly fast forms, missing referrals, expired referrals and duplicate delivery. Failed saves or malformed signals must create no conversion or commission. Valid events flagged by spam heuristics remain subject to the configured assessment policy; test Off, Monitor only and Enforced modes separately. A tracking failure must not discard the customer's successful submission on your website.
+Test valid submissions, failed saves, filled honeypots, spam verdicts, implausibly fast forms, missing referrals, expired referrals and duplicate delivery. Failed saves or malformed signals must create no conversion or compensation. Valid events flagged by spam heuristics remain subject to the configured assessment policy; test Off, Monitor only and Enforced modes separately. A tracking failure must not discard the customer's successful submission on your website.
 
 Form integration steps: [WordPress](wordpress.md) or [custom website](custom-website.md). The Shopify and WooCommerce store connections cover customer promotion orders; forms need their own accepted-submission integration.
 

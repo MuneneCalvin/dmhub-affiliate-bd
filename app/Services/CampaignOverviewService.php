@@ -47,13 +47,13 @@ class CampaignOverviewService
             $alerts[] = compact('code', 'title', 'description', 'tab', 'action', 'blocks', 'values');
         };
         if ($dailyLimit > 0 && $dailyUsage >= $dailyLimit) {
-            $add('daily_cap', 'Traffic paused: daily commission cap reached',
+            $add('daily_cap', 'Traffic paused: daily compensation cap reached',
                 $publisherView ? 'Traffic is paused until the daily cap resets at 00:00 UTC.' : '{{amount}} used today. Resets at 00:00 UTC.',
                 $publisherView ? 'tracking' : 'settings', $publisherView ? 'View tracking' : 'Review limits', true,
                 $publisherView ? [] : ['amount' => $campaign->currency.' '.number_format($dailyUsage / 100, 2)]);
         }
         if ($totalLimit > 0 && $spent >= $totalLimit) {
-            $add('total_cap', 'Traffic paused: campaign commission limit reached', 'The campaign spending limit has been reached. The advertiser must review the limit before traffic can resume.', 'settings', 'Review limits');
+            $add('total_cap', 'Traffic paused: campaign compensation limit reached', 'The campaign spending limit has been reached. The advertiser must review the limit before traffic can resume.', 'settings', 'Review limits');
         }
         if ($network?->requires_prepaid_funding && $available <= 0) {
             $add('funding', 'Traffic paused: advertiser funds unavailable', 'The advertiser needs available, ledger-backed funds in the campaign currency before traffic can resume.', 'finance', $publisherView ? 'View earnings' : 'Review funding');
@@ -103,7 +103,7 @@ class CampaignOverviewService
                 $requested = $campaign->offers()->find($assignment->requested_offer_id);
                 $enrollment = app(PartnerEnrollmentService::class);
                 if ($requested && (! $assignment->terms_accepted_at || $assignment->terms_version !== $enrollment->version($enrollment->contract($campaign, $requested)))) {
-                    $add('terms', 'Updated terms need your acceptance', 'Accept the current campaign terms and commission before your application can be approved.', 'assignment', 'Review terms');
+                    $add('terms', 'Updated terms need your acceptance', 'Accept the current campaign terms and compensation before your application can be approved.', 'assignment', 'Review terms');
                 }
             }
         } elseif (! (clone $assignments)->where('status', 'A')->whereNull('terminated_at')->exists()) {
@@ -123,7 +123,7 @@ class CampaignOverviewService
         }
         $legacy = (clone $earnings)->whereNull('ledger_transaction_id')->whereNotIn('status', ['rejected', 'reversed'])->count();
         if ($legacy) {
-            $add('reconciliation', 'Commissions require reconciliation', 'Some historical commissions are not ledger-backed and cannot be settled until an operator reconciles them.', 'finance', 'Open finance', false);
+            $add('reconciliation', 'Compensation requires reconciliation', 'Some historical compensation is not ledger-backed and cannot be settled until an operator reconciles it.', 'finance', 'Open finance', false);
         }
         if ($assignment) {
             $publisherBalance = app(LedgerService::class)->balance($assignment->network_id, $campaign->currency, 'publisher_available', $assignment->publisher_id);
@@ -167,7 +167,7 @@ class CampaignOverviewService
                 $tools['publishers'] = ['href' => route('applications.index'), 'label' => 'Open application review'];
             }
             if ($operator && $can('review_commissions')) {
-                $tools['finance'] = ['href' => route('finance.index'), 'label' => 'Open commission review'];
+                $tools['finance'] = ['href' => route('finance.index'), 'label' => 'Open compensation review'];
             }
         } else {
             if (! $operator && $user->is_publisher && $user->publisher?->id === $assignment->publisher_id && $can('access_publisher_dashboard')) {

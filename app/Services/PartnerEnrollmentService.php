@@ -122,18 +122,18 @@ class PartnerEnrollmentService
         $contract = $this->contract($campaign, $offer);
         if ($application->requested_offer_id !== $offer->id || ! $application->terms_accepted_at
             || $application->terms_version !== $this->version($contract)) {
-            throw ValidationException::withMessages(['offer_id' => 'The publisher must accept the current terms and commission for this offer before approval.']);
+            throw ValidationException::withMessages(['offer_id' => 'The publisher must accept the current terms and compensation for this offer before approval.']);
         }
         if ($campaign->max_publishers > 0 && PublisherCampaigns::where('campaign_id', $campaign->id)->whereIn('status', ['A', 'I'])->count() >= $campaign->max_publishers) {
             throw ValidationException::withMessages(['offer_id' => 'This campaign has no publisher slots available.']);
         }
         $rules = $contract['commissions'];
         if (count($rules) !== 1 || ! in_array($rules[0]['type'], ['CPL', 'CPA', 'CPS', 'RevShare', 'Flat'], true)) {
-            throw ValidationException::withMessages(['offer_id' => 'Enrollment requires exactly one supported commission rule.']);
+            throw ValidationException::withMessages(['offer_id' => 'Enrollment requires exactly one supported compensation rule.']);
         }
         $rate = ConversionMoney::cents($rules[0]['value']);
         if ($rate <= 0 || (in_array($rules[0]['type'], ['CPS', 'RevShare'], true) && $rate > 10000)) {
-            throw ValidationException::withMessages(['offer_id' => 'Commission must be positive and percentages cannot exceed 100%.']);
+            throw ValidationException::withMessages(['offer_id' => 'Compensation must be positive and percentages cannot exceed 100%.']);
         }
 
         return $contract;

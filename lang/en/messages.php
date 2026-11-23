@@ -43,7 +43,7 @@ return [
             'campaign' => 'Campaign',
             'type' => 'Type',
             'date' => 'Date',
-            'commission' => 'Commission',
+            'compensation' => 'Compensation',
             'subtotal' => 'Subtotal',
             'recovery' => 'Prior refund recovery deducted',
             'total' => 'Total',

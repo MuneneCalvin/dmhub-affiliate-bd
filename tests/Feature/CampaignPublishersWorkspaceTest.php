@@ -62,7 +62,7 @@ it('requires a meaningful rejection reason and stores it in history', function (
 it('blocks changed terms and allows the publisher to renew consent then be approved', function () {
     $this->f['offer']->update(['terms' => ['No paid search']]);
     $this->get($this->workspaceUrl)->assertInertia(fn (Assert $page) => $page->where('publisherWorkspace.rows.0.terms_current', false)
-        ->where('publisherWorkspace.rows.0.approval_blocker', 'The publisher must accept the current terms and commission for this offer before approval.'));
+        ->where('publisherWorkspace.rows.0.approval_blocker', 'The publisher must accept the current terms and compensation for this offer before approval.'));
     $this->post($this->reviewUrl, ['decision' => 'approve'])->assertSessionHasErrors('offer_id');
     $this->actingAs($this->f['publisher']->user)->get(route('publishers.campaign.application', $this->f['campaign']->id))
         ->assertInertia(fn (Assert $page) => $page->where('enrollment.id', $this->application->id)->where('enrollment.applied_notes', $this->input['applied_notes']));

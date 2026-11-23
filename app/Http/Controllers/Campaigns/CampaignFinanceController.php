@@ -34,7 +34,7 @@ class CampaignFinanceController extends Controller
         $options = $request->validate(['format' => 'required|in:csv,xlsx']);
         $filters = $this->finance->filters($request);
         $query = $this->finance->filtered($this->finance->query($campaign, $assignment), $filters)->with(['conversion.offer', 'publisher.user'])->orderBy('id');
-        $headings = ['Order', $assignment ? 'Offer' : 'Publisher', 'Currency', 'Original commission', 'Commission reversed', 'Net commission', 'Financial status', 'Ledger backed'];
+        $headings = ['Order', $assignment ? 'Offer' : 'Publisher', 'Currency', 'Original compensation', 'Compensation reversed', 'Net compensation', 'Financial status', 'Ledger backed'];
         $values = function ($earning) use ($assignment) {
             $row = $this->finance->row($earning);
 
@@ -96,7 +96,7 @@ class CampaignFinanceController extends Controller
             $reviews->adjust($earning, 'refund', (string) $data['amount'], $data['reference'], $data['reason'], $request->user()->id);
         });
 
-        return back()->with('success', 'Commission adjustment recorded.');
+        return back()->with('success', 'Compensation adjustment recorded.');
     }
 
     public function review(Request $request, int $campaign, int $earning, EarningReviewService $reviews)
@@ -110,6 +110,6 @@ class CampaignFinanceController extends Controller
             $reviews->adjust($earning, 'rejection', null, 'review-rejection', $data['reason'], $request->user()->id);
         }
 
-        return back()->with('success', 'Commission review recorded.');
+        return back()->with('success', 'Compensation review recorded.');
     }
 }

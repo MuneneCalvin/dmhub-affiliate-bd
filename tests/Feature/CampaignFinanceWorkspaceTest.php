@@ -54,7 +54,7 @@ it('shows ledger-backed net totals, real history, status filters and order searc
         ->where('financeWorkspace.summary.pending_minor', 1200)->where('financeWorkspace.summary.approved_minor', 900)
         ->where('financeWorkspace.summary.pending_count', 1)->where('financeWorkspace.selected.original_minor', 1200)
         ->where('financeWorkspace.selected.commission_minor', 900)->has('financeWorkspace.selected.history', 3)
-        ->where('financeWorkspace.selected.history.1.label', 'Commission approved')
+        ->where('financeWorkspace.selected.history.1.label', 'Compensation approved')
         ->where('financeWorkspace.selected.adjust_url', null)->where('financeWorkspace.balance_minor', 97900));
     $this->get($this->url.'&status=pending&search=2051')->assertInertia(fn (Assert $p) => $p
         ->has('financeWorkspace.rows', 1)->where('financeWorkspace.rows.0.order', 'HH-2051')

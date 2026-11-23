@@ -152,7 +152,7 @@ class PublisherInvoicePdf
         $this->pdf->text(self::MARGIN + 8, $this->y, mb_strtoupper(__('messages.invoices.pdf.campaign')), 8, true, self::MUTED);
         $this->pdf->text(self::MARGIN + 250, $this->y, mb_strtoupper(__('messages.invoices.pdf.type')), 8, true, self::MUTED);
         $this->pdf->text(self::MARGIN + 320, $this->y, mb_strtoupper(__('messages.invoices.pdf.date')), 8, true, self::MUTED);
-        $this->pdf->text($right - 8, $this->y, mb_strtoupper(__('messages.invoices.pdf.commission')), 8, true, self::MUTED, 'right');
+        $this->pdf->text($right - 8, $this->y, mb_strtoupper(__('messages.invoices.pdf.compensation')), 8, true, self::MUTED, 'right');
         $this->y += 9;
     }
 

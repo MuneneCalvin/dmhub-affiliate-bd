@@ -29,7 +29,7 @@ class CampaignAnalyticsController extends Controller
         $options = $request->validate(['format' => 'required|in:csv,xlsx', 'dataset' => 'nullable|in:breakdown,daily']);
         $data = app(CampaignAnalyticsService::class)->build($campaign, $request, $assignment);
         $filters = $data['filters'];
-        $headings = ['Clicks', 'Approved conversions', 'Net approved sales', 'Net approved commissions', 'Conversion rate (%)', 'Earnings per click'];
+        $headings = ['Clicks', 'Approved conversions', 'Net approved sales', 'Net approved compensation', 'Conversion rate (%)', 'Earnings per click'];
         $values = fn ($row, bool $blankSales = false) => [$row['clicks'], $row['conversions'], $blankSales && ! $row['purchases'] ? null : $row['sales'],
             $row['commissions'], $row['conversion_rate'], $row['earnings_per_click']];
         $metadata = [

@@ -43,7 +43,7 @@ Supply at least `referral_id` or `click_id`. If supplying multiple identifiers, 
 
 Contact details, form contents, arbitrary metadata and unknown fields are rejected on `/api/v1/events`; use [lead submissions](lead-submissions.md) when you want Brand New Day to keep the contact. Use opaque IDs that contain no customer information.
 
-Event time cannot precede the click or be in the future. The conversion window must still be open when the server receives a new event, as well as at the event time. Active status, traffic restrictions, currency, funding and the click's commission snapshot are validated.
+Event time cannot precede the click or be in the future. The conversion window must still be open when the server receives a new event, as well as at the event time. Active status, traffic restrictions, currency, funding and the click's compensation snapshot are validated.
 
 ## Try a saved event
 
@@ -71,11 +71,11 @@ Do not add `-v` or log authentication headers. Example success response (IDs and
 }
 ```
 
-`201` means a new confirmed event; `200` with `duplicate: true` means the original event already exists. New commissions start pending. The response reports the current financial status, including on retries after approval. Automated approval does not mean payment; invoicing and payout remain separate.
+`201` means a new confirmed event; `200` with `duplicate: true` means the original event already exists. New compensation starts pending. The response reports the current financial status, including on retries after approval. Automated approval does not mean payment; invoicing and payout remain separate.
 
 ## Submission spam checks
 
-Every submission requires successful completion and typed honeypot, spam-verdict and form-duration signals from the website backend. Missing or malformed signals and failed submissions return `422` without a conversion or commission. Valid signals are retained as evidence. Honeypot, spam and duration heuristics are configurable fraud rules: Off, Monitor only, or Enforced. A flagged event can be accepted as a pending conversion for review; it is not a payable approval. New installations default to shadow mode with no automatic approval. See [form submissions](form-campaigns.md) for the complete payload and integration.
+Every submission requires successful completion and typed honeypot, spam-verdict and form-duration signals from the website backend. Missing or malformed signals and failed submissions return `422` without a conversion or compensation. Valid signals are retained as evidence. Honeypot, spam and duration heuristics are configurable fraud rules: Off, Monitor only, or Enforced. A flagged event can be accepted as a pending conversion for review; it is not a payable approval. New installations default to shadow mode with no automatic approval. See [form submissions](form-campaigns.md) for the complete payload and integration.
 
 ## Retries and errors
 
@@ -88,7 +88,7 @@ Persist the complete event before its first delivery. The idempotency key is the
 | `403` | Inactive account, network, campaign, offer or assignment | Resolve activation/verification with the operator |
 | `404` | Unknown referral/token or resource belonging to another advertiser | Check the saved identity and credential scope |
 | `409` | Event identity reused with different data | Reconcile the original event; do not invent another ID |
-| `422` | Failed submission, malformed spam signals, field validation, event/commission mismatch, currency, expiry, traffic or budget | Inspect the JSON message/errors and repair the cause |
+| `422` | Failed submission, malformed spam signals, field validation, event/compensation mismatch, currency, expiry, traffic or budget | Inspect the JSON message/errors and repair the cause |
 | `429` | Rate limit | Honor `Retry-After` when supplied and back off |
 | Network error / transient `5xx` | Delivery outcome may be unknown | Retry the unchanged persisted payload with bounded exponential backoff |
 
@@ -101,8 +101,8 @@ If the browser cannot call the API, inspect its network console for CORS/preflig
 1. Confirm accounts, campaign, offer and publisher assignment are active and funding is available.
 2. Follow a fresh publisher link and verify destination referral parameters.
 3. Check persistence through all pages, carts and payment redirects.
-4. Send one successful submission, paid purchase or qualified action with the right commission type.
-5. Replay the exact saved event and verify one commission remains with its current financial status.
+4. Send one successful submission, paid purchase or qualified action with the right compensation type.
+5. Replay the exact saved event and verify one compensation remains with its current financial status.
 6. Verify failed forms, unpaid orders and page views do not create earnings.
 7. Test missing/expired attribution, wrong currency and a changed replay.
 8. Monitor durable delivery retries and plan credential rotation and refund reconciliation.

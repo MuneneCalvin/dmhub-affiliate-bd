@@ -27,7 +27,7 @@ Use the SDK's `getReferral()` method or a server session to preserve attribution
 
 Browser referral lookups require the deployment's CORS policy to allow your website origin. If that is unavailable, validate and store referrals from your backend instead.
 
-For purchases, use the order's saved referral and a verified payment callback. For actions, use the saved referral and your backend's qualified-action record. Match the approved commission type to the event, as described in [campaign setup](campaign-setup.md).
+For purchases, use the order's saved referral and a verified payment callback. For actions, use the saved referral and your backend's qualified-action record. Match the approved compensation type to the event, as described in [campaign setup](campaign-setup.md).
 
 ## 3. Send from your backend
 

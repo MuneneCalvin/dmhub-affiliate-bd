@@ -4,11 +4,11 @@ Set up your campaign, choose what counts as a conversion, and connect your websi
 
 ## Choose your campaign
 
-| Goal | Guide | What creates a commission? |
+| Goal | Guide | What creates compensation? |
 | --- | --- | --- |
 | Collect enquiries or sign-ups | [Form submission campaigns](form-campaigns.md) | A successful, non-spam `submission` with an approved CPL rate |
 | Attribute paid orders | [Checkout campaigns](checkout-campaigns.md) | A merchant-confirmed `purchase` with CPS, RevShare or Flat |
-| Measure referral traffic | [Clicks & action campaigns](click-campaigns.md) | Clicks are traffic records; they do not create commissions |
+| Measure referral traffic | [Clicks & action campaigns](click-campaigns.md) | Clicks are traffic records; they do not create compensation |
 | Reward a qualified business action | [Clicks & action campaigns](click-campaigns.md) | A merchant-confirmed `action` with CPA or Flat |
 
 Start with [campaign setup](campaign-setup.md). Campaign goals are implemented through offers, publisher assignments and event types; there is no separate form/checkout/click campaign-type switch.
@@ -28,9 +28,9 @@ Start with [campaign setup](campaign-setup.md). Campaign goals are implemented t
 2. Brand New Day records a click and redirects to the offer's destination with `referral_id` and `click_id`.
 3. Your website preserves that referral through the form or checkout.
 4. Your backend verifies the business outcome and sends a confirmed event.
-5. Brand New Day creates a conversion and a **pending** commission. Financial approval and payout happen separately.
+5. Brand New Day creates a conversion and **pending** compensation. Financial approval and payout happen separately.
 
-Loading a script, viewing a thank-you page, recording an impression or filling in a form without a successful save does not create a commission.
+Loading a script, viewing a thank-you page, recording an impression or filling in a form without a successful save does not create compensation.
 
 ## Before you copy an example
 

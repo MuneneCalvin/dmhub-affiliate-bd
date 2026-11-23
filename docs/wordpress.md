@@ -67,6 +67,6 @@ This helper does not install hooks, authenticate a browser endpoint or schedule 
 
 ## 5. Test your form plugin
 
-Follow a real publisher link, accept one synthetic entry, inspect the stored referral, and verify one conversion and pending commission. Resend the same event and verify a duplicate response. Test validation errors, spam rejection, a login form, cache/minification, unavailable browser storage and a missing referral.
+Follow a real publisher link, accept one synthetic entry, inspect the stored referral, and verify one conversion and pending compensation. Resend the same event and verify a duplicate response. Test validation errors, spam rejection, a login form, cache/minification, unavailable browser storage and a missing referral.
 
 All form contents stay on your WordPress site. Brand New Day rejects contact fields and arbitrary payloads.
