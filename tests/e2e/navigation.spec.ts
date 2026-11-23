@@ -58,8 +58,11 @@ for (const persona of Object.keys(menus) as Persona[]) {
         await page.goto('/dashboard');
         const nav = page.getByRole('navigation', { name: 'Main navigation' });
         for (const name of menus[persona].visible) {
+            // Items with a waiting count are announced as "<name> <n> waiting".
             await expect(
-                nav.getByRole('link', { name, exact: true }),
+                nav.getByRole('link', {
+                    name: new RegExp(`^${name}( \\d+ waiting)?$`),
+                }),
             ).toBeVisible();
         }
         for (const name of menus[persona].hidden) {
