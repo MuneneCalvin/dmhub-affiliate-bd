@@ -2,6 +2,7 @@
 
 // Fixture helper for the everyday-workflow browser suite (npm run test:e2e).
 //   php tests/Support/e2e.php seed    add campaigns, an approved earning, etc.
+//   php tests/Support/e2e.php leadform <origin>  add a campaign whose offer lands on a form page at <origin>
 //   php tests/Support/e2e.php state   print a JSON snapshot for assertions
 // Only runs inside the disposable SQLite database created by scripts/e2e/run.mjs.
 
@@ -199,6 +200,32 @@ if ($action === 'seed') {
     UserNetworks::create(['user_id' => $staff->id, 'network_id' => $network->id, 'status' => 'A']);
 
     echo 'seeded'.PHP_EOL;
+} elseif ($action === 'leadform') {
+    // Kept out of 'seed' so the other specs' counts stay untouched; lead-form-embed.spec adds it when it runs.
+    $origin = rtrim((string) ($argv[2] ?? ''), '/');
+    if (! preg_match('#^http://127\.0\.0\.1:\d+$#', $origin)) {
+        throw new RuntimeException('Pass the local form page origin, for example http://127.0.0.1:4000.');
+    }
+    $network = Network::where('owner_email', 'admin@dmhub.com')->firstOrFail();
+    $advertiser = Advertiser::whereHas('user', fn ($q) => $q->where('email', 'advertiser@dmhub.com'))->firstOrFail();
+    $publisher = Publisher::whereHas('user', fn ($q) => $q->where('email', 'publisher@dmhub.com'))->firstOrFail();
+    $cpl = CommissionType::where('name', 'CPL')->firstOrFail();
+    $campaign = Campaign::create([
+        'network_id' => $network->id, 'advertiser_id' => $advertiser->id, 'name' => 'E2E Lead Form Campaign',
+        'description' => 'Pension sign-up form built elsewhere.', 'start_date' => now()->subDay(), 'end_date' => now()->addMonths(2),
+        'campaign_status' => 'A', 'currency' => 'EUR', 'total_budget' => 2000,
+    ]);
+    $offer = Offer::create([
+        'campaign_id' => $campaign->id, 'network_id' => $network->id, 'name' => 'E2E Lead Form Offer', 'offer_status' => 'A',
+        'preview_url' => $origin.'/form.html', 'conversion_window_hours' => 72, 'click_cookie_lifetime_hours' => 24,
+    ]);
+    OfferCommission::create(['offer_id' => $offer->id, 'commission_type_id' => $cpl->id, 'commission_value' => '25.00']);
+    $assignment = PublisherCampaigns::create([
+        'publisher_id' => $publisher->id, 'network_id' => $network->id, 'campaign_id' => $campaign->id,
+        'offer_id' => $offer->id, 'status' => 'A', 'commission_type' => 'CPL', 'commission_value' => '25.00',
+        'tracking_link' => url('/t/'.Str::random(20)),
+    ]);
+    echo json_encode(['offer_id' => $offer->id, 'tracking_link' => $assignment->tracking_link]).PHP_EOL;
 } elseif ($action === 'state') {
     echo json_encode([
         'campaigns' => Campaign::orderBy('id')->get(['id', 'name', 'campaign_status']),

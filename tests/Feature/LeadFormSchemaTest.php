@@ -2,7 +2,6 @@
 
 use App\Models\ConversionEvent;
 use App\Models\LeadContact;
-use App\Models\Offer;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;

@@ -87,6 +87,24 @@ it('stores nothing without consent', function (array $override) {
     'no click reference' => [['click_id' => null]],
 ]);
 
+it('lets the allowed page read why a submit was refused', function (array $override, string $field) {
+    $f = conversionFixture();
+
+    submitForm($this, $f, formBody(conversionClick($f), $override))->assertUnprocessable()
+        ->assertHeader('Access-Control-Allow-Origin', FORM_ORIGIN)->assertJsonValidationErrors($field);
+})->with([
+    'no consent' => [['consent' => false], 'consent'],
+    'bad email' => [['email' => 'nope'], 'email'],
+]);
+
+it('lets the allowed page read why a foreign click was refused', function () {
+    $f = conversionFixture();
+    $other = conversionFixture();
+
+    submitForm($this, $f, formBody(conversionClick($other)))->assertUnprocessable()
+        ->assertHeader('Access-Control-Allow-Origin', FORM_ORIGIN);
+});
+
 it('refuses a missing or foreign origin without any cross-origin header', function (?string $origin) {
     $f = conversionFixture();
 

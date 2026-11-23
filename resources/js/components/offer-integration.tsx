@@ -44,7 +44,10 @@ export function OfferIntegration({
                 </dl>
             </div>
             {leadForm && (
-                <LeadFormSnippet offerId={offer.id} leadForm={leadForm} />
+                <LeadFormSnippet
+                    offerId={Number(offer.id)}
+                    leadForm={leadForm}
+                />
             )}
             <div className="space-y-3 rounded-xl border bg-surface-muted/30 p-5">
                 <h2 className="font-semibold">

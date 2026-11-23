@@ -23,7 +23,7 @@ export function LeadFormSnippet({
     offerId,
     leadForm,
 }: {
-    offerId: number | string;
+    offerId: number;
     leadForm: LeadFormSettings;
 }) {
     const { t } = useTranslation();

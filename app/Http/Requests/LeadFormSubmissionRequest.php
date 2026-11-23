@@ -3,7 +3,9 @@
 namespace App\Http\Requests;
 
 use App\Models\Offer;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\ValidationException;
 
 /**
  * A browser on the merchant's form page reports a submit. The body is JSON sent as text/plain
@@ -33,6 +35,22 @@ class LeadFormSubmissionRequest extends FormRequest
         }
 
         return in_array($origin, $allowed, true) ? $origin : null;
+    }
+
+    /** A refusal the allowed page can read; the answer holds field names and messages, never submitted values. */
+    public function rejection(array $errors): ValidationException
+    {
+        $exception = ValidationException::withMessages($errors);
+        $exception->response = response()->json([
+            'message' => 'The submission was not accepted.', 'errors' => $errors,
+        ], 422)->withHeaders(['Access-Control-Allow-Origin' => $this->allowedOrigin(), 'Vary' => 'Origin']);
+
+        return $exception;
+    }
+
+    protected function failedValidation(Validator $validator): void
+    {
+        throw $this->rejection($validator->errors()->toArray());
     }
 
     public function authorize(): bool

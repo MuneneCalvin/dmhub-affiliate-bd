@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Advertiser;
 use App\Models\Clicks;
+use App\Models\ConversionEvent;
 use App\Models\LeadContact;
 use Carbon\CarbonImmutable;
 use Closure;
@@ -16,8 +17,8 @@ class LeadIntakeService
      * Records a contact together with its confirmed submission, once per campaign and email
      * and once per click. A repeat returns the first lead and creates no event or earning.
      *
-     * @param  Closure(array): array{event: \App\Models\ConversionEvent, duplicate: bool}  $confirm
-     * @return array{lead: LeadContact, event: \App\Models\ConversionEvent, duplicate: bool}
+     * @param  Closure(array): array{event: ConversionEvent, duplicate: bool}  $confirm
+     * @return array{lead: LeadContact, event: ConversionEvent, duplicate: bool}
      */
     public function submit(Clicks $click, array $eventData, array $contact, Closure $confirm, ?CarbonImmutable $consentedAt = null): array
     {

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Tracking\LeadFormScriptController;
 use App\Models\Offer;
 
 it('serves the embed script for the offer key with its endpoint', function () {
@@ -29,7 +30,7 @@ it('escapes the key so it cannot break out of the script', function () {
     DB::table('offers')->where('id', $offer->id)->update(['lead_form_key' => 'ab</script><b']);
 
     // Routes only match plain keys, so a crafted key never reaches the generator; the escaper must still hold.
-    $script = app(App\Http\Controllers\Tracking\LeadFormScriptController::class)->render(Offer::find($offer->id));
+    $script = app(LeadFormScriptController::class)->render(Offer::find($offer->id));
 
     expect($script)->not->toContain('</script>')->and($script)->toContain('\\u003C/script\\u003E');
 });

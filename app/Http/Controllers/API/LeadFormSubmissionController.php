@@ -7,7 +7,6 @@ use App\Http\Requests\LeadFormSubmissionRequest;
 use App\Services\ConversionEventService;
 use App\Services\LeadIntakeService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Validation\ValidationException;
 
 class LeadFormSubmissionController extends Controller
 {
@@ -25,10 +24,10 @@ class LeadFormSubmissionController extends Controller
         try {
             $click = $pipeline->resolveClick(array_intersect_key($input, array_flip(['click_id', 'referral_id'])), $advertiserId);
         } catch (ModelNotFoundException) {
-            throw ValidationException::withMessages(['click_id' => 'The referral is unknown.']);
+            throw $request->rejection(['click_id' => ['The referral is unknown.']]);
         }
         if ((int) $click->offer_id !== $offer->id) {
-            throw ValidationException::withMessages(['click_id' => 'The referral belongs to another offer.']);
+            throw $request->rejection(['click_id' => ['The referral belongs to another offer.']]);
         }
 
         $eventData = [
