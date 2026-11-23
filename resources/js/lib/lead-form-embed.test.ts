@@ -4,7 +4,10 @@ import source from '../../lead-form/embed.js?raw';
 const ENDPOINT = 'https://bnd.test/lf/key123';
 
 function load() {
-    const code = source.replace('__CONFIG__', JSON.stringify({ key: 'key123', endpoint: ENDPOINT }));
+    const code = source.replace(
+        '__CONFIG__',
+        JSON.stringify({ key: 'key123', endpoint: ENDPOINT }),
+    );
     (0, eval)(code);
 }
 
@@ -21,7 +24,11 @@ function submit(form: HTMLFormElement) {
 
 const sent = () => {
     const calls = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls;
-    return calls.map(([url, init]) => ({ url, init, body: JSON.parse(init.body) }));
+    return calls.map(([url, init]) => ({
+        url,
+        init,
+        body: JSON.parse(init.body),
+    }));
 };
 
 const FORM = `
@@ -37,7 +44,10 @@ const FORM = `
 beforeEach(() => {
     sessionStorage.clear();
     delete (window as unknown as Record<string, unknown>).BNDLeadForm;
-    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ ok: true })));
+    vi.stubGlobal(
+        'fetch',
+        vi.fn(() => Promise.resolve({ ok: true })),
+    );
 });
 
 afterEach(() => {
@@ -49,7 +59,9 @@ describe('lead form embed script', () => {
         page(FORM);
         load();
 
-        const honeypot = document.querySelector<HTMLInputElement>('#f input[name="hp"]');
+        const honeypot = document.querySelector<HTMLInputElement>(
+            '#f input[name="hp"]',
+        );
         expect(honeypot).not.toBeNull();
         expect(honeypot?.tabIndex).toBe(-1);
         expect(honeypot?.getAttribute('aria-hidden')).toBe('true');
@@ -70,8 +82,14 @@ describe('lead form embed script', () => {
         expect(init.headers['Content-Type']).toBe('text/plain');
         expect(init.credentials).toBe('omit');
         expect(body).toMatchObject({
-            click_id: '42', email: 'anna@example.nl', first_name: 'Anna', last_name: 'de Vries',
-            phone: '+31201234567', company: 'Voorbeeld BV', consent: true, hp: '',
+            click_id: '42',
+            email: 'anna@example.nl',
+            first_name: 'Anna',
+            last_name: 'de Vries',
+            phone: '+31201234567',
+            company: 'Voorbeeld BV',
+            consent: true,
+            hp: '',
         });
         expect(body.duration_ms).toBeGreaterThanOrEqual(0);
         expect(body.custom_fields).toEqual({ favoriete_kleur: 'blauw' });
@@ -91,20 +109,28 @@ describe('lead form embed script', () => {
     it('reports consent false when the checkbox is unchecked or missing', () => {
         page(FORM);
         load();
-        (document.querySelector('[name="akkoord_privacy"]') as HTMLInputElement).checked = false;
+        (
+            document.querySelector(
+                '[name="akkoord_privacy"]',
+            ) as HTMLInputElement
+        ).checked = false;
         submit(document.querySelector('#f') as HTMLFormElement);
         expect(sent()[0].body.consent).toBe(false);
 
         vi.mocked(fetch).mockClear();
         delete (window as unknown as Record<string, unknown>).BNDLeadForm;
-        page('<form id="f"><input type="email" name="email" value="a@b.nl"></form>');
+        page(
+            '<form id="f"><input type="email" name="email" value="a@b.nl"></form>',
+        );
         load();
         submit(document.querySelector('#f') as HTMLFormElement);
         expect(sent()[0].body.consent).toBe(false);
     });
 
     it('honours the data-bnd-consent marker whatever the checkbox is called', () => {
-        page('<form id="f"><input type="email" name="email" value="a@b.nl"><input type="checkbox" name="ok" data-bnd-consent checked></form>');
+        page(
+            '<form id="f"><input type="email" name="email" value="a@b.nl"><input type="checkbox" name="ok" data-bnd-consent checked></form>',
+        );
         load();
 
         submit(document.querySelector('#f') as HTMLFormElement);
@@ -125,12 +151,17 @@ describe('lead form embed script', () => {
     });
 
     it('sends the referral id when the redirect carries one', () => {
-        page(FORM, '?referral_id=0b1f3a52-2f6f-4bd2-9d6f-3a5f5e7a9d11&click_id=42');
+        page(
+            FORM,
+            '?referral_id=0b1f3a52-2f6f-4bd2-9d6f-3a5f5e7a9d11&click_id=42',
+        );
         load();
 
         submit(document.querySelector('#f') as HTMLFormElement);
 
-        expect(sent()[0].body.referral_id).toBe('0b1f3a52-2f6f-4bd2-9d6f-3a5f5e7a9d11');
+        expect(sent()[0].body.referral_id).toBe(
+            '0b1f3a52-2f6f-4bd2-9d6f-3a5f5e7a9d11',
+        );
     });
 
     it('sends nothing when the visitor did not arrive through a tracked link', () => {
@@ -152,7 +183,9 @@ describe('lead form embed script', () => {
     });
 
     it('does nothing on a page with several forms unless one is marked', () => {
-        page(`${FORM}<form id="g"><input type="email" name="email" value="x@y.nl"></form>`);
+        page(
+            `${FORM}<form id="g"><input type="email" name="email" value="x@y.nl"></form>`,
+        );
         load();
 
         submit(document.querySelector('#f') as HTMLFormElement);
@@ -176,18 +209,24 @@ describe('lead form embed script', () => {
     });
 
     it('swallows network failures', async () => {
-        vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new Error('offline'))));
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(() => Promise.reject(new Error('offline'))),
+        );
         page(FORM);
         load();
 
-        expect(() => submit(document.querySelector('#f') as HTMLFormElement)).not.toThrow();
+        expect(() =>
+            submit(document.querySelector('#f') as HTMLFormElement),
+        ).not.toThrow();
         await Promise.resolve();
     });
 
     it('reports the honeypot when something filled it', () => {
         page(FORM);
         load();
-        (document.querySelector('input[name="hp"]') as HTMLInputElement).value = 'http://spam.example';
+        (document.querySelector('input[name="hp"]') as HTMLInputElement).value =
+            'http://spam.example';
 
         submit(document.querySelector('#f') as HTMLFormElement);
 

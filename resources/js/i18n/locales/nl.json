@@ -3268,5 +3268,17 @@
     "Mark as lost": "Markeren als verloren",
     "Delete {{name}}? The submission and its commission stay on record.": "{{name}} verwijderen? De aanmelding en de commissie blijven bewaard.",
     "No leads yet": "Nog geen leads",
-    "Leads appear here when an advertiser reports a submission with its contact details.": "Leads verschijnen hier zodra een adverteerder een aanmelding met contactgegevens doorgeeft."
+    "Leads appear here when an advertiser reports a submission with its contact details.": "Leads verschijnen hier zodra een adverteerder een aanmelding met contactgegevens doorgeeft.",
+    "Lead form embed": "Insluitcode voor het formulier",
+    "Paste this on the page that holds your form. It reports each consent-confirmed submission so the visitor counts as a lead for the publisher who sent them. The form itself is never changed or delayed.": "Plak dit op de pagina met uw formulier. Elke verzending met toestemming wordt gemeld, zodat de bezoeker als lead telt voor de publisher die hem heeft doorgestuurd. Het formulier zelf wordt nooit aangepast of vertraagd.",
+    "Mark the form with data-bnd-form if the page has more than one, and the consent checkbox with data-bnd-consent.": "Markeer het formulier met data-bnd-form als de pagina er meer dan één heeft, en het toestemmingsvakje met data-bnd-consent.",
+    "Pages allowed to report": "Pagina’s die mogen melden",
+    "Submissions are accepted from the landing page host below and from any extra origin you add.": "Verzendingen worden geaccepteerd van de host van de landingspagina hieronder en van elke extra herkomst die u toevoegt.",
+    "Extra allowed origin": "Extra toegestane herkomst",
+    "Add origin": "Herkomst toevoegen",
+    "Enter an origin like https://forms.example": "Voer een herkomst in zoals https://formulieren.example",
+    "Save origins": "Herkomsten opslaan",
+    "Rotate key": "Sleutel vernieuwen",
+    "Rotate lead form key": "Formuliersleutel vernieuwen",
+    "The current embed code stops working at once. Replace it on your form page with the new code.": "De huidige insluitcode werkt direct niet meer. Vervang deze op uw formulierpagina door de nieuwe code."
 }

@@ -1,7 +1,17 @@
+import {
+    LeadFormSnippet,
+    type LeadFormSettings,
+} from '@/components/lead-form-snippet';
 import type { TOffers } from '@/types';
 import { useTranslation } from 'react-i18next';
 
-export function OfferIntegration({ offer }: { offer: TOffers }) {
+export function OfferIntegration({
+    offer,
+    leadForm,
+}: {
+    offer: TOffers;
+    leadForm?: LeadFormSettings;
+}) {
     const { t } = useTranslation();
     return (
         <section className="space-y-6">
@@ -33,6 +43,9 @@ export function OfferIntegration({ offer }: { offer: TOffers }) {
                     </div>
                 </dl>
             </div>
+            {leadForm && (
+                <LeadFormSnippet offerId={offer.id} leadForm={leadForm} />
+            )}
             <div className="space-y-3 rounded-xl border bg-surface-muted/30 p-5">
                 <h2 className="font-semibold">
                     {t('Connect an existing form or checkout')}

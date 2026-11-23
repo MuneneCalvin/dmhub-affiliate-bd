@@ -75,6 +75,7 @@ Route::middleware(['auth', 'ensure.campaign.manager'])->group(function () {
     Route::get('advertiser/offers/{offer}/show', [OffersController::class, 'show'])->middleware('business.permission:view_offers')->name('advertiser.offers.show');
     Route::get('advertiser/offers/{offer}/edit', [OffersController::class, 'edit'])->middleware('business.permission:manage_offers')->name('advertiser.offers.edit');
     Route::post('advertiser/offers/{offer}/update', [OffersController::class, 'update'])->middleware('business.permission:manage_offers')->name('advertiser.offers.update');
+    Route::post('advertiser/offers/{offer}/lead-form', [OffersController::class, 'updateLeadForm'])->middleware('business.permission:manage_offers')->name('advertiser.offers.lead-form.update');
     Route::delete('advertiser/offers/{offer}/delete', [OffersController::class, 'destroy'])->middleware('business.permission:manage_offers')->name('advertiser.offers.delete');
     Route::patch('advertiser/offers/{offer}/activate', [OffersController::class, 'activate'])->middleware('business.permission:manage_offers')->name('advertiser.offers.activate');
     Route::patch('advertiser/offers/{offer}/deactivate', [OffersController::class, 'deactivate'])->middleware('business.permission:manage_offers')->name('advertiser.offers.deactivate');

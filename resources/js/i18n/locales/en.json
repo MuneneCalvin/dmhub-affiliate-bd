@@ -3268,5 +3268,17 @@
     "Mark as lost": "Mark as lost",
     "Delete {{name}}? The submission and its commission stay on record.": "Delete {{name}}? The submission and its commission stay on record.",
     "No leads yet": "No leads yet",
-    "Leads appear here when an advertiser reports a submission with its contact details.": "Leads appear here when an advertiser reports a submission with its contact details."
+    "Leads appear here when an advertiser reports a submission with its contact details.": "Leads appear here when an advertiser reports a submission with its contact details.",
+    "Lead form embed": "Lead form embed",
+    "Paste this on the page that holds your form. It reports each consent-confirmed submission so the visitor counts as a lead for the publisher who sent them. The form itself is never changed or delayed.": "Paste this on the page that holds your form. It reports each consent-confirmed submission so the visitor counts as a lead for the publisher who sent them. The form itself is never changed or delayed.",
+    "Mark the form with data-bnd-form if the page has more than one, and the consent checkbox with data-bnd-consent.": "Mark the form with data-bnd-form if the page has more than one, and the consent checkbox with data-bnd-consent.",
+    "Pages allowed to report": "Pages allowed to report",
+    "Submissions are accepted from the landing page host below and from any extra origin you add.": "Submissions are accepted from the landing page host below and from any extra origin you add.",
+    "Extra allowed origin": "Extra allowed origin",
+    "Add origin": "Add origin",
+    "Enter an origin like https://forms.example": "Enter an origin like https://forms.example",
+    "Save origins": "Save origins",
+    "Rotate key": "Rotate key",
+    "Rotate lead form key": "Rotate lead form key",
+    "The current embed code stops working at once. Replace it on your form page with the new code.": "The current embed code stops working at once. Replace it on your form page with the new code."
 }
