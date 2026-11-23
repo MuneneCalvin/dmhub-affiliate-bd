@@ -1,3 +1,4 @@
+import { InfoTip } from '@/components/app/info-tip';
 import {
     CampaignMaterialForm,
     CampaignOfferForm,
@@ -482,7 +483,9 @@ function OfferDetails({
                     </dd>
                 </div>
                 <div>
-                    <dt>{t('Commission')}</dt>
+                    <dt>
+                        {t('Commission')} <InfoTip term="compensation" />
+                    </dt>
                     <dd>
                         {offer.rates.length
                             ? offer.rates

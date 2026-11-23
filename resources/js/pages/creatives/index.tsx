@@ -6,6 +6,7 @@ import {
     ResourceDirectory,
 } from '@/components/app';
 import { useConfirmationDialog } from '@/components/app/confirm-dialog';
+import { InfoTip } from '@/components/app/info-tip';
 import {
     CREATIVE_KIND_META,
     CREATIVE_KINDS,
@@ -167,9 +168,14 @@ export default function CreativesIndex() {
             <div className="workspace-page flex flex-col gap-6">
                 <PageHeader
                     title={t('Creatives')}
-                    description={t(
-                        'Banners, text links and email assets publishers can use',
-                    )}
+                    description={
+                        <>
+                            {t(
+                                'Banners, text links and email assets publishers can use',
+                            )}{' '}
+                            <InfoTip term="creative" />
+                        </>
+                    }
                     breadcrumbs={[
                         {
                             title: t('Campaigns'),

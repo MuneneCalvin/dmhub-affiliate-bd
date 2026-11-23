@@ -60,4 +60,15 @@ return [
             ],
         ],
     ],
+
+    // Lead statuses as shown in exports. "converted" is an opened account.
+    'leads' => [
+        'status' => [
+            'new' => 'New',
+            'contacted' => 'Contacted',
+            'qualified' => 'Qualified',
+            'converted' => 'Account opened',
+            'lost' => 'Lost',
+        ],
+    ],
 ];

@@ -1,5 +1,6 @@
 import { PageHeader } from '@/components/app';
 import { useConfirmationDialog } from '@/components/app/confirm-dialog';
+import { InfoTip } from '@/components/app/info-tip';
 import {
     MutedCell,
     ResourceDirectory,
@@ -79,9 +80,15 @@ export default function LeadsIndex() {
             <div className="workspace-page flex flex-col gap-6">
                 <PageHeader
                     title={t('Leads')}
-                    description={t(
-                        'Contact details reported with confirmed submissions.',
-                    )}
+                    description={
+                        <>
+                            {t(
+                                'Contact details reported with confirmed submissions.',
+                            )}{' '}
+                            <InfoTip term="lead" />
+                            <InfoTip term="accountOpened" />
+                        </>
+                    }
                     breadcrumbs={[
                         {
                             title: t('Campaigns'),
@@ -142,7 +149,7 @@ export default function LeadsIndex() {
                         },
                         {
                             value: 'converted',
-                            label: t('Converted'),
+                            label: t('Account opened'),
                             count: statusCounts?.converted,
                             tone: 'success',
                             icon: <CheckCircle2 />,
@@ -200,7 +207,7 @@ export default function LeadsIndex() {
                             onSelect: (row) => setStatus(row, 'qualified'),
                         },
                         {
-                            label: t('Mark as converted'),
+                            label: t('Mark as account opened'),
                             icon: <CheckCircle2 />,
                             tone: 'success',
                             hidden: (row) => row.status === 'converted',

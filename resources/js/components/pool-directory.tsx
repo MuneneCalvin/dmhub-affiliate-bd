@@ -1,6 +1,7 @@
 import { PageHeader } from '@/components/app';
 import { useConfirmationDialog } from '@/components/app/confirm-dialog';
 import { FormDialog } from '@/components/app/form-dialog';
+import { InfoTip } from '@/components/app/info-tip';
 import {
     MutedCell,
     ResourceDirectory,
@@ -65,11 +66,16 @@ export function PoolDirectory({
             <div className="workspace-page flex flex-col gap-6">
                 <PageHeader
                     title={title}
-                    description={t(
-                        advertisers
-                            ? 'Review and approve advertisers to add them to your network'
-                            : 'Review and approve publishers to add them to your network',
-                    )}
+                    description={
+                        <>
+                            {t(
+                                advertisers
+                                    ? 'Review and approve advertisers to add them to your network'
+                                    : 'Review and approve publishers to add them to your network',
+                            )}{' '}
+                            <InfoTip term="partnerPool" />
+                        </>
+                    }
                     breadcrumbs={[
                         { title: t('Partner pool'), href: routes.url() },
                         {

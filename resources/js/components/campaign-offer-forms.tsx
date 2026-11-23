@@ -1,3 +1,4 @@
+import { InfoTip } from '@/components/app/info-tip';
 import { OfferThumbnailUpload } from '@/components/offer-thumbnail-upload';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +12,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useFilePreview } from '@/hooks/use-file-preview';
+import { termForCommissionType } from '@/lib/glossary';
 import advertiser from '@/routes/advertiser';
 import type {
     CampaignMaterial,
@@ -25,17 +27,23 @@ import { useTranslation } from 'react-i18next';
 function Field({
     id,
     label,
+    hint,
     error,
     children,
 }: {
     id: string;
     label: string;
+    /** An explanation next to the label, such as an InfoTip. */
+    hint?: ReactNode;
     error?: string;
     children: ReactNode;
 }) {
     return (
         <div className="offer-field">
-            <Label htmlFor={id}>{label}</Label>
+            <span className="flex items-center gap-1">
+                <Label htmlFor={id}>{label}</Label>
+                {hint}
+            </span>
             {children}
             {error && (
                 <p
@@ -213,7 +221,8 @@ export function CampaignOfferForm({
                     <p>
                         {t(
                             'Existing assignments retain their agreed rate. Changes apply to new assignments.',
-                        )}
+                        )}{' '}
+                        <InfoTip term="compensation" />
                     </p>
                     {[1, 2].map((index) => {
                         const typeKey = `commission_type_${index}` as
@@ -234,6 +243,15 @@ export function CampaignOfferForm({
                                             ? 'Commission type'
                                             : 'Second commission (optional)',
                                     )}
+                                    hint={
+                                        termForCommissionType(type) && (
+                                            <InfoTip
+                                                term={
+                                                    termForCommissionType(type)!
+                                                }
+                                            />
+                                        )
+                                    }
                                     error={form.errors[typeKey]}
                                 >
                                     <Select
