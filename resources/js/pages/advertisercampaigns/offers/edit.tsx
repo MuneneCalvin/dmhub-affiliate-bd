@@ -21,6 +21,7 @@ import { BreadcrumbItem, CommissionType, TNetwork, TOffers } from '@/types';
 import { OffersFormValueTypes } from '@/types/schema_types';
 import { OFFER_BONUSES, OFFER_TERMS, TRAFFIC_SOURCES } from '@/utils/enums';
 import { offersSchema } from '@/utils/form-schema';
+import { commissionFieldValue } from '@/utils/offer-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Head, router, usePage } from '@inertiajs/react';
 import { ArrowLeft, ArrowRight, Loader2, Tag } from 'lucide-react';
@@ -65,7 +66,7 @@ const OfferEditPage = () => {
         const comm = offer?.commissions?.[index];
         return {
             type: comm?.commission_type_id?.toString() ?? '',
-            value: comm?.commission_value ?? '0.00',
+            value: commissionFieldValue(comm),
         };
     };
 
