@@ -1,8 +1,10 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" @class(['dark' => ($appearance ?? 'light') === 'dark'])>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" translate="no" @class(['dark' => ($appearance ?? 'light') === 'dark'])>
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        {{-- The app speaks Dutch and English itself; browser translation rewrites its text and blanks the page. --}}
+        <meta name="google" content="notranslate">
         <script>
             (function() {
                  const appearance = '{{ $appearance ?? 'light' }}';
